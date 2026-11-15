@@ -1,6 +1,6 @@
 # Retail Decision Intelligence
 
-Retail analytics built with React/TypeScript, FastAPI, and Azure SQL. This first
+Retail analytics built with React/TypeScript, Tailwind CSS, FastAPI, and Azure SQL. This first
 slice provides the local development foundation: seven workspace routes and a
 typed health API. Business screens show an unavailable state until implemented.
 

@@ -22,5 +22,5 @@ export function ServiceStatus() {
     unavailable: 'Service status unavailable',
   }
 
-  return <p className={`service-status ${status}`} role="status">{labels[status]}</p>
+  return <p className={`m-0 text-sm ${status === 'connected' ? 'text-success' : 'text-muted'}`} role="status">{labels[status]}</p>
 }
