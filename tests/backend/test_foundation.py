@@ -1,9 +1,10 @@
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from sqlalchemy import text
+
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
 from retail_api.main import create_app
-from sqlalchemy import text
 
 
 def test_health_does_not_require_a_database() -> None:
