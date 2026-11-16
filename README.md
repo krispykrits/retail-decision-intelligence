@@ -37,4 +37,5 @@ python scripts/smoke_deployment.py http://127.0.0.1:8000
 Terraform 1.14.x: `infra/bootstrap/` manages the resource group and remote state;
 `infra/` manages the app, Azure SQL, identity, and logs. Copy the provided
 configuration examples before planning. Both configurations share one resource
-group in North Central US. Apply saved plans; keep state and plans out of Git.
+group. The app runs in North Central US; SQL uses West US 3.
+Apply saved plans; keep state and plans out of Git.

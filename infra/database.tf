@@ -1,7 +1,11 @@
+locals {
+  sql_location = coalesce(var.sql_location, local.location)
+}
+
 resource "azurerm_mssql_server" "sql" {
   name                                 = "${var.name_prefix}-sql"
   resource_group_name                  = local.resource_group_name
-  location                             = local.location
+  location                             = local.sql_location
   version                              = "12.0"
   minimum_tls_version                  = "1.2"
   public_network_access_enabled        = true
@@ -40,7 +44,7 @@ resource "azapi_resource" "database" {
   type      = "Microsoft.Sql/servers/databases@2023-08-01"
   name      = "retail"
   parent_id = azurerm_mssql_server.sql.id
-  location  = local.location
+  location  = local.sql_location
   tags      = local.tags
   body = {
     sku = {

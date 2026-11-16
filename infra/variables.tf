@@ -34,6 +34,12 @@ variable "sql_admin_login" {
   type = string
 }
 
+variable "sql_location" {
+  description = "SQL region override when the subscription restricts the app region."
+  type        = string
+  default     = null
+}
+
 variable "sql_allowed_ipv4_addresses" {
   description = "Reviewed API outbound IPs. Empty initially keeps SQL inaccessible over the network."
   type        = set(string)
