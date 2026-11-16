@@ -3,7 +3,7 @@ locals {
 }
 
 resource "azurerm_mssql_server" "sql" {
-  name                                 = "${var.name_prefix}-sql"
+  name                                 = "${var.name_prefix}-sql-${local.sql_location}"
   resource_group_name                  = local.resource_group_name
   location                             = local.sql_location
   version                              = "12.0"
