@@ -21,6 +21,8 @@ data/
 *.tfplan
 *.tfvars
 !*.tfvars.example
+infra/backend.hcl
+infra/bootstrap/remote.tf
 .DS_Store
 .idea/
 .vscode/

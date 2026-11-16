@@ -1,10 +1,11 @@
 # Retail Decision Intelligence
 
 React, TypeScript, Tailwind CSS, FastAPI, and Azure SQL.
+React and FastAPI deploy together as one Azure Container App.
 
 ## Development
 
-Requires Python 3.12, Node.js 24, uv 0.13.6, and Make (Linux, macOS, or WSL).
+Requires Python 3.12, Node.js 24, uv 0.13.6, and Make.
 
 ```bash
 make setup
@@ -15,33 +16,26 @@ make dev-web  # terminal 2
 Web: http://localhost:5173 · API docs: http://127.0.0.1:8000/api/v1/docs.
 Optional local settings: copy `.env.example` to `.env`.
 
-## Commands
+## Checks
 
-| Command | Purpose |
-| --- | --- |
-| `make smoke` | Install, check, build, and verify both local servers |
-| `make check` | Contracts, formatting, lint, types, tests, and build |
-| `make format` | Format Python, frontend code, and Tailwind classes |
-| `make contracts` | Regenerate OpenAPI and frontend API types |
-
-## Structure
-
-| Path | Contents |
-| --- | --- |
-| `frontend/src/app/` | Routing and navigation |
-| `frontend/src/components/` | Layout and shared UI |
-| `frontend/src/pages/` | Pages |
-| `frontend/src/api/` | Typed client and generated contract |
-| `backend/src/retail_api/` | API routes, configuration, and database setup |
-| `tests/`, `scripts/` | Backend tests and development commands |
-| `infra/`, `ml/`, `docs/` | Reserved for later stories |
-
-## Deployment target
-
-```mermaid
-flowchart TD
-  Browser["Browser"] --> SPA["React · Azure Static Web Apps"]
-  SPA --> API["FastAPI · Azure Container Apps"]
-  SPA --> Identity["Microsoft Entra External ID"]
-  API --> SQL["Azure SQL"]
+```bash
+make check      # contracts, lint, types, tests, build
+make format     # format code
+make contracts  # regenerate API types after API changes
 ```
+
+## Container
+
+```bash
+docker build -t rdi .
+docker run --rm -p 8000:8000 rdi
+python scripts/smoke_deployment.py http://127.0.0.1:8000
+```
+
+## Infrastructure
+
+Terraform 1.14.x: `infra/bootstrap/` manages the resource group and remote state;
+`infra/` manages the app, Azure SQL, identity, and logs. Copy the provided
+configuration examples before planning. Both configurations share one resource
+group. The app runs in North Central US; SQL uses West US 3.
+Apply saved plans; keep state and plans out of Git.

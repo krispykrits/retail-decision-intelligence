@@ -1,0 +1,4 @@
+# Enable only after bootstrap apply; migrate the initial local state immediately.
+terraform {
+  backend "azurerm" {}
+}
