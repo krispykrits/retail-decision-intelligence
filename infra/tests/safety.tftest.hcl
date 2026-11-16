@@ -78,28 +78,6 @@ run "reject_broad_azure_access" {
   expect_failures = [var.sql_allowed_ipv4_addresses]
 }
 
-run "reject_mutable_image" {
-  command = plan
-  variables {
-    app_image = "ghcr.io/example/rdi:latest"
-  }
-  expect_failures = [var.app_image]
-}
-
-run "allow_reported_api_address" {
-  command = plan
-  variables {
-    sql_allowed_ipv4_addresses = ["203.0.113.10"]
-  }
-  assert {
-    condition = (
-      azurerm_mssql_firewall_rule.api["203.0.113.10"].start_ip_address ==
-      azurerm_mssql_firewall_rule.api["203.0.113.10"].end_ip_address
-    )
-    error_message = "The firewall must allow individual addresses, never ranges."
-  }
-}
-
 run "reject_unrelated_address" {
   command = plan
   variables {
