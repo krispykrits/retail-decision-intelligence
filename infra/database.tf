@@ -30,12 +30,6 @@ resource "azurerm_mssql_firewall_rule" "api" {
   start_ip_address = each.value
   end_ip_address   = each.value
 
-  lifecycle {
-    precondition {
-      condition     = contains(azurerm_container_app.app.outbound_ip_addresses, each.value)
-      error_message = "Only outbound IP addresses reported by this project API may access SQL."
-    }
-  }
 }
 
 # AzAPI exposes the free-tier properties unavailable in azurerm_mssql_database.

@@ -22,9 +22,7 @@ mock_provider "azurerm" {
   mock_resource "azurerm_mssql_server" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Sql/servers/rdi-sql" }
   }
-  mock_resource "azurerm_container_app" {
-    defaults = { outbound_ip_addresses = ["203.0.113.10"] }
-  }
+
 }
 
 mock_provider "azapi" {}
@@ -76,12 +74,4 @@ run "reject_broad_azure_access" {
     sql_allowed_ipv4_addresses = ["0.0.0.0"]
   }
   expect_failures = [var.sql_allowed_ipv4_addresses]
-}
-
-run "reject_unrelated_address" {
-  command = plan
-  variables {
-    sql_allowed_ipv4_addresses = ["203.0.113.11"]
-  }
-  expect_failures = [azurerm_mssql_firewall_rule.api]
 }

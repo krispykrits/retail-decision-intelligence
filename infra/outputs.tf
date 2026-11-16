@@ -17,7 +17,3 @@ output "sql_server" {
 output "sql_database" {
   value = azapi_resource.database.name
 }
-
-output "app_outbound_ipv4_addresses" {
-  value = azurerm_container_app.app.outbound_ip_addresses
-}
