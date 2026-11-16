@@ -16,16 +16,11 @@ variable "name_prefix" {
   }
 }
 
-variable "static_web_app_location" {
-  description = "Supported Static Web Apps region; resources still use the same resource group."
-  type        = string
-}
-
-variable "api_image" {
-  description = "Publicly pullable project API image pinned to its sha256 digest."
+variable "app_image" {
+  description = "Publicly pullable combined frontend/API image pinned to its sha256 digest."
   type        = string
   validation {
-    condition     = can(regex("^.+@sha256:[a-f0-9]{64}$", var.api_image))
+    condition     = can(regex("^.+@sha256:[a-f0-9]{64}$", var.app_image))
     error_message = "Supply an immutable project image reference ending in @sha256:<64 hex digits>."
   }
 }

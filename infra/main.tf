@@ -10,15 +10,6 @@ locals {
   tags                = data.azurerm_resource_group.project.tags
 }
 
-resource "azurerm_static_web_app" "web" {
-  name                = "${var.name_prefix}-web"
-  resource_group_name = local.resource_group_name
-  location            = var.static_web_app_location
-  sku_tier            = "Free"
-  sku_size            = "Free"
-  tags                = local.tags
-}
-
 resource "azurerm_log_analytics_workspace" "logs" {
   name                = "${var.name_prefix}-logs"
   resource_group_name = local.resource_group_name
@@ -49,8 +40,8 @@ resource "azurerm_user_assigned_identity" "api" {
   tags                = local.tags
 }
 
-resource "azurerm_container_app" "api" {
-  name                         = "${var.name_prefix}-api"
+resource "azurerm_container_app" "app" {
+  name                         = "${var.name_prefix}-app"
   resource_group_name          = local.resource_group_name
   container_app_environment_id = azurerm_container_app_environment.app.id
   revision_mode                = "Single"
@@ -82,13 +73,13 @@ resource "azurerm_container_app" "api" {
     }
     container {
       name   = "api"
-      image  = var.api_image
+      image  = var.app_image
       cpu    = 0.25
       memory = "0.5Gi"
 
       env {
         name  = "RDI_CORS_ORIGINS"
-        value = jsonencode(["https://${azurerm_static_web_app.web.default_host_name}"])
+        value = "[]"
       }
       env {
         name  = "AZURE_CLIENT_ID"

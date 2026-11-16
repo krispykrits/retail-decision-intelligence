@@ -39,12 +39,14 @@ Optional local settings: copy `.env.example` to `.env`.
 
 ## Deployment target
 
-```mermaid
-flowchart TD
-  Browser["Browser"] --> SPA["React · Azure Static Web Apps"]
-  SPA --> API["FastAPI · Azure Container Apps"]
-  SPA --> Identity["Microsoft Entra External ID"]
-  API --> SQL["Azure SQL"]
+One Azure Container App serves the built React frontend and FastAPI over the
+same HTTPS address. It scales to zero and connects to Azure SQL. All project
+resources share one resource group in North Central US.
+
+```bash
+docker build -t rdi .
+docker run --rm -p 8000:8000 rdi
+python scripts/smoke_deployment.py http://127.0.0.1:8000
 ```
 
 ## Azure infrastructure
@@ -57,7 +59,7 @@ Container Apps quota, and SQL free-tier eligibility before applying. Register
 
 Copy the examples to `infra/bootstrap/terraform.tfvars`, `infra/terraform.tfvars`,
 and `infra/backend.hcl`; fill in your subscription, regions, identities, names,
-and the project's published API image digest. The bootstrap state operator must
+and the project's published combined image digest. The bootstrap state operator must
 be the signed-in identity and have permission to create resource-scoped roles.
 
 ```bash
@@ -81,16 +83,15 @@ Verify remote state migration before deleting local state backups. Blob state
 uses Entra authorization, locking, versioning, and seven-day soft delete. Keep
 state and saved plans private; provider state can contain deployment credentials.
 
-SQL starts closed. Copy `terraform -chdir=infra output api_outbound_ipv4_addresses`
+SQL starts closed. Copy `terraform -chdir=infra output app_outbound_ipv4_addresses`
 into `sql_allowed_ipv4_addresses`, review, and apply again. Only IPs reported by
 the API are accepted; broad Azure-service access is forbidden. Refresh this list
 after environment changes because outbound IPs can change. SQL uses Entra-only
 authentication and TLS 1.2; database grants and API integration are story #3.
 
-The API scales to zero; SWA uses Free, and SQL uses its free allowance with
+The API scales to zero; SQL uses its free allowance with
 automatic pause at exhaustion. State storage and logs remain metered; a regional
-cost estimate and live validation are required before deployment. Frontend/image
-publishing and application authentication are handled by the following stories.
+cost estimate and live validation are required before deployment. Application authentication is handled by the following stories.
 
 For a disposable environment, review a destroy plan, then apply it:
 

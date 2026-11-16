@@ -28,7 +28,7 @@ resource "azurerm_mssql_firewall_rule" "api" {
 
   lifecycle {
     precondition {
-      condition     = contains(azurerm_container_app.api.outbound_ip_addresses, each.value)
+      condition     = contains(azurerm_container_app.app.outbound_ip_addresses, each.value)
       error_message = "Only outbound IP addresses reported by this project API may access SQL."
     }
   }

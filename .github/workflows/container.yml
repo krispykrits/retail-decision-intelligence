@@ -1,0 +1,51 @@
+name: Container
+
+on:
+  pull_request:
+    paths: ["Dockerfile", ".dockerignore", "backend/**", "frontend/**", "scripts/smoke_deployment.py", ".github/workflows/container.yml"]
+  push:
+    branches: [main]
+    paths: ["Dockerfile", ".dockerignore", "backend/**", "frontend/**", "scripts/smoke_deployment.py", ".github/workflows/container.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/krispykrits/retail-decision-intelligence
+      COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build combined frontend and API image
+        run: |
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$COMMIT_SHA" \
+            --tag "$IMAGE_NAME:$COMMIT_SHA" .
+      - name: Verify the real container
+        run: |
+          docker run --detach --name rdi --read-only --tmpfs /tmp:rw,nosuid,size=16m \
+            --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
+          curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 1 \
+            http://127.0.0.1:8000/api/v1/health
+          python3 scripts/smoke_deployment.py http://127.0.0.1:8000
+      - name: Publish verified image
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE_NAME:$COMMIT_SHA"
+      - name: Container diagnostics
+        if: failure()
+        run: docker logs rdi || true
+      - name: Remove test container
+        if: always()
+        run: docker rm --force rdi || true
