@@ -1,4 +1,5 @@
 mock_provider "azurerm" {
+  override_during = plan
   mock_data "azurerm_client_config" {
     defaults = { tenant_id = "11111111-1111-1111-1111-111111111111" }
   }
@@ -86,4 +87,26 @@ run "reject_mutable_image" {
     api_image = "ghcr.io/example/rdi:latest"
   }
   expect_failures = [var.api_image]
+}
+
+run "allow_reported_api_address" {
+  command = plan
+  variables {
+    sql_allowed_ipv4_addresses = ["203.0.113.10"]
+  }
+  assert {
+    condition = (
+      azurerm_mssql_firewall_rule.api["203.0.113.10"].start_ip_address ==
+      azurerm_mssql_firewall_rule.api["203.0.113.10"].end_ip_address
+    )
+    error_message = "The firewall must allow individual addresses, never ranges."
+  }
+}
+
+run "reject_unrelated_address" {
+  command = plan
+  variables {
+    sql_allowed_ipv4_addresses = ["203.0.113.11"]
+  }
+  expect_failures = [azurerm_mssql_firewall_rule.api]
 }

@@ -1,4 +1,5 @@
 mock_provider "azurerm" {
+  override_during = plan
   mock_resource "azurerm_storage_account" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
