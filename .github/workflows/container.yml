@@ -33,7 +33,7 @@ jobs:
         run: |
           docker run --detach --name rdi --read-only --tmpfs /tmp:rw,nosuid,size=16m \
             --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
-          curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 1 \
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 \
             http://127.0.0.1:8000/api/v1/health
           python3 scripts/smoke_deployment.py http://127.0.0.1:8000
       - name: Publish verified image
