@@ -1,0 +1,5 @@
+subscription_id          = "<subscription-id>"
+resource_group_name      = "rg-rdi-dev"
+location                 = "<approved-region>"
+state_storage_name       = "<globally-unique-storage-name>"
+state_operator_object_id = "<deployment-principal-object-id>"

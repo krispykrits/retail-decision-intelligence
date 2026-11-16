@@ -1,0 +1,4 @@
+resource_group_name  = "rg-rdi-dev"
+storage_account_name = "<same-state-storage-name-as-bootstrap>"
+container_name       = "tfstate"
+use_azuread_auth     = true
