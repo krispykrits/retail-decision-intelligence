@@ -15,6 +15,8 @@ make dev-web  # terminal 2
 
 Web: http://localhost:5173 · API docs: http://127.0.0.1:8000/api/v1/docs.
 Optional local settings: copy `.env.example` to `.env`.
+Run `make migrate` to initialize the local database.
+`/api/v1/health` checks the process; `/api/v1/ready` checks SQL and migration status.
 
 ## Checks
 
@@ -39,3 +41,6 @@ Terraform 1.14.x: `infra/bootstrap/` manages the resource group and remote state
 configuration examples before planning. Both configurations share one resource
 group. The app runs in North Central US; SQL uses West US 3.
 Apply saved plans; keep state and plans out of Git.
+SQL uses managed identity. Run migrations separately as the SQL administrator;
+the API identity needs only `SELECT` on `dbo.alembic_version` for this story.
+SQL network access remains blocked until an egress rule is approved.

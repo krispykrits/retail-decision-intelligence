@@ -1,4 +1,4 @@
-.PHONY: setup dev-api dev-web contracts contracts-check format lint test build check smoke
+.PHONY: setup dev-api dev-web migrate contracts contracts-check format lint test build check smoke
 
 setup:
 	uv sync --project backend --locked
@@ -9,6 +9,9 @@ dev-api:
 
 dev-web:
 	npm run dev --prefix frontend
+
+migrate:
+	uv run --project backend python -m retail_api.migrate
 
 contracts:
 	uv run --project backend python scripts/export_openapi.py

@@ -36,6 +36,38 @@ jobs:
           curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 \
             http://127.0.0.1:8000/api/v1/health
           python3 scripts/smoke_deployment.py http://127.0.0.1:8000
+      - name: Verify SQL Server migrations and dependency readiness
+        run: |
+          SQL_TEST_PASSWORD="Rdi1!$(openssl rand -hex 24)"
+          echo "::add-mask::$SQL_TEST_PASSWORD"
+          export SQLCMDPASSWORD="$SQL_TEST_PASSWORD"
+          docker network create rdi-test
+          docker run --detach --name rdi-sql --network rdi-test \
+            --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD="$SQL_TEST_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+          for attempt in {1..60}; do
+            if docker exec --env SQLCMDPASSWORD rdi-sql /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -C -b -l 2 -Q 'SELECT 1' >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec --env SQLCMDPASSWORD rdi-sql /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -C -b -Q 'CREATE DATABASE retail_test'
+          export RDI_DATABASE_URL="mssql+pyodbc://sa:$SQL_TEST_PASSWORD@rdi-sql/retail_test?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes"
+          echo "::add-mask::$RDI_DATABASE_URL"
+          for attempt in 1 2; do
+            docker run --rm --network rdi-test --env RDI_DATABASE_URL \
+              "$IMAGE_NAME:$COMMIT_SHA" python -m retail_api.migrate
+          done
+          docker run --detach --name rdi-db-api --network rdi-test --read-only \
+            --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
+            --publish 127.0.0.1:8001:8000 "$IMAGE_NAME:$COMMIT_SHA"
+          curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
+            --max-time 3 http://127.0.0.1:8001/api/v1/ready
+          docker stop rdi-sql
+          test "$(curl --silent --max-time 20 --output /tmp/readiness.json \
+            --write-out '%{http_code}' http://127.0.0.1:8001/api/v1/ready)" = 503
+          grep --quiet '"status":"unavailable"' /tmp/readiness.json
+          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8001/api/v1/health
       - name: Publish verified image
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -45,7 +77,11 @@ jobs:
           docker push "$IMAGE_NAME:$COMMIT_SHA"
       - name: Container diagnostics
         if: failure()
-        run: docker logs rdi || true
+        run: |
+          docker logs rdi || true
+          docker logs rdi-db-api || true
       - name: Remove test container
         if: always()
-        run: docker rm --force rdi || true
+        run: |
+          docker rm --force rdi rdi-db-api rdi-sql || true
+          docker network rm rdi-test || true
