@@ -12,7 +12,13 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Change Role */
+        /**
+         * Change another account's application role
+         * @description Requires an Administrator session and CSRF token. Assigns Analyst or Administrator in SQL.
+         *
+         *     An administrator cannot change their own role. The target's next API request uses the new
+         *     permission without waiting for token expiry. Returns the target's public account profile.
+         */
         put: operations["change_account_role"];
         post?: never;
         delete?: never;
@@ -28,7 +34,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Account Configuration */
+        /**
+         * Read public account configuration
+         * @description Public endpoint. Returns configuration flags without secrets or SMTP credentials.
+         *
+         *     Responses are not cached. A configured sender has not necessarily been delivery-tested.
+         */
         get: operations["get_account_configuration"];
         put?: never;
         post?: never;
@@ -45,7 +56,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Csrf */
+        /**
+         * Get a CSRF token and cookie
+         * @description Public endpoint. Sets an HttpOnly, SameSite=Strict cookie and returns its signed token.
+         *
+         *     Send the token in `X-CSRF-Token` on writes, including registration and sign-in.
+         *     In Swagger, enter it under **Authorize → CSRFToken**. Keep cookies enabled and
+         *     use the same origin. Refresh the token after one hour or after replacing its cookie.
+         *     Development cookies require HTTPS. This endpoint does not sign in the caller.
+         */
         get: operations["get_csrf_token"];
         put?: never;
         post?: never;
@@ -64,7 +83,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Forgot Password */
+        /**
+         * Request a password recovery link
+         * @description Public write with CSRF protection. Emails a 30-minute recovery link to an active account.
+         *
+         *     Missing or inactive accounts also return 202. Requesting a link does not change the password
+         *     or revoke sessions. Actual SMTP failures return 503 rather than reporting successful delivery.
+         */
         post: operations["request_password_reset"];
         delete?: never;
         options?: never;
@@ -81,7 +106,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login */
+        /**
+         * Sign in with email and password
+         * @description Public write requiring CSRF protection. Accepts JSON credentials for a verified account.
+         *
+         *     Issues an eight-hour HttpOnly, SameSite=Strict session cookie (Secure in development).
+         *     Replaces this browser's previous session; other sessions remain active. No session token
+         *     is returned in JSON. Requests are rate-limited by account and connection address.
+         */
         post: operations["sign_in"];
         delete?: never;
         options?: never;
@@ -98,7 +130,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Revoke the current session
+         * @description Requires a valid session and CSRF token. Revokes this browser's session in SQL.
+         *
+         *     Either application role can sign out. Other sessions remain active. Reusing the revoked
+         *     cookie fails authentication; an already-expired or revoked session returns 401.
+         */
         post: operations["sign_out"];
         delete?: never;
         options?: never;
@@ -115,7 +153,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register */
+        /**
+         * Register an Analyst account
+         * @description Public write requiring CSRF protection. Creates an unverified Analyst and emails a link.
+         *
+         *     Existing accounts also return 202 without changing credentials or permissions.
+         *     Use request-verify to resend a link. Account/verification flags cannot be supplied.
+         *     Email delivery must be configured; sign-in is blocked until verification succeeds.
+         */
         post: operations["register_account"];
         delete?: never;
         options?: never;
@@ -132,7 +177,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request Verification */
+        /**
+         * Resend an email verification link
+         * @description Public write requiring CSRF protection. Emails a new link to an active, unverified account.
+         *
+         *     Missing, inactive and already-verified accounts also return 202. Links expire after
+         *     30 minutes and cannot verify an account again after successful verification.
+         */
         post: operations["request_email_verification"];
         delete?: never;
         options?: never;
@@ -149,7 +200,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reset Password */
+        /**
+         * Reset a password using an email token
+         * @description Public write requiring CSRF protection. Sets a new password using a valid recovery token.
+         *
+         *     Revokes every session in the same SQL transaction as the password change. The token cannot
+         *     be reused afterward. Does not create a new session or verify an unverified email address.
+         */
         post: operations["reset_password"];
         delete?: never;
         options?: never;
@@ -166,7 +223,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify */
+        /**
+         * Verify account email ownership
+         * @description Public write requiring CSRF protection. Consumes the verification email's token.
+         *
+         *     This verifies email ownership without creating a session or granting Administrator access.
+         *     Recovery tokens cannot be used here. Submit explicitly rather than following a GET link.
+         */
         post: operations["verify_email"];
         delete?: never;
         options?: never;
@@ -182,8 +245,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Health
-         * @description Process liveness only; database readiness is a separate concern.
+         * Check API process liveness
+         * @description Public endpoint. Returns 200 while the API process can serve requests.
+         *
+         *     Does not query SQL or check email delivery. Use /ready for database readiness.
          */
         get: operations["get_health"];
         put?: never;
@@ -202,8 +267,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Me
-         * @description Return the account identified by the server-issued HttpOnly session cookie.
+         * Read the signed-in account
+         * @description Requires a session cookie. Returns account ID, display name, email and current roles.
+         *
+         *     SQL is authoritative: role changes and account disabling apply on the next request.
+         *     Responses are not cached and contain no password hashes, session tokens or credential metadata.
          */
         get: operations["get_current_account"];
         put?: never;
@@ -222,8 +290,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Readiness
-         * @description Require connectivity and the expected migration; never expose SQL errors.
+         * Check database and migration readiness
+         * @description Public endpoint. Checks SQL connectivity and migration compatibility with this build.
+         *
+         *     Returns 503 with a safe unavailable status and Retry-After: 15 otherwise. Responses are
+         *     not cached and expose no database errors. Does not test email delivery.
          */
         get: operations["get_readiness"];
         put?: never;
@@ -240,26 +311,40 @@ export interface components {
     schemas: {
         /** AccountConfiguration */
         AccountConfiguration: {
-            /** Configured */
+            /**
+             * Configured
+             * @description Account signing configuration is present.
+             */
             configured: boolean;
-            /** Email Delivery */
+            /**
+             * Email Delivery
+             * @description SMTP settings are present; this is not a delivery health check.
+             */
             email_delivery: boolean;
         };
         /** AccountRead */
         AccountRead: {
-            /** Display Name */
+            /**
+             * Display Name
+             * @description Account display name.
+             */
             display_name: string;
             /**
              * Email
              * Format: email
+             * @description Verified account email address.
              */
             email: string;
             /**
              * Id
              * Format: uuid
+             * @description Stable application account identifier.
              */
             id: string;
-            /** Roles */
+            /**
+             * Roles
+             * @description Current SQL-managed permissions: Analyst or Administrator.
+             */
             roles: components["schemas"]["Role"][];
         };
         /** Credentials */
@@ -267,14 +352,23 @@ export interface components {
             /**
              * Email
              * Format: email
+             * @description Registered, verified email address.
+             * @example analyst@example.com
              */
             email: string;
-            /** Password */
+            /**
+             * Password
+             * Format: password
+             * @description Account password.
+             */
             password: string;
         };
         /** CsrfToken */
         CsrfToken: {
-            /** Token */
+            /**
+             * Token
+             * @description Send as X-CSRF-Token with the matching browser cookie on writes; valid for one hour.
+             */
             token: string;
         };
         /** EmailRequest */
@@ -282,8 +376,18 @@ export interface components {
             /**
              * Email
              * Format: email
+             * @description Account email; responses do not disclose whether it exists.
+             * @example analyst@example.com
              */
             email: string;
+        };
+        /** ErrorResponse */
+        ErrorResponse: {
+            /**
+             * Detail
+             * @description Safe error message; excludes credentials and provider/SQL details.
+             */
+            detail: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -312,7 +416,10 @@ export interface components {
         };
         /** LinkToken */
         LinkToken: {
-            /** Token */
+            /**
+             * Token
+             * @description Token from the matching email link's #token fragment; expires after 30 minutes.
+             */
             token: string;
         };
         /** ReadinessResponse */
@@ -325,21 +432,38 @@ export interface components {
         };
         /** RegisterAccount */
         RegisterAccount: {
-            /** Display Name */
+            /**
+             * Display Name
+             * @description Name displayed in the application; does not grant permissions.
+             * @example Retail analyst
+             */
             display_name: string;
             /**
              * Email
              * Format: email
+             * @description Email address to verify before sign-in.
+             * @example analyst@example.com
              */
             email: string;
-            /** Password */
+            /**
+             * Password
+             * Format: password
+             * @description Password or passphrase; 15–128 characters.
+             */
             password: string;
         };
         /** ResetPassword */
         ResetPassword: {
-            /** Password */
+            /**
+             * Password
+             * Format: password
+             * @description New password or passphrase; 15–128 characters.
+             */
             password: string;
-            /** Token */
+            /**
+             * Token
+             * @description Token from the matching email link's #token fragment; expires after 30 minutes.
+             */
             token: string;
         };
         /**
@@ -349,6 +473,7 @@ export interface components {
         Role: "Analyst" | "Administrator";
         /** RoleChange */
         RoleChange: {
+            /** @description Role to assign to another account; self-changes are forbidden. */
             role: components["schemas"]["Role"];
         };
         /** ValidationError */
@@ -378,6 +503,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description UUID of another existing application account. */
                 account_id: string;
             };
             cookie?: never;
@@ -397,6 +523,33 @@ export interface operations {
                     "application/json": components["schemas"]["AccountRead"];
                 };
             };
+            /** @description Session is missing, invalid, expired or revoked, or the account is inactive/unverified. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrator access is required; self-changes and invalid CSRF/origin are forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The target account does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -404,6 +557,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -446,6 +608,15 @@ export interface operations {
                     "application/json": components["schemas"]["CsrfToken"];
                 };
             };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     request_password_reset: {
@@ -461,13 +632,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Request accepted; does not reveal whether the account exists. */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -477,6 +657,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -494,12 +694,30 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Session cookie issued; no response body. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Credentials are incorrect, or the account is inactive/unverified. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -508,6 +726,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -521,12 +759,39 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Session revoked and cookie cleared; no response body. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Session is missing, invalid, expired or revoked, or the account is inactive/unverified. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -543,13 +808,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Registration accepted; the same response is returned for existing accounts. */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -559,6 +833,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -576,13 +870,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Request accepted; does not reveal account existence or verification status. */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -592,6 +895,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -609,13 +932,31 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Password changed and all account sessions revoked; sign in again. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Recovery token is invalid, expired, already used or belongs to another flow. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -625,6 +966,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -642,13 +1003,31 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Email verified; sign-in is now available. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Verification token is invalid, expired, already used or belongs to another flow. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -658,6 +1037,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many account requests. Retry after the rate-limit window. */
+            429: {
+                headers: {
+                    /** @description Seconds to wait when the rate-limit window is available. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -700,6 +1099,24 @@ export interface operations {
                     "application/json": components["schemas"]["AccountRead"];
                 };
             };
+            /** @description Session is missing, invalid, expired or revoked, or the account is inactive/unverified. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account configuration, SQL or required email delivery is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_readiness: {
@@ -720,9 +1137,11 @@ export interface operations {
                     "application/json": components["schemas"]["ReadinessResponse"];
                 };
             };
-            /** @description Service Unavailable */
+            /** @description SQL cannot be reached or migrations do not match the application. */
             503: {
                 headers: {
+                    /** @description Seconds to wait before retrying (15). */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {

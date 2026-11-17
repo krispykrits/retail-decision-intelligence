@@ -22,9 +22,17 @@ class HealthResponse(BaseModel):
     version: str = __version__
 
 
-@router.get("/health", response_model=HealthResponse, operation_id="get_health")
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    operation_id="get_health",
+    summary="Check API process liveness",
+)
 def health() -> HealthResponse:
-    """Process liveness only; database readiness is a separate concern."""
+    """Public endpoint. Returns 200 while the API process can serve requests.
+
+    Does not query SQL or check email delivery. Use /ready for database readiness.
+    """
     return HealthResponse()
 
 
@@ -35,11 +43,27 @@ class ReadinessResponse(BaseModel):
 @router.get(
     "/ready",
     response_model=ReadinessResponse,
-    responses={503: {"model": ReadinessResponse}},
+    responses={
+        503: {
+            "model": ReadinessResponse,
+            "description": "SQL cannot be reached or migrations do not match the application.",
+            "headers": {
+                "Retry-After": {
+                    "description": "Seconds to wait before retrying (15).",
+                    "schema": {"type": "integer"},
+                }
+            },
+        }
+    },
     operation_id="get_readiness",
+    summary="Check database and migration readiness",
 )
 def readiness(request: Request, response: Response) -> ReadinessResponse:
-    """Require connectivity and the expected migration; never expose SQL errors."""
+    """Public endpoint. Checks SQL connectivity and migration compatibility with this build.
+
+    Returns 503 with a safe unavailable status and Retry-After: 15 otherwise. Responses are
+    not cached and expose no database errors. Does not test email delivery.
+    """
     response.headers["Cache-Control"] = "no-store"
     try:
         with request.app.state.database.connect() as connection:

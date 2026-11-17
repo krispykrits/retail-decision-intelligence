@@ -36,6 +36,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title="Retail Decision Intelligence API",
+        description=(
+            "Health and account setup endpoints are public. Other versioned API endpoints require "
+            "a verified account's session cookie. Writes require CSRF protection and, outside "
+            "account flows, Administrator access. For Swagger writes, first call GET "
+            "/api/v1/auth/csrf and enter its token under Authorize → CSRFToken; "
+            "keep cookies enabled. "
+            "Sign in through POST /api/v1/auth/login. Validation failures return 422 with field "
+            "locations and safe messages, without echoing submitted credentials."
+        ),
+        openapi_tags=[
+            {
+                "name": "account",
+                "description": (
+                    "Registration, verified-email sign-in, recovery, sessions and SQL-managed"
+                    " roles."
+                ),
+            },
+            {"name": "health", "description": "Public process and database readiness probes."},
+        ],
         version=__version__,
         openapi_url=f"{API_PREFIX}/openapi.json",
         docs_url=f"{API_PREFIX}/docs",
