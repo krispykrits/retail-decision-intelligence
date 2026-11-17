@@ -63,6 +63,9 @@ run "single_group_and_cost_controls" {
       length(azurerm_mssql_firewall_rule.api) == 0 &&
       length(azurerm_mssql_firewall_rule.azure_services) == 0 &&
       azurerm_mssql_server.sql.azuread_administrator[0].azuread_authentication_only &&
+      azurerm_mssql_server.sql.minimum_tls_version == "1.2" &&
+      { for entry in azurerm_container_app.app.template[0].container[0].env : entry.name => entry.value }["RDI_ENVIRONMENT"] == "development" &&
+      { for entry in azurerm_container_app.app.template[0].container[0].env : entry.name => entry.value }["RDI_CORS_ORIGINS"] == "[]" &&
       !azurerm_container_app.app.ingress[0].allow_insecure_connections
     )
     error_message = "A fresh deployment must deny SQL network access and require Entra/TLS."

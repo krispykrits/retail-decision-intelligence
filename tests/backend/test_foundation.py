@@ -1,8 +1,9 @@
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
 
-from retail_api.config import Settings
+from retail_api.config import Environment, Settings
 from retail_api.database import create_database_engine
 from retail_api.main import create_app
 
@@ -37,6 +38,14 @@ def test_cors_allows_only_configured_origins() -> None:
         denied = client.get("/api/v1/health", headers={"Origin": "https://untrusted.example"})
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert "access-control-allow-origin" not in denied.headers
+    with pytest.raises(ValueError, match="explicit"):
+        Settings(cors_origins=["*"], _env_file=None)
+    with pytest.raises(ValueError, match="one origin"):
+        Settings(
+            environment=Environment.DEVELOPMENT,
+            cors_origins=["https://other.example"],
+            _env_file=None,
+        )
 
 
 def test_local_sql_configuration_executes_a_query() -> None:

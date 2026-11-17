@@ -98,6 +98,10 @@ resource "azurerm_container_app" "app" {
 
       # UI and API share one origin; database authentication uses the attached identity.
       env {
+        name  = "RDI_ENVIRONMENT"
+        value = "development"
+      }
+      env {
         name  = "RDI_CORS_ORIGINS"
         value = "[]"
       }

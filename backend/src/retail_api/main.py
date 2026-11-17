@@ -11,9 +11,11 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from retail_api import __version__
+from retail_api.api import API_PREFIX
 from retail_api.api.health import router as health_router
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
+from retail_api.security import security_headers
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -31,17 +33,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="Retail Decision Intelligence API",
         version=__version__,
-        openapi_url="/api/v1/openapi.json",
-        docs_url="/api/v1/docs",
+        openapi_url=f"{API_PREFIX}/openapi.json",
+        docs_url=f"{API_PREFIX}/docs",
         redoc_url=None,
         lifespan=lifespan,
     )
+    documentation_paths = {application.docs_url, application.swagger_ui_oauth2_redirect_url}
 
     @application.middleware("http")
     async def correlation_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
         request.state.correlation_id = str(uuid4())
         response = await call_next(request)
         response.headers["X-Correlation-ID"] = request.state.correlation_id
+        response.headers.update(
+            security_headers(
+                configuration.environment,
+                documentation=request.url.path in documentation_paths,
+            )
+        )
         return response
 
     application.add_middleware(
@@ -51,7 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET"],
         allow_headers=["Authorization", "Content-Type"],
     )
-    application.include_router(health_router, prefix="/api/v1")
+    application.include_router(health_router, prefix=API_PREFIX)
     if configuration.static_directory is not None:
         # Unknown API requests must never fall through to the React HTML page.
         application.add_api_route(

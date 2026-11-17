@@ -65,12 +65,13 @@ jobs:
           # Start the built app once, with a read-only filesystem and writable /tmp.
           docker run --detach --name rdi --network rdi-test --read-only \
             --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
+            --env RDI_ENVIRONMENT=development \
             --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
           # Wait until the API can query the migrated database.
           curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
             --max-time 3 http://127.0.0.1:8000/api/v1/ready
           # Check frontend routes, assets, API health, and missing-route responses.
-          python3 scripts/smoke_deployment.py http://127.0.0.1:8000
+          python3 scripts/smoke_deployment.py http://127.0.0.1:8000 --security
           # Simulate a database outage: readiness must fail, while liveness stays healthy.
           docker stop rdi-sql
           test "$(curl --silent --show-error --max-time 20 --output /dev/null \
