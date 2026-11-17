@@ -4,12 +4,10 @@
       "AccountConfiguration": {
         "properties": {
           "configured": {
-            "description": "Account signing configuration is present.",
             "title": "Configured",
             "type": "boolean"
           },
           "email_delivery": {
-            "description": "SMTP settings are present; this is not a delivery health check.",
             "title": "Email Delivery",
             "type": "boolean"
           }
@@ -24,24 +22,20 @@
       "AccountRead": {
         "properties": {
           "display_name": {
-            "description": "Account display name.",
             "title": "Display Name",
             "type": "string"
           },
           "email": {
-            "description": "Verified account email address.",
             "format": "email",
             "title": "Email",
             "type": "string"
           },
           "id": {
-            "description": "Stable application account identifier.",
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
           "roles": {
-            "description": "Current SQL-managed permissions: Analyst or Administrator.",
             "items": {
               "$ref": "#/components/schemas/Role"
             },
@@ -61,16 +55,11 @@
       "Credentials": {
         "properties": {
           "email": {
-            "description": "Registered, verified email address.",
-            "examples": [
-              "analyst@example.com"
-            ],
             "format": "email",
             "title": "Email",
             "type": "string"
           },
           "password": {
-            "description": "Account password.",
             "format": "password",
             "maxLength": 128,
             "minLength": 1,
@@ -89,7 +78,6 @@
       "CsrfToken": {
         "properties": {
           "token": {
-            "description": "Send as X-CSRF-Token with the matching browser cookie on writes; valid for one hour.",
             "title": "Token",
             "type": "string"
           }
@@ -103,10 +91,6 @@
       "EmailRequest": {
         "properties": {
           "email": {
-            "description": "Account email; responses do not disclose whether it exists.",
-            "examples": [
-              "analyst@example.com"
-            ],
             "format": "email",
             "title": "Email",
             "type": "string"
@@ -121,7 +105,6 @@
       "ErrorResponse": {
         "properties": {
           "detail": {
-            "description": "Safe error message; excludes credentials and provider/SQL details.",
             "title": "Detail",
             "type": "string"
           }
@@ -171,7 +154,6 @@
       "LinkToken": {
         "properties": {
           "token": {
-            "description": "Token from the matching email link's #token fragment; expires after 30 minutes.",
             "maxLength": 4096,
             "minLength": 1,
             "title": "Token",
@@ -206,10 +188,6 @@
         "additionalProperties": false,
         "properties": {
           "display_name": {
-            "description": "Name displayed in the application; does not grant permissions.",
-            "examples": [
-              "Retail analyst"
-            ],
             "maxLength": 100,
             "minLength": 1,
             "pattern": "\\S",
@@ -217,16 +195,11 @@
             "type": "string"
           },
           "email": {
-            "description": "Email address to verify before sign-in.",
-            "examples": [
-              "analyst@example.com"
-            ],
             "format": "email",
             "title": "Email",
             "type": "string"
           },
           "password": {
-            "description": "Password or passphrase; 15\u2013128 characters.",
             "format": "password",
             "maxLength": 128,
             "minLength": 15,
@@ -246,7 +219,6 @@
       "ResetPassword": {
         "properties": {
           "password": {
-            "description": "New password or passphrase; 15\u2013128 characters.",
             "format": "password",
             "maxLength": 128,
             "minLength": 15,
@@ -255,7 +227,6 @@
             "writeOnly": true
           },
           "token": {
-            "description": "Token from the matching email link's #token fragment; expires after 30 minutes.",
             "maxLength": 4096,
             "minLength": 1,
             "title": "Token",
@@ -282,8 +253,7 @@
         "additionalProperties": false,
         "properties": {
           "role": {
-            "$ref": "#/components/schemas/Role",
-            "description": "Role to assign to another account; self-changes are forbidden."
+            "$ref": "#/components/schemas/Role"
           }
         },
         "required": [
@@ -355,7 +325,6 @@
     }
   },
   "info": {
-    "description": "Health and account setup endpoints are public. Other versioned API endpoints require a verified account's session cookie. Writes require CSRF protection and, outside account flows, Administrator access. For Swagger writes, first call GET /api/v1/auth/csrf and enter its token under Authorize \u2192 CSRFToken; keep cookies enabled. Sign in through POST /api/v1/auth/login. Validation failures return 422 with field locations and safe messages, without echoing submitted credentials.",
     "title": "Retail Decision Intelligence API",
     "version": "0.1.0"
   },
@@ -1211,15 +1180,5 @@
         ]
       }
     }
-  },
-  "tags": [
-    {
-      "description": "Registration, verified-email sign-in, recovery, sessions and SQL-managed roles.",
-      "name": "account"
-    },
-    {
-      "description": "Public process and database readiness probes.",
-      "name": "health"
-    }
-  ]
+  }
 }

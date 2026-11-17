@@ -29,8 +29,6 @@ def token_digest(token: str) -> str:
 
 
 class AccountStore(BaseUserDatabase[AccountUser, UUID]):
-    """Adapt the existing synchronous SQL/managed-identity engine to FastAPI Users."""
-
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 

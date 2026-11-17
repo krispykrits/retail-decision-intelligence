@@ -311,40 +311,26 @@ export interface components {
     schemas: {
         /** AccountConfiguration */
         AccountConfiguration: {
-            /**
-             * Configured
-             * @description Account signing configuration is present.
-             */
+            /** Configured */
             configured: boolean;
-            /**
-             * Email Delivery
-             * @description SMTP settings are present; this is not a delivery health check.
-             */
+            /** Email Delivery */
             email_delivery: boolean;
         };
         /** AccountRead */
         AccountRead: {
-            /**
-             * Display Name
-             * @description Account display name.
-             */
+            /** Display Name */
             display_name: string;
             /**
              * Email
              * Format: email
-             * @description Verified account email address.
              */
             email: string;
             /**
              * Id
              * Format: uuid
-             * @description Stable application account identifier.
              */
             id: string;
-            /**
-             * Roles
-             * @description Current SQL-managed permissions: Analyst or Administrator.
-             */
+            /** Roles */
             roles: components["schemas"]["Role"][];
         };
         /** Credentials */
@@ -352,23 +338,17 @@ export interface components {
             /**
              * Email
              * Format: email
-             * @description Registered, verified email address.
-             * @example analyst@example.com
              */
             email: string;
             /**
              * Password
              * Format: password
-             * @description Account password.
              */
             password: string;
         };
         /** CsrfToken */
         CsrfToken: {
-            /**
-             * Token
-             * @description Send as X-CSRF-Token with the matching browser cookie on writes; valid for one hour.
-             */
+            /** Token */
             token: string;
         };
         /** EmailRequest */
@@ -376,17 +356,12 @@ export interface components {
             /**
              * Email
              * Format: email
-             * @description Account email; responses do not disclose whether it exists.
-             * @example analyst@example.com
              */
             email: string;
         };
         /** ErrorResponse */
         ErrorResponse: {
-            /**
-             * Detail
-             * @description Safe error message; excludes credentials and provider/SQL details.
-             */
+            /** Detail */
             detail: string;
         };
         /** HTTPValidationError */
@@ -416,10 +391,7 @@ export interface components {
         };
         /** LinkToken */
         LinkToken: {
-            /**
-             * Token
-             * @description Token from the matching email link's #token fragment; expires after 30 minutes.
-             */
+            /** Token */
             token: string;
         };
         /** ReadinessResponse */
@@ -432,23 +404,16 @@ export interface components {
         };
         /** RegisterAccount */
         RegisterAccount: {
-            /**
-             * Display Name
-             * @description Name displayed in the application; does not grant permissions.
-             * @example Retail analyst
-             */
+            /** Display Name */
             display_name: string;
             /**
              * Email
              * Format: email
-             * @description Email address to verify before sign-in.
-             * @example analyst@example.com
              */
             email: string;
             /**
              * Password
              * Format: password
-             * @description Password or passphrase; 15–128 characters.
              */
             password: string;
         };
@@ -457,13 +422,9 @@ export interface components {
             /**
              * Password
              * Format: password
-             * @description New password or passphrase; 15–128 characters.
              */
             password: string;
-            /**
-             * Token
-             * @description Token from the matching email link's #token fragment; expires after 30 minutes.
-             */
+            /** Token */
             token: string;
         };
         /**
@@ -473,7 +434,6 @@ export interface components {
         Role: "Analyst" | "Administrator";
         /** RoleChange */
         RoleChange: {
-            /** @description Role to assign to another account; self-changes are forbidden. */
             role: components["schemas"]["Role"];
         };
         /** ValidationError */
