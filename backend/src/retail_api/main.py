@@ -18,6 +18,7 @@ from retail_api.database import create_database_engine
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     configuration = settings if settings is not None else Settings()
+    development = configuration.environment == "development"
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -31,8 +32,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="Retail Decision Intelligence API",
         version=__version__,
-        openapi_url="/api/v1/openapi.json",
-        docs_url="/api/v1/docs",
+        openapi_url=None if development else "/api/v1/openapi.json",
+        docs_url=None if development else "/api/v1/docs",
         redoc_url=None,
         lifespan=lifespan,
     )
@@ -42,6 +43,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request.state.correlation_id = str(uuid4())
         response = await call_next(request)
         response.headers["X-Correlation-ID"] = request.state.correlation_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if development:
+            # The Azure ingress enforces HTTPS; the built SPA needs only same-origin assets.
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; base-uri 'self'; object-src 'none'; "
+                "frame-ancestors 'none'; form-action 'self'"
+            )
         return response
 
     application.add_middleware(
