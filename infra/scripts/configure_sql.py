@@ -4,11 +4,12 @@ import os
 import time
 from uuid import UUID
 
+from sqlalchemy import Connection, Engine, text
+from sqlalchemy.exc import DBAPIError
+
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
 from retail_api.migrate import run_migrations
-from sqlalchemy import Connection, Engine, text
-from sqlalchemy.exc import DBAPIError
 
 
 def connect_for_migration(engine: Engine) -> Connection:
