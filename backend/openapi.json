@@ -1,24 +1,6 @@
 {
   "components": {
     "schemas": {
-      "AccountConfiguration": {
-        "properties": {
-          "configured": {
-            "title": "Configured",
-            "type": "boolean"
-          },
-          "email_delivery": {
-            "title": "Email Delivery",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "configured",
-          "email_delivery"
-        ],
-        "title": "AccountConfiguration",
-        "type": "object"
-      },
       "AccountRead": {
         "properties": {
           "display_name": {
@@ -249,19 +231,6 @@
         "title": "Role",
         "type": "string"
       },
-      "RoleChange": {
-        "additionalProperties": false,
-        "properties": {
-          "role": {
-            "$ref": "#/components/schemas/Role"
-          }
-        },
-        "required": [
-          "role"
-        ],
-        "title": "RoleChange",
-        "type": "object"
-      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -305,19 +274,17 @@
     },
     "securitySchemes": {
       "CSRFToken": {
-        "description": "Call GET /api/v1/auth/csrf, then enter its token in Authorize. Keep the matching cookie. Required on every write, including sign-in.",
+        "description": "CSRF token returned by GET /api/v1/auth/csrf; required on writes.",
         "in": "header",
         "name": "X-CSRF-Token",
         "type": "apiKey"
       },
       "DevelopmentSession": {
-        "description": "Development HTTPS session cookie, issued by sign-in and sent automatically by the browser.",
         "in": "cookie",
         "name": "__Host-rdi_session",
         "type": "apiKey"
       },
       "LocalSession": {
-        "description": "Local HTTP session cookie, issued by sign-in and sent automatically by the browser.",
         "in": "cookie",
         "name": "rdi_session",
         "type": "apiKey"
@@ -330,137 +297,9 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/v1/accounts/{account_id}/role": {
-      "put": {
-        "description": "Requires an Administrator session and CSRF token. Assigns Analyst or Administrator in SQL.\n\nAn administrator cannot change their own role. The target's next API request uses the new\npermission without waiting for token expiry. Returns the target's public account profile.",
-        "operationId": "change_account_role",
-        "parameters": [
-          {
-            "description": "UUID of another existing application account.",
-            "in": "path",
-            "name": "account_id",
-            "required": true,
-            "schema": {
-              "description": "UUID of another existing application account.",
-              "format": "uuid",
-              "title": "Account Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoleChange"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccountRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Session is missing, invalid, expired or revoked, or the account is inactive/unverified."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Administrator access is required; self-changes and invalid CSRF/origin are forbidden."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "The target account does not exist."
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
-          }
-        },
-        "security": [
-          {
-            "CSRFToken": [],
-            "LocalSession": []
-          },
-          {
-            "CSRFToken": [],
-            "DevelopmentSession": []
-          }
-        ],
-        "summary": "Change another account's application role",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/api/v1/auth/config": {
-      "get": {
-        "description": "Public endpoint. Returns configuration flags without secrets or SMTP credentials.\n\nResponses are not cached. A configured sender has not necessarily been delivery-tested.",
-        "operationId": "get_account_configuration",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccountConfiguration"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Read public account configuration",
-        "tags": [
-          "account"
-        ]
-      }
-    },
     "/api/v1/auth/csrf": {
       "get": {
-        "description": "Public endpoint. Sets an HttpOnly, SameSite=Strict cookie and returns its signed token.\n\nSend the token in `X-CSRF-Token` on writes, including registration and sign-in.\nIn Swagger, enter it under **Authorize \u2192 CSRFToken**. Keep cookies enabled and\nuse the same origin. Refresh the token after one hour or after replacing its cookie.\nDevelopment cookies require HTTPS. This endpoint does not sign in the caller.",
+        "description": "Public. Sets the CSRF cookie; send the returned token as X-CSRF-Token on writes.\nIn Swagger, enter the token under Authorize. Expires after one hour.",
         "operationId": "get_csrf_token",
         "responses": {
           "200": {
@@ -481,7 +320,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "summary": "Get a CSRF token and cookie",
@@ -492,7 +331,7 @@
     },
     "/api/v1/auth/forgot-password": {
       "post": {
-        "description": "Public write with CSRF protection. Emails a 30-minute recovery link to an active account.\n\nMissing or inactive accounts also return 202. Requesting a link does not change the password\nor revoke sessions. Actual SMTP failures return 503 rather than reporting successful delivery.",
+        "description": "Public with CSRF. Sends a 30-minute recovery link to an active account.\nMissing and inactive accounts also return 202; email delivery failures return 503.",
         "operationId": "request_password_reset",
         "requestBody": {
           "content": {
@@ -511,7 +350,7 @@
                 "schema": {}
               }
             },
-            "description": "Request accepted; does not reveal whether the account exists."
+            "description": "Successful Response"
           },
           "403": {
             "content": {
@@ -521,7 +360,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -541,15 +380,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -559,7 +390,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -575,7 +406,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "description": "Public write requiring CSRF protection. Accepts JSON credentials for a verified account.\n\nIssues an eight-hour HttpOnly, SameSite=Strict session cookie (Secure in development).\nReplaces this browser's previous session; other sessions remain active. No session token\nis returned in JSON. Requests are rate-limited by account and connection address.",
+        "description": "Public with CSRF. Signs in a verified account and issues an eight-hour HttpOnly session.\nThe cookie is Secure in development; an existing browser session is replaced.",
         "operationId": "sign_in",
         "requestBody": {
           "content": {
@@ -589,7 +420,7 @@
         },
         "responses": {
           "204": {
-            "description": "Session cookie issued; no response body."
+            "description": "Successful Response"
           },
           "401": {
             "content": {
@@ -599,7 +430,7 @@
                 }
               }
             },
-            "description": "Credentials are incorrect, or the account is inactive/unverified."
+            "description": "Invalid credentials or unverified/inactive account."
           },
           "403": {
             "content": {
@@ -609,7 +440,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -629,15 +460,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -647,7 +470,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -663,11 +486,11 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "Requires a valid session and CSRF token. Revokes this browser's session in SQL.\n\nEither application role can sign out. Other sessions remain active. Reusing the revoked\ncookie fails authentication; an already-expired or revoked session returns 401.",
+        "description": "Requires a session and CSRF. Revokes this session in SQL and clears its cookie.",
         "operationId": "sign_out",
         "responses": {
           "204": {
-            "description": "Session revoked and cookie cleared; no response body."
+            "description": "Successful Response"
           },
           "401": {
             "content": {
@@ -677,7 +500,7 @@
                 }
               }
             },
-            "description": "Session is missing, invalid, expired or revoked, or the account is inactive/unverified."
+            "description": "Missing, invalid, expired or revoked session."
           },
           "403": {
             "content": {
@@ -687,7 +510,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "503": {
             "content": {
@@ -697,7 +520,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -718,7 +541,7 @@
     },
     "/api/v1/auth/register": {
       "post": {
-        "description": "Public write requiring CSRF protection. Creates an unverified Analyst and emails a link.\n\nExisting accounts also return 202 without changing credentials or permissions.\nUse request-verify to resend a link. Account/verification flags cannot be supplied.\nEmail delivery must be configured; sign-in is blocked until verification succeeds.",
+        "description": "Public with CSRF. Creates an unverified Analyst and emails a verification link.\nExisting accounts also return 202. Verification is required before sign-in.",
         "operationId": "register_account",
         "requestBody": {
           "content": {
@@ -737,7 +560,7 @@
                 "schema": {}
               }
             },
-            "description": "Registration accepted; the same response is returned for existing accounts."
+            "description": "Successful Response"
           },
           "403": {
             "content": {
@@ -747,7 +570,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -767,15 +590,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -785,7 +600,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -801,7 +616,7 @@
     },
     "/api/v1/auth/request-verify": {
       "post": {
-        "description": "Public write requiring CSRF protection. Emails a new link to an active, unverified account.\n\nMissing, inactive and already-verified accounts also return 202. Links expire after\n30 minutes and cannot verify an account again after successful verification.",
+        "description": "Public with CSRF. Sends a 30-minute verification link to an unverified account.\nMissing, inactive and verified accounts also return 202.",
         "operationId": "request_email_verification",
         "requestBody": {
           "content": {
@@ -820,7 +635,7 @@
                 "schema": {}
               }
             },
-            "description": "Request accepted; does not reveal account existence or verification status."
+            "description": "Successful Response"
           },
           "403": {
             "content": {
@@ -830,7 +645,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -850,15 +665,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -868,7 +675,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -884,7 +691,7 @@
     },
     "/api/v1/auth/reset-password": {
       "post": {
-        "description": "Public write requiring CSRF protection. Sets a new password using a valid recovery token.\n\nRevokes every session in the same SQL transaction as the password change. The token cannot\nbe reused afterward. Does not create a new session or verify an unverified email address.",
+        "description": "Public with CSRF. Changes the password and revokes all sessions atomically.\nThe recovery token cannot be reused; sign in again afterward.",
         "operationId": "reset_password",
         "requestBody": {
           "content": {
@@ -903,7 +710,7 @@
                 "schema": {}
               }
             },
-            "description": "Password changed and all account sessions revoked; sign in again."
+            "description": "Successful Response"
           },
           "400": {
             "content": {
@@ -913,7 +720,7 @@
                 }
               }
             },
-            "description": "Recovery token is invalid, expired, already used or belongs to another flow."
+            "description": "Invalid, expired or used recovery token."
           },
           "403": {
             "content": {
@@ -923,7 +730,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -943,15 +750,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -961,7 +760,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -977,7 +776,7 @@
     },
     "/api/v1/auth/verify": {
       "post": {
-        "description": "Public write requiring CSRF protection. Consumes the verification email's token.\n\nThis verifies email ownership without creating a session or granting Administrator access.\nRecovery tokens cannot be used here. Submit explicitly rather than following a GET link.",
+        "description": "Public with CSRF. Verifies email ownership using the emailed token.\nExpired or used links fail; successful verification does not sign in the account.",
         "operationId": "verify_email",
         "requestBody": {
           "content": {
@@ -996,7 +795,7 @@
                 "schema": {}
               }
             },
-            "description": "Email verified; sign-in is now available."
+            "description": "Successful Response"
           },
           "400": {
             "content": {
@@ -1006,7 +805,7 @@
                 }
               }
             },
-            "description": "Verification token is invalid, expired, already used or belongs to another flow."
+            "description": "Invalid, expired or used verification token."
           },
           "403": {
             "content": {
@@ -1016,7 +815,7 @@
                 }
               }
             },
-            "description": "CSRF cookie/header is missing, mismatched or expired, or the request Origin is untrusted."
+            "description": "Invalid CSRF token or request origin."
           },
           "422": {
             "content": {
@@ -1036,15 +835,7 @@
                 }
               }
             },
-            "description": "Too many account requests. Retry after the rate-limit window.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait when the rate-limit window is available.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many account requests; retry later."
           },
           "503": {
             "content": {
@@ -1054,7 +845,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [
@@ -1092,7 +883,7 @@
     },
     "/api/v1/me": {
       "get": {
-        "description": "Requires a session cookie. Returns account ID, display name, email and current roles.\n\nSQL is authoritative: role changes and account disabling apply on the next request.\nResponses are not cached and contain no password hashes, session tokens or credential metadata.",
+        "description": "Requires a session. Returns account ID, display name, email and current SQL roles.\nThe response is not cached and contains no credential metadata.",
         "operationId": "get_current_account",
         "responses": {
           "200": {
@@ -1113,7 +904,7 @@
                 }
               }
             },
-            "description": "Session is missing, invalid, expired or revoked, or the account is inactive/unverified."
+            "description": "Missing, invalid, expired or revoked session."
           },
           "503": {
             "content": {
@@ -1123,7 +914,7 @@
                 }
               }
             },
-            "description": "Account configuration, SQL or required email delivery is unavailable."
+            "description": "Account configuration, SQL or email delivery unavailable."
           }
         },
         "security": [

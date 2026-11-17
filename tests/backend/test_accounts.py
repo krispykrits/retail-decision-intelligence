@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from datetime import timedelta
 from email.message import EmailMessage
 from pathlib import Path
+from unittest.mock import MagicMock
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -28,26 +29,9 @@ def account_client(
 ) -> Iterator[tuple[TestClient, list[EmailMessage], Settings]]:
     messages: list[EmailMessage] = []
 
-    class MailClient:
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-        def __enter__(self) -> "MailClient":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            pass
-
-        def starttls(self, **kwargs: object) -> None:
-            pass
-
-        def login(self, *args: object) -> None:
-            pass
-
-        def send_message(self, message: EmailMessage) -> None:
-            messages.append(message)
-
-    monkeypatch.setattr("retail_api.accounts.manager.smtplib.SMTP", MailClient)
+    smtp = MagicMock()
+    smtp.return_value.__enter__.return_value.send_message.side_effect = messages.append
+    monkeypatch.setattr("retail_api.accounts.manager.smtplib.SMTP", smtp)
     settings = Settings(
         environment=Environment.DEVELOPMENT,
         public_url="https://testserver",
@@ -196,18 +180,6 @@ def test_csrf_and_role_escalation_are_rejected(account_client) -> None:
         )
         assert response.status_code == 422
         assert PASSWORD not in response.text
-    enroll(client, messages)
-    account_id = client.get("/api/v1/me").json()["id"]
-    csrf = client.get("/api/v1/auth/csrf").json()["token"]
-    assert (
-        client.put(
-            f"/api/v1/accounts/{account_id}/role",
-            json={"role": "Administrator"},
-            headers={"X-CSRF-Token": csrf},
-        ).status_code
-        == 403
-    )
-    assert post(client, "/auth/logout").status_code == 204
 
 
 def test_expired_and_malformed_credentials_fail_closed(account_client) -> None:

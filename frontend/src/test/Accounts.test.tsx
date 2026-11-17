@@ -4,8 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import * as api from '../api/accounts'
 import { AccountPage } from '../pages/AccountPage'
-import { RequireAccount } from './RequireAccount'
-import { SessionProvider } from './SessionProvider'
+import { RequireAccount } from '../auth/RequireAccount'
+import { SessionProvider } from '../auth/SessionProvider'
 
 vi.mock('../api/accounts', () => ({
   getCurrentAccount: vi.fn(),
@@ -67,18 +67,4 @@ it('waits for explicit verification and clears the token from browser history', 
   expect(await screen.findByRole('status')).toHaveTextContent('Email verified')
   await user.click(screen.getByRole('link', { name: 'Sign in' }))
   expect(screen.getByLabelText('Password')).toBeVisible()
-})
-
-it('shows unavailable email delivery without claiming success', async () => {
-  const user = userEvent.setup()
-  vi.mocked(api.requestRecovery).mockRejectedValue(
-    new Error('Account email delivery is not configured'),
-  )
-  open('/account/recover')
-  await user.type(screen.getByLabelText('Email'), 'analyst@example.com')
-  await user.click(screen.getByRole('button', { name: 'Reset your password' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Account email delivery is not configured',
-  )
-  expect(screen.queryByRole('status')).not.toBeInTheDocument()
 })

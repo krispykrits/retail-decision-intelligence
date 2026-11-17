@@ -84,15 +84,6 @@ class AccountStore(BaseUserDatabase[AccountUser, UUID]):
 
         return await self.run(update)
 
-    async def delete(self, user: AccountUser) -> None:
-        def remove(session: Session) -> None:
-            session.execute(delete(AccountSession).where(AccountSession.account_id == user.id))
-            account = session.get(Account, user.id)
-            if account:
-                session.delete(account)
-
-        await self.run(remove)
-
     async def session_account(self, token: str) -> AccountUser | None:
         account = await self.run(
             lambda session: session.scalar(

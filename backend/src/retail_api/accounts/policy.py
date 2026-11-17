@@ -14,8 +14,7 @@ CSRF_HEADER = "X-CSRF-Token"
 CSRF_SECONDS = 60 * 60
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 PUBLIC_READ_PATHS = frozenset(
-    f"{API_PREFIX}/{path}"
-    for path in ("health", "ready", "docs", "openapi.json", "auth/config", "auth/csrf")
+    f"{API_PREFIX}/{path}" for path in ("health", "ready", "docs", "openapi.json", "auth/csrf")
 )
 PUBLIC_WRITE_PATHS = frozenset(
     f"{AUTH_PREFIX}/{path}"

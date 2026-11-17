@@ -77,7 +77,7 @@ jobs:
           # Check frontend routes, assets, API health, and missing-route responses.
           python3 scripts/smoke_deployment.py http://127.0.0.1:8000 --security
           # Exercise cookie sessions and role queries with the actual SQL Server driver.
-          docker exec --interactive rdi python < scripts/smoke_accounts.py
+          docker exec --interactive rdi python < tests/backend/smoke_accounts.py
           # Simulate a database outage: readiness must fail, while liveness stays healthy.
           docker stop rdi-sql
           test "$(curl --silent --show-error --max-time 20 --output /dev/null \

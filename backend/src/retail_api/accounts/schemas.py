@@ -43,16 +43,6 @@ class ResetPassword(LinkToken):
     )
 
 
-class RoleChange(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    role: Role
-
-
-class AccountConfiguration(BaseModel):
-    configured: bool
-    email_delivery: bool
-
-
 class CsrfToken(BaseModel):
     token: str
 
