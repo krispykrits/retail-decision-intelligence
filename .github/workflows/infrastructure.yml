@@ -1,11 +1,7 @@
 name: Infrastructure
 
 on:
-  pull_request:
-    paths: ["infra/**", ".github/workflows/infrastructure.yml"]
-  push:
-    branches: [main]
-    paths: ["infra/**", ".github/workflows/infrastructure.yml"]
+  workflow_call:
 
 permissions:
   contents: read

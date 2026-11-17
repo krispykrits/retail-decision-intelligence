@@ -22,6 +22,7 @@ data/
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
+!infra/development.tfvars
 infra/backend.hcl
 infra/bootstrap/remote.tf
 .DS_Store

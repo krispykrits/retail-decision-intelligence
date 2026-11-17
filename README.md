@@ -17,6 +17,13 @@ make dev-web  # terminal 2
 Web: http://localhost:5173 · API docs: http://127.0.0.1:8000/api/v1/docs.
 Optional local settings: copy `.env.example` to `.env`.
 
+Environments: **local** uses the commands above; **development** deploys from
+`main` after CI passes. No staging or production environment is configured.
+
+Rollback: run **Deploy development** from `main` with the previous image reference
+shown in the deployment summary. Migrations are not downgraded; the selected image
+must support the current database schema.
+
 ## Checks
 
 ```bash
