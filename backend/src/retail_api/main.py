@@ -4,14 +4,18 @@ from typing import NoReturn
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from retail_api import __version__
+from retail_api.accounts.policy import CSRF_HEADER, authorize_request
 from retail_api.api import API_PREFIX
+from retail_api.api.account import router as account_router
 from retail_api.api.health import router as health_router
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
@@ -38,12 +42,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
         lifespan=lifespan,
     )
+    application.state.settings = configuration
     documentation_paths = {application.docs_url, application.swagger_ui_oauth2_redirect_url}
 
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, error: RequestValidationError) -> JSONResponse:
+        # Validation must not echo submitted passwords or recovery tokens.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {key: value for key, value in item.items() if key in {"loc", "msg", "type"}}
+                    for item in error.errors()
+                ]
+            },
+        )
+
     @application.middleware("http")
-    async def correlation_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def request_policy(request: Request, call_next: RequestResponseEndpoint) -> Response:
         request.state.correlation_id = str(uuid4())
-        response = await call_next(request)
+        try:
+            request.state.account = await authorize_request(request, configuration)
+            response = await call_next(request)
+        except HTTPException as error:
+            response = JSONResponse(
+                {"detail": error.detail}, status_code=error.status_code, headers=error.headers
+            )
+        except SQLAlchemyError:
+            response = JSONResponse({"detail": "Account service unavailable"}, status_code=503)
         response.headers["X-Correlation-ID"] = request.state.correlation_id
         response.headers.update(
             security_headers(
@@ -57,10 +83,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=configuration.cors_origins,
         allow_credentials=False,
-        allow_methods=["GET"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", CSRF_HEADER],
     )
     application.include_router(health_router, prefix=API_PREFIX)
+    application.include_router(account_router, prefix=API_PREFIX)
     if configuration.static_directory is not None:
         # Unknown API requests must never fall through to the React HTML page.
         application.add_api_route(

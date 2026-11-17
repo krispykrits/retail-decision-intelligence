@@ -37,6 +37,9 @@ jobs:
           # Generate and mask credentials used only by the disposable CI database.
           SQL_TEST_PASSWORD="Rdi1!$(openssl rand -hex 24)"
           echo "::add-mask::$SQL_TEST_PASSWORD"
+          RDI_AUTH_SECRET=$(openssl rand -hex 32)
+          echo "::add-mask::$RDI_AUTH_SECRET"
+          export RDI_AUTH_SECRET
           # sqlcmd reads its password from this environment variable.
           export SQLCMDPASSWORD="$SQL_TEST_PASSWORD"
           # Give the test containers a shared, isolated Docker network.
@@ -66,12 +69,15 @@ jobs:
           docker run --detach --name rdi --network rdi-test --read-only \
             --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
             --env RDI_ENVIRONMENT=development \
+            --env RDI_AUTH_SECRET --env RDI_PUBLIC_URL=https://ci.example \
             --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
           # Wait until the API can query the migrated database.
           curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
             --max-time 3 http://127.0.0.1:8000/api/v1/ready
           # Check frontend routes, assets, API health, and missing-route responses.
           python3 scripts/smoke_deployment.py http://127.0.0.1:8000 --security
+          # Exercise cookie sessions and role queries with the actual SQL Server driver.
+          docker exec --interactive rdi python < tests/backend/smoke_accounts.py
           # Simulate a database outage: readiness must fail, while liveness stays healthy.
           docker stop rdi-sql
           test "$(curl --silent --show-error --max-time 20 --output /dev/null \

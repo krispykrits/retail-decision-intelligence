@@ -36,6 +36,8 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_app_image: ${{ inputs.image }}
+      # Optional SMTP JSON; an unset secret leaves email operations visibly unavailable.
+      TF_VAR_account_mail: ${{ secrets.ACCOUNT_MAIL || 'null' }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:

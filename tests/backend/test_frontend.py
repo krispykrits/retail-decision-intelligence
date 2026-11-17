@@ -37,7 +37,7 @@ def test_frontend_deep_links_and_api_share_one_origin(
         assert "/api/v1/health" in client.get("/api/v1/openapi.json").json()["paths"]
         docs = client.get("/api/v1/docs")
         assert docs.status_code == 200
-        assert client.get("/api/v1/admin").status_code == 404
+        assert client.get("/api/v1/admin").status_code == 401
         if environment is Environment.DEVELOPMENT:
             assert (
                 "script-src https://cdn.jsdelivr.net 'unsafe-inline'"
@@ -53,9 +53,9 @@ def test_frontend_deep_links_and_api_share_one_origin(
             assert "Access-Control-Allow-Origin" not in response.headers
         for path in ["/api/missing", "/api/v1/missing", "/assets/missing.js"]:
             response = client.get(path, headers={"Accept": "text/html"})
-            assert response.status_code == 404
+            assert response.status_code == (401 if path.startswith("/api/v1/") else 404)
             assert "text/html" not in response.headers["content-type"]
-        assert client.post("/api/v1/missing").status_code == 404
+        assert client.post("/api/v1/missing").status_code == 401
 
 
 def test_configured_frontend_requires_a_built_index(tmp_path: Path) -> None:

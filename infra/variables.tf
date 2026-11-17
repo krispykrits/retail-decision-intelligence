@@ -58,3 +58,16 @@ variable "sql_allow_azure_services" {
   type        = bool
   default     = false
 }
+
+variable "account_mail" {
+  description = "STARTTLS SMTP delivery settings supplied through the development ACCOUNT_MAIL secret."
+  type = object({
+    host     = string
+    port     = optional(number, 587)
+    username = string
+    password = string
+    sender   = string
+  })
+  sensitive = true
+  default   = null
+}

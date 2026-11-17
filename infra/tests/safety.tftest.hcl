@@ -26,6 +26,7 @@ mock_provider "azurerm" {
 }
 
 mock_provider "azapi" {}
+mock_provider "random" {}
 
 variables {
   subscription_id     = "11111111-1111-1111-1111-111111111111"

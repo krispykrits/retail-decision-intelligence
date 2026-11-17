@@ -46,7 +46,12 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
     assert scripts, "Built frontend JavaScript is missing"
     with urlopen(f"{base_url}{scripts[0]}", timeout=REQUEST_TIMEOUT_SECONDS) as response:
         assert "javascript" in response.headers["Content-Type"]
-    missing_paths = [f"{API_PREFIX}/missing", "/assets/missing.js", f"{API_PREFIX}/admin"]
+    denied_paths = {
+        f"{API_PREFIX}/missing": 401,
+        "/assets/missing.js": 404,
+        f"{API_PREFIX}/admin": 401,
+        f"{API_PREFIX}/me": 401,
+    }
     with urlopen(
         f"{base_url}{API_PREFIX}/openapi.json", timeout=REQUEST_TIMEOUT_SECONDS
     ) as response:
@@ -58,17 +63,17 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
                 "script-src https://cdn.jsdelivr.net 'unsafe-inline'"
                 in response.headers["Content-Security-Policy"]
             )
-    for path in missing_paths:
+    for path, expected_status in denied_paths.items():
         try:
             urlopen(
                 Request(f"{base_url}{path}", headers={"Accept": "text/html"}),
                 timeout=REQUEST_TIMEOUT_SECONDS,
             )
         except HTTPError as error:
-            assert error.code == 404, f"Unexpected response for {path}: {error.code}"
+            assert error.code == expected_status, f"Unexpected response for {path}: {error.code}"
         else:
             raise AssertionError(f"Missing endpoint returned frontend HTML: {path}")
-    print("Deployment smoke passed: one origin, API health, SPA deep links, assets and 404s.")
+    print("Deployment smoke passed: one origin, API health, SPA routes, assets and access denial.")
 
 
 if __name__ == "__main__":

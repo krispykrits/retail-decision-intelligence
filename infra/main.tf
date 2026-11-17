@@ -45,6 +45,12 @@ resource "azurerm_user_assigned_identity" "api" {
   tags                = local.tags
 }
 
+# Persist a signing key across revisions; session credentials themselves stay hashed in SQL.
+resource "random_password" "accounts" {
+  length  = 64
+  special = false
+}
+
 # Deploy the combined React/FastAPI image after database setup completes.
 resource "azurerm_container_app" "app" {
   depends_on                   = [terraform_data.database_access]
@@ -54,6 +60,16 @@ resource "azurerm_container_app" "app" {
   revision_mode                = "Single"
   workload_profile_name        = "Consumption"
   tags                         = local.tags
+
+  # Container App secret references keep credentials out of ordinary environment values.
+  secret {
+    name  = "account-signing-key"
+    value = random_password.accounts.result
+  }
+  secret {
+    name  = "account-mail"
+    value = var.account_mail == null ? "{}" : jsonencode(var.account_mail)
+  }
 
   # Azure omits these Single-mode/default fields from read responses.
   # Probe transports stay managed so future updates preserve HTTP checks.
@@ -104,6 +120,22 @@ resource "azurerm_container_app" "app" {
       env {
         name  = "RDI_CORS_ORIGINS"
         value = "[]"
+      }
+      env {
+        name  = "RDI_PUBLIC_URL"
+        value = "https://${var.name_prefix}-app.${azurerm_container_app_environment.app.default_domain}"
+      }
+      env {
+        name        = "RDI_AUTH_SECRET"
+        secret_name = "account-signing-key"
+      }
+      # Without SMTP, registration/recovery explicitly report unavailable delivery.
+      dynamic "env" {
+        for_each = nonsensitive(var.account_mail == null) ? [] : [1]
+        content {
+          name        = "RDI_MAIL"
+          secret_name = "account-mail"
+        }
       }
       env {
         name  = "AZURE_CLIENT_ID"
