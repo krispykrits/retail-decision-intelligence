@@ -10,12 +10,13 @@ Requires Python 3.12, Node.js 24, uv 0.13.6, and Make.
 
 ```bash
 make setup
+make local-account
+uv run --project backend python -m retail_api.accounts.admin 'you@example.com'  # optional: promote to Administrator
 make dev-api  # terminal 1
 make dev-web  # terminal 2
 ```
 
 Web: http://localhost:5173 · API docs: http://127.0.0.1:8000/api/v1/docs.
-Optional local settings: copy `.env.example` to `.env`.
 
 Environments: **local** uses the commands above; **development** deploys from
 `main` after CI passes. No staging or production environment is configured.

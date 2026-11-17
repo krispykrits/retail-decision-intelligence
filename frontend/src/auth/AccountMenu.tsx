@@ -24,12 +24,16 @@ export function AccountMenu() {
         {account?.display_name} · {account?.roles.join(', ')}
       </span>
       <button
-        className="rounded-lg border border-line px-3 py-2"
+        type="button"
+        className="min-w-28 cursor-pointer rounded-lg border border-line px-3 py-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand enabled:hover:border-brand enabled:hover:bg-canvas enabled:hover:text-brand enabled:active:bg-line disabled:cursor-wait disabled:bg-canvas disabled:text-muted"
         disabled={busy}
         onClick={() => void handleLogout()}
       >
-        Sign out
+        {busy ? 'Signing out…' : 'Sign out'}
       </button>
+      <span className="sr-only" aria-live="polite">
+        {busy ? 'Signing out…' : ''}
+      </span>
       {error && <span role="alert">{error}</span>}
     </div>
   )

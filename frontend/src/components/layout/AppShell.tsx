@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { workspaces } from '../../app/workspaces'
-import { ServiceStatus } from '../ServiceStatus'
 import { AccountMenu } from '../../auth/AccountMenu'
 
 export function AppShell() {
@@ -35,9 +34,7 @@ export function AppShell() {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white p-4 md:px-8 md:py-5">
-          <span>Retail Decision Intelligence</span>
-          <ServiceStatus />
+        <header className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-white p-4 md:px-8 md:py-5">
           <AccountMenu />
         </header>
         <main className="max-w-7xl px-4 py-6 md:px-8 md:py-10" id="main-content" tabIndex={-1}>

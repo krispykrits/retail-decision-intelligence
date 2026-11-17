@@ -1,8 +1,11 @@
-.PHONY: setup dev-api dev-web migrate contracts contracts-check format lint test build check smoke
+.PHONY: setup local-account dev-api dev-web migrate contracts contracts-check format lint test build check smoke
 
 setup:
 	uv sync --project backend --locked
 	npm ci --prefix frontend
+
+local-account:
+	uv run --project backend --locked python -m retail_api.accounts.local
 
 dev-api:
 	uv run --project backend uvicorn retail_api.main:app --reload --host 127.0.0.1 --port 8000
