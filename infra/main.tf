@@ -55,9 +55,6 @@ resource "azurerm_container_app" "app" {
       ingress[0].traffic_weight,
       template[0].cooldown_period_in_seconds,
       template[0].polling_interval_in_seconds,
-      template[0].container[0].liveness_probe[0].transport,
-      template[0].container[0].readiness_probe[0].transport,
-      template[0].container[0].startup_probe[0].transport,
     ]
   }
 
