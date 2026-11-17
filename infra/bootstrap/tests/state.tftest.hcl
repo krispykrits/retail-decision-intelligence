@@ -1,5 +1,8 @@
 mock_provider "azurerm" {
   override_during = plan
+  mock_resource "azurerm_resource_group" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-111111111111/resourceGroups/rg-rdi-test" }
+  }
   mock_resource "azurerm_storage_account" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
@@ -7,19 +10,12 @@ mock_provider "azurerm" {
     defaults = {
       id                           = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/containerApps/rdi-test-app"
       container_app_environment_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/managedEnvironments/rdi-test-env"
-      template                     = [{ container = [{ image = "ghcr.io/example/retail@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }] }]
     }
   }
   mock_data "azurerm_user_assigned_identity" {
     defaults = {
       id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rdi-test-api"
     }
-  }
-  mock_resource "azurerm_container_app_job" {
-    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/jobs/rdi-test-migrate" }
-  }
-  mock_resource "azurerm_user_assigned_identity" {
-    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rdi-test-deploy" }
   }
 }
 
@@ -55,13 +51,14 @@ run "private_state_in_project_group" {
   }
   assert {
     condition = (
-      azurerm_container_app_job.migrations[0].resource_group_name == var.resource_group_name &&
-      azurerm_container_app_job.migrations[0].identity[0].identity_ids == toset([azurerm_user_assigned_identity.deployment[0].id]) &&
-      azurerm_container_app_job.migrations[0].replica_retry_limit == 0 &&
-      azurerm_role_assignment.migration_operator[0].scope == azurerm_container_app_job.migrations[0].id &&
-      azurerm_role_assignment.migration_operator[0].role_definition_name == "Container Apps Jobs Operator"
+      azurerm_role_assignment.runner_access[0].scope == "${azurerm_resource_group.project.id}/providers/Microsoft.Sql/servers/rdi-test-sql-westus3" &&
+      toset(azurerm_role_definition.runner_access[0].permissions[0].actions) == toset([
+        "Microsoft.Sql/servers/firewallRules/read",
+        "Microsoft.Sql/servers/firewallRules/write",
+        "Microsoft.Sql/servers/firewallRules/delete",
+      ])
     )
-    error_message = "Migrations must use the deployment identity in the project group, with job-scoped execution access and no migration replay."
+    error_message = "Runner access must be limited to firewall-rule operations on this project's SQL server."
   }
   assert {
     condition = (
