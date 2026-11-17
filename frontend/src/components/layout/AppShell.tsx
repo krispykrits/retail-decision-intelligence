@@ -36,7 +36,6 @@ export function AppShell() {
       </aside>
       <div className="min-w-0 flex-1">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white p-4 md:px-8 md:py-5">
-          <span>Retail Decision Intelligence</span>
           <ServiceStatus />
           <AccountMenu />
         </header>
