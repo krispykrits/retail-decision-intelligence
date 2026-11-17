@@ -1,23 +1,49 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import NoReturn
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
 
 from retail_api import __version__
 from retail_api.api.health import router as health_router
 from retail_api.config import Settings
+from retail_api.database import create_database_engine
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     configuration = settings if settings is not None else Settings()
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        engine = create_database_engine(configuration)
+        application.state.database = engine
+        try:
+            yield
+        finally:
+            engine.dispose()
+
     application = FastAPI(
         title="Retail Decision Intelligence API",
         version=__version__,
         openapi_url="/api/v1/openapi.json",
         docs_url="/api/v1/docs",
         redoc_url=None,
+        lifespan=lifespan,
     )
+
+    @application.middleware("http")
+    async def correlation_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        request.state.correlation_id = str(uuid4())
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = request.state.correlation_id
+        return response
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=configuration.cors_origins,

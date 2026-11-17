@@ -14,6 +14,15 @@ COPY backend/src/ ./src/
 RUN uv sync --locked --no-dev --no-editable
 
 FROM python:3.12-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl --fail --silent --show-error --location \
+       https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
+       --output /tmp/packages-microsoft-prod.deb \
+    && dpkg -i /tmp/packages-microsoft-prod.deb \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 libgssapi-krb5-2 \
+    && apt-get purge -y curl \
+    && rm -rf /var/lib/apt/lists/* /tmp/packages-microsoft-prod.deb
 ENV PATH="/app/backend/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

@@ -4,9 +4,12 @@ version = "0.1.0"
 description = "Retail Decision Intelligence HTTP API"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic==1.20.1",
+    "azure-identity==1.27.0",
     "fastapi==0.163.1",
     "pydantic==2.14.3",
     "pydantic-settings==2.16.3",
+    "pyodbc==5.5.0",
     "sqlalchemy==2.1.8",
     "uvicorn==0.54.0",
 ]
@@ -35,6 +38,10 @@ known-first-party = ["retail_api"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+[[tool.mypy.overrides]]
+module = "pyodbc"
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [

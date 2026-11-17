@@ -2,6 +2,7 @@ locals {
   sql_location = coalesce(var.sql_location, local.location)
 }
 
+# Create the SQL server with Entra-only authentication in the approved SQL region.
 resource "azurerm_mssql_server" "sql" {
   name                                 = "${var.name_prefix}-sql-${local.sql_location}"
   resource_group_name                  = local.resource_group_name
@@ -20,9 +21,7 @@ resource "azurerm_mssql_server" "sql" {
   }
 }
 
-# Keep SQL closed on the first apply. After retrieving the API egress IPs,
-# explicitly allow only those individual addresses. Azure may change these IPs;
-# refresh and review the allowlist after environment changes.
+# Optional individual operator/client addresses.
 resource "azurerm_mssql_firewall_rule" "api" {
   for_each         = var.sql_allowed_ipv4_addresses
   name             = "api-${replace(each.value, ".", "-")}"
@@ -30,6 +29,42 @@ resource "azurerm_mssql_firewall_rule" "api" {
   start_ip_address = each.value
   end_ip_address   = each.value
 
+}
+
+# Opt-in development access: Azure resources still require Entra SQL permissions.
+resource "azurerm_mssql_firewall_rule" "azure_services" {
+  count            = var.sql_allow_azure_services ? 1 : 0
+  name             = "AllowAzureServices"
+  server_id        = azurerm_mssql_server.sql.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+# When enabled, runs migrations and API db_owner setup as the SQL administrator.
+# Runs on creation or changes to the database, identity, script, or migration files.
+# Unchanged applies skip it; failed provisioning is retried on the next apply.
+# This is deployment setup, never API startup or request handling.
+resource "terraform_data" "database_access" {
+  count = var.sql_allow_azure_services ? 1 : 0
+  triggers_replace = [
+    azapi_resource.database.id,
+    azurerm_user_assigned_identity.api.client_id,
+    filesha256("${path.module}/scripts/configure_sql.py"),
+    sha256(join("", [for file in sort(fileset("${path.module}/../backend/src/retail_api/migrations", "**/*.py")) : filesha256("${path.module}/../backend/src/retail_api/migrations/${file}")])),
+  ]
+  provisioner "local-exec" {
+    working_dir = "${path.module}/.."
+    command     = "uv run --project backend --locked python infra/scripts/configure_sql.py"
+    environment = {
+      # Use the operator's Azure CLI login, not the API's managed identity, for setup.
+      AZURE_CLIENT_ID   = ""
+      RDI_SQL_SERVER    = azurerm_mssql_server.sql.fully_qualified_domain_name
+      RDI_SQL_DATABASE  = azapi_resource.database.name
+      RDI_API_NAME      = azurerm_user_assigned_identity.api.name
+      RDI_API_CLIENT_ID = azurerm_user_assigned_identity.api.client_id
+    }
+  }
+  depends_on = [azurerm_mssql_firewall_rule.azure_services]
 }
 
 # AzAPI exposes the free-tier properties unavailable in azurerm_mssql_database.

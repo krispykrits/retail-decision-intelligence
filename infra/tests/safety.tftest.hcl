@@ -61,6 +61,7 @@ run "single_group_and_cost_controls" {
   assert {
     condition = (
       length(azurerm_mssql_firewall_rule.api) == 0 &&
+      length(azurerm_mssql_firewall_rule.azure_services) == 0 &&
       azurerm_mssql_server.sql.azuread_administrator[0].azuread_authentication_only &&
       !azurerm_container_app.app.ingress[0].allow_insecure_connections
     )

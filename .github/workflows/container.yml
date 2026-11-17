@@ -26,26 +26,71 @@ jobs:
           persist-credentials: false
       - name: Build combined frontend and API image
         run: |
+          # Build one UI/API image and record the repository and source commit.
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$COMMIT_SHA" \
             --tag "$IMAGE_NAME:$COMMIT_SHA" .
-      - name: Verify the real container
+      - name: Verify container and SQL connectivity
         run: |
-          docker run --detach --name rdi --read-only --tmpfs /tmp:rw,nosuid,size=16m \
+          # Generate and mask credentials used only by the disposable CI database.
+          SQL_TEST_PASSWORD="Rdi1!$(openssl rand -hex 24)"
+          echo "::add-mask::$SQL_TEST_PASSWORD"
+          # sqlcmd reads its password from this environment variable.
+          export SQLCMDPASSWORD="$SQL_TEST_PASSWORD"
+          # Give the test containers a shared, isolated Docker network.
+          docker network create rdi-test
+          # Start SQL Server locally on the runner, not in Azure.
+          docker run --detach --name rdi-sql --network rdi-test \
+            --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD="$SQL_TEST_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+          # Wait for SQL startup before creating the test database.
+          for attempt in {1..60}; do
+            if docker exec --env SQLCMDPASSWORD rdi-sql /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -C -b -l 2 -Q 'SELECT 1' >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          # Create a fresh database for this workflow run.
+          docker exec --env SQLCMDPASSWORD rdi-sql /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -C -b -Q 'CREATE DATABASE retail_test'
+          # Trust the local test server's certificate only; Azure verifies certificates.
+          export RDI_DATABASE_URL="mssql+pyodbc://sa:$SQL_TEST_PASSWORD@rdi-sql/retail_test?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes"
+          echo "::add-mask::$RDI_DATABASE_URL"
+          # Run migrations twice to verify they are safe to repeat.
+          for attempt in 1 2; do
+            docker run --rm --network rdi-test --env RDI_DATABASE_URL \
+              "$IMAGE_NAME:$COMMIT_SHA" python -m retail_api.migrate
+          done
+          # Start the built app once, with a read-only filesystem and writable /tmp.
+          docker run --detach --name rdi --network rdi-test --read-only \
+            --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
             --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
-          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 \
-            http://127.0.0.1:8000/api/v1/health
+          # Wait until the API can query the migrated database.
+          curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
+            --max-time 3 http://127.0.0.1:8000/api/v1/ready
+          # Check frontend routes, assets, API health, and missing-route responses.
           python3 scripts/smoke_deployment.py http://127.0.0.1:8000
+          # Simulate a database outage: readiness must fail, while liveness stays healthy.
+          docker stop rdi-sql
+          test "$(curl --silent --show-error --max-time 20 --output /dev/null \
+            --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/ready)" = 503
+          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8000/api/v1/health
       - name: Publish verified image
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Authenticate with GitHub's workflow token and publish only after checks pass.
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker push "$IMAGE_NAME:$COMMIT_SHA"
       - name: Container diagnostics
         if: failure()
-        run: docker logs rdi || true
+        run: |
+          # Preserve useful startup/error output if verification fails.
+          docker logs rdi || true
+          docker logs rdi-sql || true
       - name: Remove test container
         if: always()
-        run: docker rm --force rdi || true
+        run: |
+          # Remove containers before their network, including after a failed step.
+          docker rm --force rdi rdi-sql || true
+          docker network rm rdi-test || true
