@@ -14,7 +14,7 @@ def main() -> None:
     name = os.environ["RDI_API_NAME"]
     quoted_name = "[" + name.replace("]", "]]") + "]"
     sid = UUID(os.environ["RDI_API_CLIENT_ID"]).bytes_le
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(Settings(), connect_timeout=60)
     try:
         with engine.begin() as connection:
             run_migrations(connection)

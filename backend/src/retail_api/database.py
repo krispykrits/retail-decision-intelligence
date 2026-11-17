@@ -9,7 +9,7 @@ from sqlalchemy.pool import NullPool
 from retail_api.config import Settings
 
 
-def create_database_engine(settings: Settings) -> Engine:
+def create_database_engine(settings: Settings, *, connect_timeout: int = 5) -> Engine:
     """Connect lazily; close SQL connections between requests so SQL can pause."""
     url: str | URL = settings.database_url.get_secret_value()
     if settings.sql_server:
@@ -33,7 +33,7 @@ def create_database_engine(settings: Settings) -> Engine:
     # Disable the driver's second pool as well as SQLAlchemy's pool.
     pyodbc.pooling = False
     engine = create_engine(
-        url, poolclass=NullPool, hide_parameters=True, connect_args={"timeout": 5}
+        url, poolclass=NullPool, hide_parameters=True, connect_args={"timeout": connect_timeout}
     )
 
     @event.listens_for(engine, "connect")
