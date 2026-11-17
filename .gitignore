@@ -20,6 +20,7 @@ data/
 *.tfstate*
 *.tfplan
 *.tfvars
+*.tfvars.json
 !*.tfvars.example
 infra/backend.hcl
 infra/bootstrap/remote.tf

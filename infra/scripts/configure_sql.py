@@ -28,11 +28,12 @@ def main() -> None:
                 )
             elif bytes(existing) != sid:
                 raise RuntimeError("Existing SQL user belongs to a different identity")
-            connection.exec_driver_sql(f"GRANT CONNECT TO {quoted_name}")
-            connection.exec_driver_sql(
-                f"GRANT SELECT ON OBJECT::dbo.alembic_version TO {quoted_name}"
-            )
-        print("SQL migration and least-privilege API identity access configured.")
+            is_owner = connection.execute(
+                text("SELECT IS_ROLEMEMBER('db_owner', :name)"), {"name": name}
+            ).scalar_one()
+            if not is_owner:
+                connection.exec_driver_sql(f"ALTER ROLE db_owner ADD MEMBER {quoted_name}")
+        print("SQL migration and API db_owner membership configured.")
     finally:
         engine.dispose()
 
