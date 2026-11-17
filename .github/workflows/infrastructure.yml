@@ -29,3 +29,8 @@ jobs:
           terraform -chdir=infra/bootstrap init -input=false -lockfile=readonly
           terraform -chdir=infra/bootstrap validate
           terraform -chdir=infra/bootstrap test
+      - name: Validate temporary runner access
+        run: |
+          # Validate the isolated firewall state without connecting to Azure.
+          terraform -chdir=infra/runner-access init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=infra/runner-access validate

@@ -82,6 +82,9 @@ jobs:
           # Preserve the existing administrator instead of assigning the deployment identity as admin.
           GROUP=$(terraform -chdir=infra output -raw resource_group_name)
           SERVER=$(terraform -chdir=infra output -raw sql_server)
+          # The temporary firewall module targets this existing SQL server only.
+          SERVER_ID=$(az sql server show --resource-group "$GROUP" --name "${SERVER%%.*}" --query id --output tsv)
+          echo "TF_VAR_sql_server_id=$SERVER_ID" >> "$GITHUB_ENV"
           az sql server ad-admin list --resource-group "$GROUP" --server-name "${SERVER%%.*}" \
             --query '[0].{login:login,object_id:sid}' --output json > /tmp/rdi-sql-admin.json
           python - <<'PY'
@@ -93,6 +96,19 @@ jobs:
                   assert '\n' not in value and '\r' not in value
                   output.write(f'TF_VAR_{variable}={value}\n')
           PY
+      - name: Allow this runner to reach SQL
+        id: runner_access
+        run: |
+          # Keep temporary network access in its own state so cleanup cannot alter the app.
+          terraform -chdir=infra/runner-access init -input=false -lockfile=readonly \
+            -backend-config=../development.backend.hcl -backend-config=key=runner-access.tfstate \
+            -backend-config=use_oidc=true
+          # Hosted-runner addresses change; allow only the actual public IPv4 for this run.
+          RUNNER_IPV4=$(curl -4 --fail --silent --show-error --retry 3 --max-time 10 https://api.ipify.org)
+          python -c 'import ipaddress, sys; assert ipaddress.IPv4Address(sys.argv[1]).is_global' "$RUNNER_IPV4"
+          echo "TF_VAR_runner_ipv4=$RUNNER_IPV4" >> "$GITHUB_ENV"
+          export TF_VAR_runner_ipv4="$RUNNER_IPV4"
+          terraform -chdir=infra/runner-access apply -input=false -auto-approve
       - name: Apply Terraform and pending SQL migrations
         id: deploy
         run: |
@@ -116,3 +132,8 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 5 \
             --max-time 20 "$APP_URL/api/v1/ready"
           python scripts/smoke_deployment.py "$APP_URL"
+      - name: Remove temporary SQL access
+        if: always() && env.TF_VAR_runner_ipv4 != ''
+        run: |
+          # Run after success, failure, or cancellation; this state contains only the IP rule.
+          terraform -chdir=infra/runner-access destroy -input=false -auto-approve

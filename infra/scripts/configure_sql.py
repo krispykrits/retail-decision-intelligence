@@ -13,12 +13,13 @@ from retail_api.migrate import run_migrations
 
 
 def connect_for_migration(engine: Engine) -> Connection:
-    # A paused serverless database returns 40613 while resuming; retry before any SQL runs.
-    for delay in (5, 10, 20, 40):
+    # Wait for serverless resume (40613) or a newly created firewall rule (40615).
+    # Retry only the initial connection, before any migration or grant SQL executes.
+    for delay in (5, 10, 20, 40, 60, 60, 60):
         try:
             return engine.connect()
         except DBAPIError as error:
-            if "(40613)" not in str(error.orig):
+            if not any(code in str(error.orig) for code in ("(40613)", "(40615)")):
                 raise
             print(f"SQL is temporarily unavailable; retrying connection in {delay}s.", flush=True)
             time.sleep(delay)

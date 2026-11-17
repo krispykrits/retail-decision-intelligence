@@ -1,5 +1,8 @@
 mock_provider "azurerm" {
   override_during = plan
+  mock_resource "azurerm_resource_group" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-111111111111/resourceGroups/rg-rdi-test" }
+  }
   mock_resource "azurerm_storage_account" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
@@ -45,6 +48,17 @@ run "private_state_in_project_group" {
       azurerm_role_assignment.state_operator.role_definition_name == "Storage Blob Data Contributor"
     )
     error_message = "State access must be scoped to the state storage account."
+  }
+  assert {
+    condition = (
+      azurerm_role_assignment.runner_access[0].scope == "${azurerm_resource_group.project.id}/providers/Microsoft.Sql/servers/rdi-test-sql-westus3" &&
+      toset(azurerm_role_definition.runner_access[0].permissions[0].actions) == toset([
+        "Microsoft.Sql/servers/firewallRules/read",
+        "Microsoft.Sql/servers/firewallRules/write",
+        "Microsoft.Sql/servers/firewallRules/delete",
+      ])
+    )
+    error_message = "Runner access must be limited to firewall-rule operations on this project's SQL server."
   }
   assert {
     condition = (
