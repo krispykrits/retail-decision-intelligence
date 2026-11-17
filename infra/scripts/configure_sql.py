@@ -1,13 +1,27 @@
 """Terraform SQL bootstrap, run as the operator's existing Azure CLI identity."""
 
 import os
+import time
 from uuid import UUID
-
-from sqlalchemy import Connection, text
 
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
 from retail_api.migrate import run_migrations
+from sqlalchemy import Connection, Engine, text
+from sqlalchemy.exc import DBAPIError
+
+
+def connect_for_migration(engine: Engine) -> Connection:
+    # A paused serverless database returns 40613 while resuming; retry before any SQL runs.
+    for delay in (5, 10, 20, 40):
+        try:
+            return engine.connect()
+        except DBAPIError as error:
+            if "(40613)" not in str(error.orig):
+                raise
+            print(f"SQL is temporarily unavailable; retrying connection in {delay}s.", flush=True)
+            time.sleep(delay)
+    return engine.connect()
 
 
 def ensure_user(connection: Connection, name: str, client_id: str) -> str:
@@ -29,7 +43,7 @@ def main() -> None:
     # Deployment can wait longer than API readiness for a serverless SQL connection.
     engine = create_database_engine(Settings(), connect_timeout=60)
     try:
-        with engine.begin() as connection:
+        with connect_for_migration(engine) as connection, connection.begin():
             # Apply pending Alembic revisions before the API uses the database.
             run_migrations(connection)
             name = os.environ["RDI_API_NAME"]
