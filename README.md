@@ -2,7 +2,7 @@
 
 Retail analytics for understanding customer behavior, merchandise performance,
 shopping baskets, and demand. The current foundation provides workspace navigation
-and API/database connectivity.
+and secure account access.
 
 ## Development
 
@@ -16,6 +16,11 @@ make dev-web  # terminal 2
 
 Web: http://localhost:5173 · API docs: http://127.0.0.1:8000/api/v1/docs.
 Optional local settings: copy `.env.example` to `.env`.
+Accounts require a signing key, SMTP settings in `.env`, and `make migrate`.
+Development SMTP uses the `ACCOUNT_MAIL` environment secret (JSON matching `account_mail`
+in `infra/variables.tf`). Registration and recovery require working email delivery.
+Promote an existing verified account explicitly with
+`uv run --project backend python -m retail_api.accounts.admin <email>` using operator SQL access.
 
 Environments: **local** uses the commands above; **development** deploys from
 `main` after CI passes. No staging or production environment is configured.
@@ -52,6 +57,7 @@ flowchart TD
         App -->|logs| Logs["Log Analytics"]
         State["Blob Storage: Terraform state"]
     end
+    App -->|STARTTLS| Mail["SMTP email delivery"]
 ```
 
 App, logs, and state: North Central US. SQL: West US 3.

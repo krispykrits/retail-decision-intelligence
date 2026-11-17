@@ -1,11 +1,33 @@
-import { render, screen } from '@testing-library/react'
+import { render as renderView, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { getHealth } from '../api/client'
+import { SessionContext } from '../auth/session'
 
 vi.mock('../api/client', () => ({ getHealth: vi.fn() }))
+
+function render(view: ReactNode) {
+  return renderView(
+    <SessionContext.Provider
+      value={{
+        account: {
+          id: 'test-account',
+          email: 'analyst@example.com',
+          display_name: 'Retail analyst',
+          roles: ['Analyst'],
+        },
+        status: 'ready',
+        refresh: vi.fn(),
+        logout: vi.fn(),
+      }}
+    >
+      {view}
+    </SessionContext.Provider>,
+  )
+}
 
 const expectedRoutes = [
   ['/command-center', 'Command Center'],

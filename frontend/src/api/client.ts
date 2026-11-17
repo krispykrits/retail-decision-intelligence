@@ -1,7 +1,7 @@
 import createClient from 'openapi-fetch'
 import type { components, paths } from './schema'
 
-const client = createClient<paths>()
+export const client = createClient<paths>()
 
 type HealthResponse = components['schemas']['HealthResponse']
 
