@@ -22,7 +22,7 @@ variables {
   location                 = "eastus"
   state_storage_name       = "rditeststate"
   state_operator_object_id = "22222222-2222-2222-2222-222222222222"
-  github_repository        = "example/retail"
+  github_repository        = "example@123/retail@456"
   name_prefix              = "rdi-test"
 }
 
@@ -48,7 +48,7 @@ run "private_state_in_project_group" {
   }
   assert {
     condition = (
-      azurerm_federated_identity_credential.github[0].subject == "repo:example/retail:environment:development" &&
+      azurerm_federated_identity_credential.github[0].subject == "repo:example@123/retail@456:environment:development" &&
       alltrue([for grant in azurerm_role_assignment.deployment : !contains(["Owner", "Contributor"], grant.role_definition_name)])
     )
     error_message = "Deployment must use development-only federation without broad Owner/Contributor grants."
