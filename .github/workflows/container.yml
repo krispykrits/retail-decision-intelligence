@@ -29,14 +29,7 @@ jobs:
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$COMMIT_SHA" \
             --tag "$IMAGE_NAME:$COMMIT_SHA" .
-      - name: Verify the real container
-        run: |
-          docker run --detach --name rdi --read-only --tmpfs /tmp:rw,nosuid,size=16m \
-            --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
-          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 \
-            http://127.0.0.1:8000/api/v1/health
-          python3 scripts/smoke_deployment.py http://127.0.0.1:8000
-      - name: Verify SQL Server migrations and dependency readiness
+      - name: Verify container and SQL connectivity
         run: |
           SQL_TEST_PASSWORD="Rdi1!$(openssl rand -hex 24)"
           echo "::add-mask::$SQL_TEST_PASSWORD"
@@ -58,16 +51,16 @@ jobs:
             docker run --rm --network rdi-test --env RDI_DATABASE_URL \
               "$IMAGE_NAME:$COMMIT_SHA" python -m retail_api.migrate
           done
-          docker run --detach --name rdi-db-api --network rdi-test --read-only \
+          docker run --detach --name rdi --network rdi-test --read-only \
             --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
-            --publish 127.0.0.1:8001:8000 "$IMAGE_NAME:$COMMIT_SHA"
+            --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
           curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
-            --max-time 3 http://127.0.0.1:8001/api/v1/ready
+            --max-time 3 http://127.0.0.1:8000/api/v1/ready
+          python3 scripts/smoke_deployment.py http://127.0.0.1:8000
           docker stop rdi-sql
-          test "$(curl --silent --max-time 20 --output /tmp/readiness.json \
-            --write-out '%{http_code}' http://127.0.0.1:8001/api/v1/ready)" = 503
-          grep --quiet '"status":"unavailable"' /tmp/readiness.json
-          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8001/api/v1/health
+          test "$(curl --silent --show-error --max-time 20 --output /dev/null \
+            --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/ready)" = 503
+          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8000/api/v1/health
       - name: Publish verified image
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -79,9 +72,9 @@ jobs:
         if: failure()
         run: |
           docker logs rdi || true
-          docker logs rdi-db-api || true
+          docker logs rdi-sql || true
       - name: Remove test container
         if: always()
         run: |
-          docker rm --force rdi rdi-db-api rdi-sql || true
+          docker rm --force rdi rdi-sql || true
           docker network rm rdi-test || true

@@ -39,6 +39,9 @@ resource "azurerm_mssql_firewall_rule" "azure_services" {
   end_ip_address   = "0.0.0.0"
 }
 
+# Runs configure_sql.py as the SQL administrator on creation or tracked changes.
+# Unchanged applies skip it; failed provisioning is retried on the next apply.
+# This is deployment setup, never API startup or request handling.
 resource "terraform_data" "database_access" {
   count = var.sql_allow_azure_services ? 1 : 0
   triggers_replace = [
