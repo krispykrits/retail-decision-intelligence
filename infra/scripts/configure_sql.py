@@ -1,28 +1,13 @@
 """Terraform SQL bootstrap, run as the operator's existing Azure CLI identity."""
 
 import os
-import time
 from uuid import UUID
 
-from sqlalchemy import Connection, Engine, text
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy import Connection, text
 
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
-from retail_api.migrate import run_migrations
-
-
-def connect_for_migration(engine: Engine) -> Connection:
-    # A paused serverless database returns 40613 while resuming; retry before any SQL runs.
-    for delay in (5, 10, 20, 40):
-        try:
-            return engine.connect()
-        except DBAPIError as error:
-            if "(40613)" not in str(error.orig):
-                raise
-            print(f"SQL is temporarily unavailable; retrying connection in {delay}s.", flush=True)
-            time.sleep(delay)
-    return engine.connect()
+from retail_api.migrate import connect_for_migration, run_migrations
 
 
 def ensure_user(connection: Connection, name: str, client_id: str) -> str:

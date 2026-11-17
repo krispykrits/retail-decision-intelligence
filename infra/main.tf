@@ -47,7 +47,7 @@ resource "azurerm_user_assigned_identity" "api" {
 
 # Deploy the combined React/FastAPI image after database setup completes.
 resource "azurerm_container_app" "app" {
-  depends_on                   = [terraform_data.database_access]
+  depends_on                   = [terraform_data.database_migrations]
   name                         = "${var.name_prefix}-app"
   resource_group_name          = local.resource_group_name
   container_app_environment_id = azurerm_container_app_environment.app.id

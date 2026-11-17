@@ -40,31 +40,30 @@ resource "azurerm_mssql_firewall_rule" "azure_services" {
   end_ip_address   = "0.0.0.0"
 }
 
-# When enabled, runs migrations and API db_owner setup as the SQL administrator.
-# Runs on creation or changes to the database, identity, script, or migration files.
-# Unchanged applies skip it; failed provisioning is retried on the next apply.
-# This is deployment setup, never API startup or request handling.
-resource "terraform_data" "database_access" {
+# Bootstrap provisions SQL identities separately. Each new image migrates inside Azure
+# before the app revision changes; GitHub runners never connect directly to SQL.
+resource "terraform_data" "database_migrations" {
   count = var.sql_allow_azure_services ? 1 : 0
   triggers_replace = [
     azapi_resource.database.id,
-    azurerm_user_assigned_identity.api.client_id,
-    filesha256("${path.module}/scripts/configure_sql.py"),
-    sha256(join("", [for file in sort(fileset("${path.module}/../backend/src/retail_api/migrations", "**/*.py")) : filesha256("${path.module}/../backend/src/retail_api/migrations/${file}")])),
+    var.app_image,
+    filesha256("${path.module}/scripts/run_migrations.sh"),
   ]
   provisioner "local-exec" {
     working_dir = "${path.module}/.."
-    command     = "uv run --project backend --locked python infra/scripts/configure_sql.py"
+    command     = "bash infra/scripts/run_migrations.sh"
     environment = {
-      # Use the operator's Azure CLI login, not the API's managed identity, for setup.
-      AZURE_CLIENT_ID   = ""
-      RDI_SQL_SERVER    = azurerm_mssql_server.sql.fully_qualified_domain_name
-      RDI_SQL_DATABASE  = azapi_resource.database.name
-      RDI_API_NAME      = azurerm_user_assigned_identity.api.name
-      RDI_API_CLIENT_ID = azurerm_user_assigned_identity.api.client_id
+      RDI_RESOURCE_GROUP = local.resource_group_name
+      RDI_MIGRATION_JOB  = "${var.name_prefix}-migrate"
+      RDI_APP_IMAGE      = var.app_image
     }
   }
   depends_on = [azurerm_mssql_firewall_rule.azure_services]
+}
+
+moved {
+  from = terraform_data.database_access
+  to   = terraform_data.database_migrations
 }
 
 # AzAPI exposes the free-tier properties unavailable in azurerm_mssql_database.

@@ -63,18 +63,7 @@ jobs:
           terraform_wrapper: false
       - name: Prepare deployment tools and state
         run: |
-          # uv supplies the locked migration dependencies; OIDC also authenticates state access.
-          python -m pip install uv==0.13.6
-          uv sync --project backend --locked --no-dev
-          # The SQL bootstrap provisioner needs Microsoft's ODBC driver on the runner.
-          if ! odbcinst -q -d -n 'ODBC Driver 18 for SQL Server' >/dev/null 2>&1; then
-            curl --fail --silent --show-error --location \
-              https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
-              --output /tmp/packages-microsoft-prod.deb
-            sudo dpkg -i /tmp/packages-microsoft-prod.deb
-            sudo apt-get update
-            sudo ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 libgssapi-krb5-2
-          fi
+          # OIDC authenticates Terraform state; migrations execute in the Azure job.
           terraform -chdir=infra init -input=false -lockfile=readonly \
             -backend-config=development.backend.hcl -backend-config=use_oidc=true
       - name: Read existing SQL administrator

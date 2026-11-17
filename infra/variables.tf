@@ -54,7 +54,7 @@ variable "sql_allowed_ipv4_addresses" {
 }
 
 variable "sql_allow_azure_services" {
-  description = "Development opt-in: allow Azure network sources and provision API database ownership using the operator's Azure CLI identity."
+  description = "Development opt-in: allow Azure network sources and run migrations in the bootstrapped Azure job."
   type        = bool
   default     = false
 }
