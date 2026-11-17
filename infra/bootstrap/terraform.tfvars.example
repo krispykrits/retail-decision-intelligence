@@ -3,3 +3,8 @@ resource_group_name      = "rg-rdi-dev"
 location                 = "<approved-region>"
 state_storage_name       = "<globally-unique-storage-name>"
 state_operator_object_id = "<deployment-principal-object-id>"
+
+# Enable CI setup after the initial development app/database deployment.
+# github_repository = "krispykrits/retail-decision-intelligence"
+# name_prefix       = "<same-prefix-as-application>"
+# sql_location      = "westus3"

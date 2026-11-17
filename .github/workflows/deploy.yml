@@ -1,0 +1,118 @@
+name: Deploy development
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Previously verified ghcr.io/krispykrits/retail-decision-intelligence@sha256 digest to redeploy.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-development
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: development
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_app_image: ${{ inputs.image }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate project image and source revision
+        run: |
+          # Accept only an immutable project image whose source was merged into main.
+          [[ "$TF_VAR_app_image" =~ ^ghcr\.io/krispykrits/retail-decision-intelligence@sha256:[a-f0-9]{64}$ ]]
+          docker pull "$TF_VAR_app_image"
+          SOURCE_SHA=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$TF_VAR_app_image")
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
+      - uses: azure/login@0949e32778441b2c442592b7a0e6313466dc8f29 # v3.0.2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: .python-version
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+      - name: Prepare deployment tools and state
+        run: |
+          # uv supplies the locked migration dependencies; OIDC also authenticates state access.
+          python -m pip install uv==0.13.6
+          uv sync --project backend --locked --no-dev
+          # The SQL bootstrap provisioner needs Microsoft's ODBC driver on the runner.
+          if ! odbcinst -q -d -n 'ODBC Driver 18 for SQL Server' >/dev/null 2>&1; then
+            curl --fail --silent --show-error --location \
+              https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+              --output /tmp/packages-microsoft-prod.deb
+            sudo dpkg -i /tmp/packages-microsoft-prod.deb
+            sudo apt-get update
+            sudo ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 libgssapi-krb5-2
+          fi
+          terraform -chdir=infra init -input=false -lockfile=readonly \
+            -backend-config=development.backend.hcl -backend-config=use_oidc=true
+      - name: Read existing SQL administrator
+        run: |
+          # Preserve the existing administrator instead of assigning the deployment identity as admin.
+          GROUP=$(terraform -chdir=infra output -raw resource_group_name)
+          SERVER=$(terraform -chdir=infra output -raw sql_server)
+          az sql server ad-admin list --resource-group "$GROUP" --server-name "${SERVER%%.*}" \
+            --query '[0].{login:login,object_id:sid}' --output json > /tmp/rdi-sql-admin.json
+          python - <<'PY'
+          import json, os
+          admin = json.load(open('/tmp/rdi-sql-admin.json'))
+          assert admin['login'] and admin['object_id'], 'Existing SQL administrator is required'
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for variable, value in [('sql_admin_login', admin['login']), ('sql_admin_object_id', admin['object_id'])]:
+                  assert '\n' not in value and '\r' not in value
+                  output.write(f'TF_VAR_{variable}={value}\n')
+          PY
+      - name: Apply Terraform and pending SQL migrations
+        id: deploy
+        run: |
+          # Record the current digest before planning; it is the manual rollback target.
+          PREVIOUS=$(az containerapp show -g rg-rdi-dev-ncus -n rdi-dev-f5ea75-app \
+            --query 'properties.template.containers[0].image' --output tsv)
+          # Keep the rollback reference even if Terraform or a later smoke check fails.
+          printf '### Development deployment\nImage: `%s`\n\nPrevious image: `%s`\n\nRun: %s/%s/actions/runs/%s\n' \
+            "$TF_VAR_app_image" "$PREVIOUS" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          terraform -chdir=infra plan -input=false -var-file=development.tfvars -out=development.tfplan
+          # Terraform runs Alembic when migration files change, before updating the app image.
+          terraform -chdir=infra apply -input=false development.tfplan
+          URL=$(terraform -chdir=infra output -raw app_url)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          printf '\nApp: %s\n' "$URL" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify development deployment
+        env:
+          APP_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          # Allow cold startup, then verify SQL readiness and the shared frontend/API origin.
+          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 5 \
+            --max-time 20 "$APP_URL/api/v1/ready"
+          python scripts/smoke_deployment.py "$APP_URL"

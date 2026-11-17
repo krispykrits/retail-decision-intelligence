@@ -3,6 +3,17 @@ mock_provider "azurerm" {
   mock_resource "azurerm_storage_account" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
+  mock_data "azurerm_container_app" {
+    defaults = {
+      id                           = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/containerApps/rdi-test-app"
+      container_app_environment_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/managedEnvironments/rdi-test-env"
+    }
+  }
+  mock_data "azurerm_user_assigned_identity" {
+    defaults = {
+      id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rdi-test-api"
+    }
+  }
 }
 
 variables {
@@ -11,6 +22,8 @@ variables {
   location                 = "eastus"
   state_storage_name       = "rditeststate"
   state_operator_object_id = "22222222-2222-2222-2222-222222222222"
+  github_repository        = "example/retail"
+  name_prefix              = "rdi-test"
 }
 
 run "private_state_in_project_group" {
@@ -32,5 +45,12 @@ run "private_state_in_project_group" {
       azurerm_role_assignment.state_operator.role_definition_name == "Storage Blob Data Contributor"
     )
     error_message = "State access must be scoped to the state storage account."
+  }
+  assert {
+    condition = (
+      azurerm_federated_identity_credential.github[0].subject == "repo:example/retail:environment:development" &&
+      alltrue([for grant in azurerm_role_assignment.deployment : !contains(["Owner", "Contributor"], grant.role_definition_name)])
+    )
+    error_message = "Deployment must use development-only federation without broad Owner/Contributor grants."
   }
 }

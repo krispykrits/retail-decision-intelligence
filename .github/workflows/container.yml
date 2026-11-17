@@ -1,11 +1,11 @@
 name: Container
 
 on:
-  pull_request:
-    paths: ["Dockerfile", ".dockerignore", "backend/**", "frontend/**", "scripts/smoke_deployment.py", ".github/workflows/container.yml"]
-  push:
-    branches: [main]
-    paths: ["Dockerfile", ".dockerignore", "backend/**", "frontend/**", "scripts/smoke_deployment.py", ".github/workflows/container.yml"]
+  workflow_call:
+    outputs:
+      image:
+        description: Verified image pinned to its registry digest.
+        value: ${{ jobs.build.outputs.image }}
 
 permissions:
   contents: read
@@ -14,6 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
     permissions:
       contents: read
       packages: write
@@ -75,6 +77,7 @@ jobs:
             --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/ready)" = 503
           curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8000/api/v1/health
       - name: Publish verified image
+        id: publish
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,6 +85,10 @@ jobs:
           # Authenticate with GitHub's workflow token and publish only after checks pass.
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker push "$IMAGE_NAME:$COMMIT_SHA"
+          # Pass the immutable image reference to the development deployment.
+          IMAGE=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE_NAME:$COMMIT_SHA")
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Verified image: \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Container diagnostics
         if: failure()
         run: |
