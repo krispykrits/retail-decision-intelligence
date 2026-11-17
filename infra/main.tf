@@ -113,6 +113,7 @@ resource "azurerm_container_app" "app" {
         transport               = "HTTP"
         port                    = 8000
         path                    = "/api/v1/ready"
+        success_count_threshold = 1
         timeout                 = 10
         interval_seconds        = 30
         failure_count_threshold = 10
