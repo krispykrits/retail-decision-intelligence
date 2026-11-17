@@ -32,8 +32,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="Retail Decision Intelligence API",
         version=__version__,
-        openapi_url=None if development else "/api/v1/openapi.json",
-        docs_url=None if development else "/api/v1/docs",
+        openapi_url="/api/v1/openapi.json",
+        docs_url="/api/v1/docs",
         redoc_url=None,
         lifespan=lifespan,
     )
@@ -53,6 +53,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "default-src 'self'; base-uri 'self'; object-src 'none'; "
                 "frame-ancestors 'none'; form-action 'self'"
             )
+            if request.url.path in (
+                application.docs_url,
+                application.swagger_ui_oauth2_redirect_url,
+            ):
+                # FastAPI's Swagger page uses CDN assets and an inline bootstrap script.
+                # Keep this allowance limited to documentation, not the application UI.
+                response.headers["Content-Security-Policy"] += (
+                    "; script-src https://cdn.jsdelivr.net 'unsafe-inline'; "
+                    "style-src https://cdn.jsdelivr.net 'unsafe-inline'; "
+                    "img-src 'self' https://fastapi.tiangolo.com data:"
+                )
         return response
 
     application.add_middleware(

@@ -38,8 +38,15 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
     with urlopen(f"{base_url}{scripts[0]}", timeout=30) as response:
         assert "javascript" in response.headers["Content-Type"]
     missing_paths = ["/api/v1/missing", "/assets/missing.js", "/api/v1/admin"]
-    if security:
-        missing_paths += ["/api/v1/docs", "/api/v1/openapi.json"]
+    with urlopen(f"{base_url}/api/v1/openapi.json", timeout=30) as response:
+        assert "/api/v1/health" in json.load(response)["paths"]
+    with urlopen(f"{base_url}/api/v1/docs", timeout=30) as response:
+        assert "SwaggerUIBundle" in response.read().decode()
+        if security:
+            assert (
+                "script-src https://cdn.jsdelivr.net 'unsafe-inline'"
+                in response.headers["Content-Security-Policy"]
+            )
     for path in missing_paths:
         try:
             urlopen(Request(f"{base_url}{path}", headers={"Accept": "text/html"}), timeout=30)

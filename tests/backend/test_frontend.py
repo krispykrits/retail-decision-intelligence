@@ -35,18 +35,22 @@ def test_frontend_deep_links_and_api_share_one_origin(
             assert response.text == '<div id="root"></div>'
         assert client.get("/assets/app.js").text == "console.log('app')"
         assert client.get("/api/v1/health").json()["status"] == "ok"
-        if environment == "local":
-            assert "/api/v1/health" in client.get("/api/v1/openapi.json").json()["paths"]
-            assert client.get("/api/v1/docs").status_code == 200
-        else:
-            for path in ["/api/v1/docs", "/api/v1/openapi.json", "/api/v1/admin"]:
-                assert client.get(path).status_code == 404
+        assert "/api/v1/health" in client.get("/api/v1/openapi.json").json()["paths"]
+        docs = client.get("/api/v1/docs")
+        assert docs.status_code == 200
+        assert client.get("/api/v1/admin").status_code == 404
+        if environment == "development":
+            assert (
+                "script-src https://cdn.jsdelivr.net 'unsafe-inline'"
+                in docs.headers["Content-Security-Policy"]
+            )
             response = client.get("/", headers={"Origin": "https://untrusted.example"})
             assert response.headers["X-Content-Type-Options"] == "nosniff"
             assert response.headers["X-Frame-Options"] == "DENY"
             assert response.headers["Referrer-Policy"] == "no-referrer"
             assert response.headers["Strict-Transport-Security"] == "max-age=31536000"
             assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+            assert "unsafe-inline" not in response.headers["Content-Security-Policy"]
             assert "Access-Control-Allow-Origin" not in response.headers
         for path in ["/api/missing", "/api/v1/missing", "/assets/missing.js"]:
             response = client.get(path, headers={"Accept": "text/html"})
