@@ -18,6 +18,9 @@ mock_provider "azurerm" {
   mock_resource "azurerm_container_app_job" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/jobs/rdi-test-migrate" }
   }
+  mock_resource "azurerm_user_assigned_identity" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rdi-test-deploy" }
+  }
 }
 
 variables {
