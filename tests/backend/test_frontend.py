@@ -1,16 +1,15 @@
 from pathlib import Path
-from typing import Literal
 
 import pytest
 from fastapi.testclient import TestClient
 
-from retail_api.config import Settings
+from retail_api.config import Environment, Settings
 from retail_api.main import create_app
 
 
-@pytest.mark.parametrize("environment", ["local", "development"])
+@pytest.mark.parametrize("environment", [Environment.LOCAL, Environment.DEVELOPMENT])
 def test_frontend_deep_links_and_api_share_one_origin(
-    tmp_path: Path, environment: Literal["local", "development"]
+    tmp_path: Path, environment: Environment
 ) -> None:
     (tmp_path / "index.html").write_text('<div id="root"></div>')
     (tmp_path / "assets").mkdir()
@@ -39,7 +38,7 @@ def test_frontend_deep_links_and_api_share_one_origin(
         docs = client.get("/api/v1/docs")
         assert docs.status_code == 200
         assert client.get("/api/v1/admin").status_code == 404
-        if environment == "development":
+        if environment is Environment.DEVELOPMENT:
             assert (
                 "script-src https://cdn.jsdelivr.net 'unsafe-inline'"
                 in docs.headers["Content-Security-Policy"]

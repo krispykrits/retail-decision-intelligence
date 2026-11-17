@@ -1,14 +1,19 @@
+from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class Environment(StrEnum):
+    LOCAL = "local"
+    DEVELOPMENT = "development"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RDI_", env_file=".env", extra="ignore")
 
-    environment: Literal["local", "development"] = "local"
+    environment: Environment = Environment.LOCAL
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     database_url: SecretStr = SecretStr("sqlite+pysqlite:///:memory:")
     sql_server: str | None = None
@@ -21,6 +26,6 @@ class Settings(BaseSettings):
             raise ValueError("SQL server and database must be configured together")
         if "*" in self.cors_origins:
             raise ValueError("CORS origins must be explicit")
-        if self.environment == "development" and self.cors_origins:
+        if self.environment is Environment.DEVELOPMENT and self.cors_origins:
             raise ValueError("Development uses one origin; leave CORS origins empty")
         return self
