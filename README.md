@@ -1,7 +1,8 @@
 # Retail Decision Intelligence
 
-React, TypeScript, Tailwind CSS, FastAPI, and Azure SQL.
-React and FastAPI deploy together as one Azure Container App.
+Retail analytics for understanding customer behavior, merchandise performance,
+shopping baskets, and demand. The current foundation provides workspace navigation
+and API/database connectivity.
 
 ## Development
 
@@ -32,10 +33,18 @@ docker run --rm -p 8000:8000 rdi
 python scripts/smoke_deployment.py http://127.0.0.1:8000
 ```
 
-## Infrastructure
+## Architecture
 
-Terraform 1.14.x: `infra/bootstrap/` manages the resource group and remote state;
-`infra/` manages the app, Azure SQL, identity, and logs. Copy the provided
-configuration examples before planning. Both configurations share one resource
-group. The app runs in North Central US; SQL uses West US 3.
-Apply saved plans; keep state and plans out of Git.
+```mermaid
+flowchart TD
+    Browser["Analyst browser"] -->|HTTPS| App
+    Terraform["Terraform"] -.->|provisions| Azure
+    Terraform -->|remote state| State
+    subgraph Azure["Azure: one resource group"]
+        App["Container App: React + FastAPI"] -->|managed identity| SQL["Azure SQL: retail"]
+        App -->|logs| Logs["Log Analytics"]
+        State["Blob Storage: Terraform state"]
+    end
+```
+
+App, logs, and state: North Central US. SQL: West US 3.
