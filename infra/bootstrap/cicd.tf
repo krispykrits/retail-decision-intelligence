@@ -2,7 +2,7 @@
 variable "github_repository" {
   type        = string
   default     = null
-  description = "owner/repository allowed to deploy; null leaves CI identity setup disabled."
+  description = "Repository segment from GitHub's OIDC subject, including immutable IDs (owner@id/repo@id); null disables CI setup."
   validation {
     condition     = var.github_repository == null || var.name_prefix != null
     error_message = "Set name_prefix when enabling GitHub deployment."

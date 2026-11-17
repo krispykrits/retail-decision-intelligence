@@ -5,6 +5,7 @@ state_storage_name       = "<globally-unique-storage-name>"
 state_operator_object_id = "<deployment-principal-object-id>"
 
 # Enable CI setup after the initial development app/database deployment.
-# github_repository = "krispykrits/retail-decision-intelligence"
+# Copy the repository segment from the workflow's OIDC subject, including permanent IDs.
+# github_repository = "krispykrits@64175002/retail-decision-intelligence@1459028611"
 # name_prefix       = "<same-prefix-as-application>"
 # sql_location      = "westus3"
