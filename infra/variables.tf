@@ -41,7 +41,7 @@ variable "sql_location" {
 }
 
 variable "sql_allowed_ipv4_addresses" {
-  description = "Reviewed API outbound IPs. Empty initially keeps SQL inaccessible over the network."
+  description = "Reviewed individual operator/client IPv4 addresses."
   type        = set(string)
   default     = []
   validation {
@@ -49,6 +49,12 @@ variable "sql_allowed_ipv4_addresses" {
       for ip in var.sql_allowed_ipv4_addresses :
       can(cidrnetmask("${ip}/32")) && ip != "0.0.0.0"
     ])
-    error_message = "Supply individual IPv4 addresses; 0.0.0.0 (Allow Azure services) is forbidden."
+    error_message = "Supply individual IPv4 addresses; use sql_allow_azure_services for Azure-wide access."
   }
+}
+
+variable "sql_allow_azure_services" {
+  description = "Development opt-in: allow Azure network sources and provision least-privilege API SQL access using the operator's Azure CLI identity."
+  type        = bool
+  default     = false
 }

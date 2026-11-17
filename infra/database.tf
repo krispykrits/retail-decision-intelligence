@@ -20,9 +20,7 @@ resource "azurerm_mssql_server" "sql" {
   }
 }
 
-# Keep SQL closed on the first apply. After retrieving the API egress IPs,
-# explicitly allow only those individual addresses. Azure may change these IPs;
-# refresh and review the allowlist after environment changes.
+# Optional individual operator/client addresses.
 resource "azurerm_mssql_firewall_rule" "api" {
   for_each         = var.sql_allowed_ipv4_addresses
   name             = "api-${replace(each.value, ".", "-")}"
@@ -30,6 +28,37 @@ resource "azurerm_mssql_firewall_rule" "api" {
   start_ip_address = each.value
   end_ip_address   = each.value
 
+}
+
+# Opt-in development access: Azure resources still require Entra SQL permissions.
+resource "azurerm_mssql_firewall_rule" "azure_services" {
+  count            = var.sql_allow_azure_services ? 1 : 0
+  name             = "AllowAzureServices"
+  server_id        = azurerm_mssql_server.sql.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+resource "terraform_data" "database_access" {
+  count = var.sql_allow_azure_services ? 1 : 0
+  triggers_replace = [
+    azapi_resource.database.id,
+    azurerm_user_assigned_identity.api.client_id,
+    filesha256("${path.module}/scripts/configure_sql.py"),
+    sha256(join("", [for file in sort(fileset("${path.module}/../backend/src/retail_api/migrations", "**/*.py")) : filesha256("${path.module}/../backend/src/retail_api/migrations/${file}")])),
+  ]
+  provisioner "local-exec" {
+    working_dir = "${path.module}/.."
+    command     = "uv run --project backend --locked python infra/scripts/configure_sql.py"
+    environment = {
+      AZURE_CLIENT_ID   = ""
+      RDI_SQL_SERVER    = azurerm_mssql_server.sql.fully_qualified_domain_name
+      RDI_SQL_DATABASE  = azapi_resource.database.name
+      RDI_API_NAME      = azurerm_user_assigned_identity.api.name
+      RDI_API_CLIENT_ID = azurerm_user_assigned_identity.api.client_id
+    }
+  }
+  depends_on = [azurerm_mssql_firewall_rule.azure_services]
 }
 
 # AzAPI exposes the free-tier properties unavailable in azurerm_mssql_database.

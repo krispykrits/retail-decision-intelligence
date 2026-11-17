@@ -22,13 +22,13 @@ contracts-check:
 	npm run check:api --prefix frontend
 
 format:
-	uv run --project backend ruff check --fix --config backend/pyproject.toml backend/src tests/backend scripts
-	uv run --project backend ruff format --config backend/pyproject.toml backend/src tests/backend scripts
+	uv run --project backend ruff check --fix --config backend/pyproject.toml backend/src tests/backend scripts infra/scripts
+	uv run --project backend ruff format --config backend/pyproject.toml backend/src tests/backend scripts infra/scripts
 	npm run format --prefix frontend
 
 lint:
-	uv run --project backend ruff check --config backend/pyproject.toml backend/src tests/backend scripts
-	uv run --project backend ruff format --check --config backend/pyproject.toml backend/src tests/backend scripts
+	uv run --project backend ruff check --config backend/pyproject.toml backend/src tests/backend scripts infra/scripts
+	uv run --project backend ruff format --check --config backend/pyproject.toml backend/src tests/backend scripts infra/scripts
 	uv run --project backend mypy --config-file backend/pyproject.toml backend/src
 	npm run format:check --prefix frontend
 	npm run lint --prefix frontend
