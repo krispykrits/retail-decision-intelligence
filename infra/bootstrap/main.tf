@@ -1,3 +1,4 @@
+# Create the resource group and state storage before initializing remote state.
 terraform {
   required_version = "~> 1.14.0"
   required_providers {
@@ -11,6 +12,7 @@ terraform {
 provider "azurerm" {
   features {
     storage {
+      # Avoid unrelated data-plane reads; state access still uses Entra authentication.
       data_plane_available = false
     }
   }
@@ -40,6 +42,7 @@ variable "state_operator_object_id" {
   type        = string
 }
 
+# Keep the project in one group and protect it from accidental Terraform deletion.
 resource "azurerm_resource_group" "project" {
   name     = var.resource_group_name
   location = var.location
@@ -50,6 +53,7 @@ resource "azurerm_resource_group" "project" {
   }
 }
 
+# Keep state private and keyless, with versions and soft deletion for recovery.
 resource "azurerm_storage_account" "state" {
   name                            = var.state_storage_name
   resource_group_name             = azurerm_resource_group.project.name
@@ -73,12 +77,14 @@ resource "azurerm_storage_account" "state" {
   }
 }
 
+# Allow the deployment operator to read, write, and lock Terraform state blobs.
 resource "azurerm_role_assignment" "state_operator" {
   scope                = azurerm_storage_account.state.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = var.state_operator_object_id
 }
 
+# Store state files in a private container after operator access is assigned.
 resource "azurerm_storage_container" "state" {
   name                  = "tfstate"
   storage_account_id    = azurerm_storage_account.state.id
@@ -86,6 +92,7 @@ resource "azurerm_storage_container" "state" {
   depends_on            = [azurerm_role_assignment.state_operator]
 }
 
+# Return backend connection settings without exposing storage keys.
 output "backend_config" {
   value = {
     resource_group_name  = azurerm_resource_group.project.name

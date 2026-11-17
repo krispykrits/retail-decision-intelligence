@@ -2,6 +2,7 @@ locals {
   sql_location = coalesce(var.sql_location, local.location)
 }
 
+# Create the SQL server with Entra-only authentication in the approved SQL region.
 resource "azurerm_mssql_server" "sql" {
   name                                 = "${var.name_prefix}-sql-${local.sql_location}"
   resource_group_name                  = local.resource_group_name
@@ -39,7 +40,8 @@ resource "azurerm_mssql_firewall_rule" "azure_services" {
   end_ip_address   = "0.0.0.0"
 }
 
-# Runs configure_sql.py as the SQL administrator on creation or tracked changes.
+# When enabled, runs migrations and API db_owner setup as the SQL administrator.
+# Runs on creation or changes to the database, identity, script, or migration files.
 # Unchanged applies skip it; failed provisioning is retried on the next apply.
 # This is deployment setup, never API startup or request handling.
 resource "terraform_data" "database_access" {
@@ -54,6 +56,7 @@ resource "terraform_data" "database_access" {
     working_dir = "${path.module}/.."
     command     = "uv run --project backend --locked python infra/scripts/configure_sql.py"
     environment = {
+      # Use the operator's Azure CLI login, not the API's managed identity, for setup.
       AZURE_CLIENT_ID   = ""
       RDI_SQL_SERVER    = azurerm_mssql_server.sql.fully_qualified_domain_name
       RDI_SQL_DATABASE  = azapi_resource.database.name

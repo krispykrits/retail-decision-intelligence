@@ -12,22 +12,28 @@ from retail_api.migrate import run_migrations
 
 def main() -> None:
     name = os.environ["RDI_API_NAME"]
+    # Quote the SQL identifier; encode the managed identity's client ID as a SQL SID.
     quoted_name = "[" + name.replace("]", "]]") + "]"
     sid = UUID(os.environ["RDI_API_CLIENT_ID"]).bytes_le
+    # Deployment can wait longer than API readiness for a serverless SQL connection.
     engine = create_database_engine(Settings(), connect_timeout=60)
     try:
         with engine.begin() as connection:
+            # Apply pending Alembic revisions before the API uses the database.
             run_migrations(connection)
             existing = connection.execute(
                 text("SELECT sid FROM sys.database_principals WHERE name = :name"),
                 {"name": name},
             ).scalar_one_or_none()
             if existing is None:
+                # Map the identity directly, without requiring Microsoft Graph lookup access.
                 connection.exec_driver_sql(
                     f"CREATE USER {quoted_name} WITH SID = 0x{sid.hex()}, TYPE = E"
                 )
             elif bytes(existing) != sid:
+                # Do not repurpose a pre-existing user belonging to another identity.
                 raise RuntimeError("Existing SQL user belongs to a different identity")
+            # Skip the role change when a previous deployment already granted ownership.
             is_owner = connection.execute(
                 text("SELECT IS_ROLEMEMBER('db_owner', :name)"), {"name": name}
             ).scalar_one()
