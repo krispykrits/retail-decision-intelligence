@@ -5,6 +5,13 @@ import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
 const colors = ['#1848a5', '#2870ce', '#4389df', '#69a8f0', '#a2ccfc', '#b4c1d4']
+const donutWidth = 228
+const donutHeight = 166
+const centerX = donutWidth / 2
+const centerY = donutHeight / 2
+const radius = 70
+const labelGap = 15
+
 const sliceColor = (index: number) => colors[Math.min(index, colors.length - 1)]
 
 export function DashboardBreakdown({
@@ -43,11 +50,21 @@ export function DashboardBreakdown({
     slices.push({
       name,
       share,
-      color,
       stop: `${color} ${start}% ${end}%`,
-      x: 50 + 41 * Math.sin(angle),
-      y: 50 - 41 * Math.cos(angle),
+      x: centerX + radius * Math.sin(angle),
+      y: centerY - radius * Math.cos(angle),
     })
+  }
+  const labels = []
+  for (const left of [true, false]) {
+    const side = slices.filter((slice) => slice.x < centerX === left).sort((a, b) => a.y - b.y)
+    let previousY = 10 - labelGap
+    for (const [index, slice] of side.entries()) {
+      const maxY = donutHeight - 10 - (side.length - 1 - index) * labelGap
+      const y = Math.max(previousY + labelGap, Math.min(slice.y, maxY))
+      labels.push({ ...slice, left, labelY: y })
+      previousY = y
+    }
   }
   const showDonut = slices.length > 0 && !signed
   const columns = {
@@ -67,56 +84,58 @@ export function DashboardBreakdown({
           : 'Net spend and share of the selected period.'}
       </p>
       <div
-        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(6rem,1fr)_minmax(0,2fr)] lg:content-center lg:items-center' : ''}`}
+        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,2fr)_minmax(0,3fr)] lg:content-center lg:items-center' : ''}`}
       >
         {showDonut && (
-          <figure aria-label="Share of net spend" className="mx-auto w-full max-w-44">
+          <figure
+            aria-label="Share of net spend"
+            className="relative mx-auto grid w-full max-w-56 place-items-center"
+            style={{ aspectRatio: `${donutWidth} / ${donutHeight}` }}
+          >
             <div
-              className="relative mx-auto grid aspect-square w-40 max-w-full place-items-center rounded-full"
+              className="grid aspect-square place-items-center rounded-full"
               style={{
+                width: `${(2 * radius * 100) / donutWidth}%`,
                 background: `conic-gradient(${slices.map((slice) => slice.stop).join(', ')})`,
               }}
             >
-              <div className="grid size-[65%] place-content-center rounded-full bg-surface text-center">
-                <span className="text-sm font-semibold tabular-nums">
+              <div className="grid size-[66%] place-content-center rounded-full bg-surface text-center">
+                <span className="text-xs font-semibold tabular-nums">
                   {valueLabel('spend', netSpend)}
                 </span>
                 <span className="text-[0.65rem] text-muted">Net spend</span>
               </div>
-              {slices
-                .filter(({ share }) => share >= 12)
-                .map((slice) => (
-                  <span
-                    key={slice.name}
-                    aria-label={`${slice.name} ${slice.share.toFixed(1)}%`}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded bg-surface px-1 text-[0.65rem] font-semibold text-ink tabular-nums"
-                    style={{ left: `${slice.x}%`, top: `${slice.y}%` }}
-                  >
-                    {slice.share.toFixed(1)}%
-                  </span>
-                ))}
             </div>
-            {slices.some(({ share }) => share < 12) && (
-              <figcaption className="mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[0.65rem] text-muted">
-                {slices
-                  .filter(({ share }) => share < 12)
-                  .map(({ name, color, share }) => (
-                    <span key={name} className="inline-flex items-baseline gap-1">
-                      <span
-                        aria-hidden="true"
-                        className="size-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span>
-                        {name}{' '}
-                        <strong className="font-semibold text-ink tabular-nums">
-                          {share.toFixed(1)}%
-                        </strong>
-                      </span>
-                    </span>
-                  ))}
-              </figcaption>
-            )}
+            <svg
+              viewBox={`0 0 ${donutWidth} ${donutHeight}`}
+              className="pointer-events-none absolute inset-0 size-full"
+            >
+              {labels.map(({ name, share, x, y, left, labelY }) => {
+                const elbow = left ? 42 : donutWidth - 42
+                const textX = elbow + (left ? -3 : 3)
+                const percentage = `${share.toFixed(1)}%`
+                return (
+                  <g key={name}>
+                    <path
+                      d={`M ${x} ${y} L ${elbow} ${labelY}`}
+                      className="stroke-muted"
+                      fill="none"
+                      aria-hidden="true"
+                    />
+                    <text
+                      x={textX}
+                      y={labelY}
+                      textAnchor={left ? 'end' : 'start'}
+                      dominantBaseline="middle"
+                      aria-label={`${name} ${percentage}`}
+                      className="fill-ink text-[11px] font-semibold tabular-nums"
+                    >
+                      {percentage}
+                    </text>
+                  </g>
+                )
+              })}
+            </svg>
           </figure>
         )}
         <div className="min-w-0">

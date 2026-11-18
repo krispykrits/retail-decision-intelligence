@@ -269,11 +269,22 @@ describe('Command Center', () => {
           rows: [
             {
               name: department ? 'PRODUCE' : 'FOOD',
-              current: totals,
+              current: department ? totals : { ...totals, spend: '19.56' },
               prior: null,
               change: null,
-              share: '100',
+              share: department ? '100' : '97.8',
             },
+            ...(!department
+              ? [
+                  {
+                    name: 'PHARMA',
+                    current: { ...totals, spend: '0.44' },
+                    prior: null,
+                    change: null,
+                    share: '2.2',
+                  },
+                ]
+              : []),
           ],
         },
         signals: {
@@ -342,7 +353,8 @@ describe('Command Center', () => {
       expect(await screen.findByRole('group', { name: 'Net units by day' })).toBeVisible()
 
       expect(screen.queryByRole('link', { name: /^FOOD$/ })).not.toBeInTheDocument()
-      expect(screen.getByLabelText('FOOD 100.0%')).toBeVisible()
+      expect(screen.getByLabelText('FOOD 97.8%')).toBeVisible()
+      expect(screen.getByLabelText('PHARMA 2.2%')).toBeVisible()
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
