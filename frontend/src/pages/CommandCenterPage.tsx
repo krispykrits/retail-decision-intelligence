@@ -10,7 +10,7 @@ import { workspaces } from '../app/workspaces'
 import { AccountMenu } from '../components/AccountMenu'
 import { Panel } from '../components/Panel'
 import { Spinner } from '../components/Spinner'
-import { WorkspaceIcon } from '../components/WorkspaceIcon'
+import { Icon, WorkspaceIcon } from '../components/WorkspaceIcon'
 import { DashboardBreakdown } from '../features/dashboard/DashboardBreakdown'
 import { DashboardFilters } from '../features/dashboard/DashboardFilters'
 import { DashboardSignals } from '../features/dashboard/DashboardSignals'
@@ -68,6 +68,18 @@ export function CommandCenterPage() {
     defaultTrend ??
     (trendResult?.key.startsWith(`${result?.key}:`) ? trendResult.data : null) ??
     data?.trend
+
+  useEffect(() => {
+    function dismissPeriodPicker(event: PointerEvent) {
+      const picker = periodPicker.current
+      if (picker?.open && event.target instanceof Node && !picker.contains(event.target)) {
+        picker.open = false
+      }
+    }
+
+    document.addEventListener('pointerdown', dismissPeriodPicker, true)
+    return () => document.removeEventListener('pointerdown', dismissPeriodPicker, true)
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -140,18 +152,14 @@ export function CommandCenterPage() {
           {data?.options.first_date && (
             <details ref={periodPicker} className="group sm:relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-brand/40">
-                <span aria-hidden="true" className="text-lg text-brand">
-                  ▦
-                </span>
+                <Icon name="calendar" className="size-5 text-brand" />
                 <span className="grid">
                   <span className="text-xs text-muted">Analysis period</span>
                   <span className="font-semibold">
                     {current ? periodLabel(current) : 'Choose dates'}
                   </span>
                 </span>
-                <span aria-hidden="true" className="ml-1 text-muted group-open:rotate-180">
-                  ⌄
-                </span>
+                <Icon name="chevron" className="ml-1 size-4 text-muted group-open:rotate-180" />
               </summary>
               <Panel className="absolute right-4 left-4 z-20 mt-2 sm:right-0 sm:left-auto sm:w-100">
                 <DashboardFilters
@@ -241,7 +249,7 @@ export function CommandCenterPage() {
             />
           </div>
 
-          <div className="grid gap-3 md:gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
             <DashboardTakeaways
               summary={data.summary}
               breakdown={data.breakdown}

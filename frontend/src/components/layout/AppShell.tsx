@@ -6,7 +6,7 @@ import { WorkspaceIcon } from '../WorkspaceIcon'
 export function AppShell() {
   const isCommandCenter = useMatch('/command-center')
   return (
-    <div className="flex min-h-screen flex-col bg-canvas font-sans text-ink md:flex-row">
+    <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">
       <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">
         Skip to content
       </a>
@@ -42,7 +42,7 @@ export function AppShell() {
       </aside>
       <div className="min-w-0 flex-1">
         {!isCommandCenter && (
-          <header className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-surface px-4 py-3 md:px-8">
+          <header className="md:flex md:flex-wrap md:items-center md:justify-end md:gap-3 md:border-b md:border-line md:bg-surface md:px-8 md:py-3">
             <AccountMenu />
           </header>
         )}

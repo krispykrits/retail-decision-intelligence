@@ -392,7 +392,15 @@ describe('Command Center', () => {
         ),
       ).toBeVisible()
       expect(screen.queryByRole('link', { name: /Active households/ })).not.toBeInTheDocument()
-      await user.click(screen.getByText('Analysis period'))
+      const periodTrigger = screen.getByText('Analysis period')
+      const periodPicker = periodTrigger.closest('details')
+      await user.click(periodTrigger)
+      expect(periodPicker).toHaveAttribute('open')
+      await user.click(screen.getByLabelText('Start date'))
+      expect(periodPicker).toHaveAttribute('open')
+      await user.click(screen.getByRole('heading', { name: 'Command Center' }))
+      expect(periodPicker).not.toHaveAttribute('open')
+      await user.click(periodTrigger)
       await user.selectOptions(screen.getByLabelText('Region'), 'EAST')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(dashboard).toHaveBeenLastCalledWith(

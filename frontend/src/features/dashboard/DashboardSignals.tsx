@@ -3,7 +3,7 @@ import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
-import { WorkspaceIcon } from '../../components/WorkspaceIcon'
+import { Icon, WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
 export function DashboardSignals({ signals }: { signals: Dashboard['signals'] }) {
@@ -13,7 +13,7 @@ export function DashboardSignals({ signals }: { signals: Dashboard['signals'] })
     <Panel aria-labelledby="signals-title">
       <div className="relative mb-2 flex items-center gap-2">
         <h2 id="signals-title" className="flex items-center gap-2 text-base font-semibold">
-          <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
+          <Icon name="search" className="size-5 text-brand" />
           Notable changes &amp; investigation signals
         </h2>
         <InfoTooltip label="Investigation signals">

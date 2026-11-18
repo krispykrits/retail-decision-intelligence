@@ -3,7 +3,7 @@ import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
-import { WorkspaceIcon } from '../../components/WorkspaceIcon'
+import { Icon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
 const colors = ['#1848a5', '#2870ce', '#4389df', '#69a8f0', '#a2ccfc', '#b4c1d4']
@@ -123,7 +123,7 @@ export function DashboardBreakdown({
     <Panel aria-labelledby="breakdown-title" className="flex flex-col">
       <div className="relative flex items-center gap-2">
         <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+          <Icon name="pie" className="size-5 text-brand" />
           {isDepartment ? 'Department contribution' : 'Commodity contribution'}
         </h2>
         <InfoTooltip label={isDepartment ? 'Department contribution' : 'Commodity contribution'}>

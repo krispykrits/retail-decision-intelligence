@@ -1,14 +1,13 @@
 import type { Dashboard, Metric } from '../../api/dashboard'
-import type { Workspace } from '../../app/workspaces'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
-import { WorkspaceIcon } from '../../components/WorkspaceIcon'
+import { Icon, type IconName } from '../../components/WorkspaceIcon'
 import { metrics, percentLabel, periodLabel, valueLabel } from './format'
 
-const cards: { metric: Metric; icon: Workspace['path']; definition: string }[] = [
+const cards: { metric: Metric; icon: IconName; definition: string }[] = [
   {
     metric: 'spend',
-    icon: '/merchandise',
+    icon: 'wallet',
     definition: 'Adds signed spend for matching transactions, including returns and adjustments.',
   },
   {
@@ -25,7 +24,7 @@ const cards: { metric: Metric; icon: Workspace['path']; definition: string }[] =
   },
   {
     metric: 'avg_basket',
-    icon: '/command-center',
+    icon: 'calculator',
     definition: 'Divides net spend by the number of distinct baskets in the selection.',
   },
 ]
@@ -40,7 +39,7 @@ export function DashboardSummary({ summary }: { summary: Dashboard['summary'] })
         return (
           <Panel key={metric} className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-brand">
-              <WorkspaceIcon path={icon} className="size-5" />
+              <Icon name={icon} className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="relative flex items-center gap-1.5">
