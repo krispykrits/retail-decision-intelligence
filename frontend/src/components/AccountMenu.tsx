@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSession } from './session'
+import { useSession } from '../auth/session'
 
 export function AccountMenu() {
   const { account, logout } = useSession()

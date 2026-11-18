@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { workspaces } from '../../app/workspaces'
-import { AccountMenu } from '../../auth/AccountMenu'
+import { AccountMenu } from '../AccountMenu'
 
 export function AppShell() {
   return (
