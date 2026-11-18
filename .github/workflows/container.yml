@@ -60,11 +60,9 @@ jobs:
           # Trust the local test server's certificate only; Azure verifies certificates.
           export RDI_DATABASE_URL="mssql+pyodbc://sa:$SQL_TEST_PASSWORD@rdi-sql/retail_test?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes"
           echo "::add-mask::$RDI_DATABASE_URL"
-          # Run migrations twice to verify they are safe to repeat.
-          for attempt in 1 2; do
-            docker run --rm --network rdi-test --env RDI_DATABASE_URL \
-              "$IMAGE_NAME:$COMMIT_SHA" python -m retail_api.migrate
-          done
+          # Verify upgrades with the deployment identity's SQL permissions.
+          docker run --interactive --rm --network rdi-test --env RDI_DATABASE_URL \
+            "$IMAGE_NAME:$COMMIT_SHA" python < tests/backend/smoke_migrations.py
           # Start the built app once, with a read-only filesystem and writable /tmp.
           docker run --detach --name rdi --network rdi-test --read-only \
             --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \

@@ -76,7 +76,13 @@ def upload(client: TestClient, dataset: str, content: bytes, filename: str = "da
 
 def test_import_api_preserves_records_and_reports_rejections(signed_in: TestClient) -> None:
     client = signed_in
-    assert client.get("/api/v1/datasets").status_code == 200
+    response = client.get("/api/v1/datasets")
+    assert response.status_code == 200
+    assert [row["dataset"] for row in response.json()] == list(Dataset)
+    assert all(
+        row["records"] == row["version"] == 0 and row["last_success"] is None
+        for row in response.json()
+    )
     assert upload(client, "households", HOUSEHOLDS + HOUSEHOLD).status_code == 403
     assert client.get("/api/v1/imports").status_code == 403
     with Session(client.app.state.database) as db, db.begin():

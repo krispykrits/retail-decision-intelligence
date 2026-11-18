@@ -10,11 +10,11 @@ from retail_api.database import create_database_engine
 MIGRATIONS = Path(__file__).parent / "migrations"
 
 
-def run_migrations(connection: Connection) -> None:
+def run_migrations(connection: Connection, revision: str = "head") -> None:
     configuration = Config()
     configuration.set_main_option("script_location", str(MIGRATIONS))
     configuration.attributes["connection"] = connection
-    command.upgrade(configuration, "head")
+    command.upgrade(configuration, revision)
 
 
 def upgrade_database(settings: Settings) -> None:
