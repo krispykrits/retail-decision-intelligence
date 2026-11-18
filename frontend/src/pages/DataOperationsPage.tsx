@@ -16,7 +16,7 @@ const datasets = [
   ['transactions', 'Transactions'],
 ] as const satisfies readonly (readonly [Dataset, string])[]
 
-const panel = 'rounded-xl border border-line bg-white p-5 md:p-6'
+const panel = 'rounded-2xl border border-line bg-surface shadow-panel p-5 md:p-6'
 const heading = 'text-xl font-semibold'
 const control =
   'rounded-lg border border-brand px-3 py-2 text-sm font-semibold text-brand hover:bg-canvas'
@@ -100,7 +100,7 @@ export function DataOperationsPage() {
 
   return (
     <>
-      <h1 className="mb-2 text-3xl font-bold md:text-4xl">Data Operations</h1>
+      <h1 className="mb-2 text-3xl font-semibold tracking-tight md:text-4xl">Data Operations</h1>
       <p className="mb-8 text-muted">Upload and review retail datasets.</p>
       <div className="grid gap-5">
         {administrator && (
@@ -172,7 +172,7 @@ export function DataOperationsPage() {
               {progress ?? (results.length ? 'Import results are available below.' : '')}
             </p>
             {uploadError && (
-              <p className="mt-3 text-sm text-red-700" role="alert">
+              <p className="mt-3 text-sm text-error" role="alert">
                 {uploadError}
               </p>
             )}
@@ -230,7 +230,7 @@ export function DataOperationsPage() {
             </p>
           )}
           {inventory.status === 'error' && (
-            <p className="mt-2 text-sm text-red-700" role="alert">
+            <p className="mt-2 text-sm text-error" role="alert">
               Stored datasets could not be loaded.
             </p>
           )}
@@ -255,7 +255,7 @@ export function DataOperationsPage() {
             )}
             {history.status === 'error' && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <p className="text-sm text-red-700" role="alert">
+                <p className="text-sm text-error" role="alert">
                   Import history could not be loaded.
                 </p>
                 <button type="button" className={button} onClick={history.refresh}>

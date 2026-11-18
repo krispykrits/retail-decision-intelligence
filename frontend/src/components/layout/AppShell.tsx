@@ -5,12 +5,12 @@ import { AccountMenu } from '../AccountMenu'
 export function AppShell() {
   return (
     <div className="flex min-h-screen flex-col bg-canvas font-sans text-ink md:flex-row">
-      <a className="fixed -top-20 left-4 z-10 bg-white p-3 focus:top-4" href="#main-content">
+      <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">
         Skip to content
       </a>
-      <aside className="bg-sidebar p-4 text-white md:w-60 md:shrink-0 md:py-6">
+      <aside className="border-b border-line bg-sidebar p-4 md:w-60 md:shrink-0 md:border-r md:border-b-0 md:py-6">
         <Link
-          className="block px-3 pt-2 pb-4 text-xl font-bold text-white no-underline md:pb-7"
+          className="block px-3 pt-2 pb-5 text-lg leading-tight font-semibold tracking-tight text-ink no-underline md:pb-8"
           to="/command-center"
         >
           Retail Decision
@@ -23,8 +23,10 @@ export function AppShell() {
               key={workspace.path}
               to={workspace.path}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-3.5 no-underline ${
-                  isActive ? 'bg-brand font-semibold text-white' : 'text-nav hover:bg-nav-hover'
+                `rounded-lg border px-3 py-2.5 text-sm no-underline transition-colors ${
+                  isActive
+                    ? 'border-brand/20 bg-nav-selected font-semibold text-link'
+                    : 'border-transparent text-nav hover:bg-nav-hover'
                 }`
               }
             >
@@ -34,7 +36,7 @@ export function AppShell() {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-white p-4 md:px-8 md:py-5">
+        <header className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-surface px-4 py-3 md:px-8">
           <AccountMenu />
         </header>
         <main className="max-w-7xl px-4 py-6 md:px-8 md:py-10" id="main-content" tabIndex={-1}>

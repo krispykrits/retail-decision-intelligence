@@ -9,11 +9,11 @@ type DataTableProps = {
 
 export function DataTable({ columns, children, busy, className = '' }: DataTableProps) {
   return (
-    <div className="overflow-x-auto" aria-busy={busy}>
+    <div className="overflow-x-auto rounded-xl border border-line" aria-busy={busy}>
       <table
         className={`w-full text-left text-sm [&_:is(th,td)]:px-3 [&_:is(th,td)]:py-2 ${className}`}
       >
-        <thead className="bg-canvas">
+        <thead className="border-b border-line bg-canvas text-nav">
           <tr>
             {Object.entries(columns).map(([key, label]) => (
               <th key={key} scope="col">
@@ -22,7 +22,7 @@ export function DataTable({ columns, children, busy, className = '' }: DataTable
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-line border-b border-line">{children}</tbody>
+        <tbody className="divide-y divide-line">{children}</tbody>
       </table>
     </div>
   )

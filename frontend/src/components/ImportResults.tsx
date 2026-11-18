@@ -22,7 +22,7 @@ export function ImportResults({ results }: { results: ImportResult[] }) {
               className={
                 result.status === 'completed'
                   ? 'font-semibold text-success'
-                  : 'font-semibold text-red-700'
+                  : 'font-semibold text-error'
               }
             >
               {statusLabel[result.status]}
@@ -35,7 +35,7 @@ export function ImportResults({ results }: { results: ImportResult[] }) {
             {' · '}
             {result.rejected.toLocaleString()} rejected
           </p>
-          {result.detail && <p className="mt-1 text-red-700">{result.detail}</p>}
+          {result.detail && <p className="mt-1 text-error">{result.detail}</p>}
           {!!result.errors.length && (
             <details className="mt-2">
               <summary className="cursor-pointer text-link">
