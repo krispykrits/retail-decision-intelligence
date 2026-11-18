@@ -31,6 +31,16 @@ export function TrendChart({
   const end = points.reduce((index, point) => Math.max(index, point.index), 0)
   const x = (index: number) => (end ? left + (index / end) * (right - left) : (left + right) / 2)
   const y = (value: number) => bottom - ((value - low) / span) * (bottom - top)
+  const firstTick = ticks[0]
+  const lastTick = ticks.at(-1)
+  const spacing = end * 0.24
+  const middleTick = ticks[Math.floor(ticks.length / 2)]
+  const visibleTicks = firstTick ? [firstTick] : []
+  if (firstTick && lastTick && lastTick.index - firstTick.index > spacing) {
+    if (middleTick.index - firstTick.index > spacing && lastTick.index - middleTick.index > spacing)
+      visibleTicks.push(middleTick)
+    visibleTicks.push(lastTick)
+  }
   const grid = [...new Set([low, low + span / 2, low + span, 0])]
 
   return (
@@ -56,7 +66,7 @@ export function TrendChart({
             </text>
           </g>
         ))}
-        {ticks.map((tick) => (
+        {visibleTicks.map((tick) => (
           <text
             aria-hidden="true"
             key={tick.index}

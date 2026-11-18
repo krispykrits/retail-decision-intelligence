@@ -3,10 +3,18 @@ import { Panel } from '../../components/Panel'
 import { Spinner } from '../../components/Spinner'
 import { TrendChart } from '../../components/TrendChart'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
-import { dateLabel, metrics, periodLabel, valueLabel } from './format'
+import { metrics, periodLabel, valueLabel } from './format'
+
+const axisDates = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
+const millisecondsPerDay = 86_400_000
 
 export function DashboardTrend({
   trend,
+  coverage,
   metric,
   loading,
   error,
@@ -14,35 +22,50 @@ export function DashboardTrend({
   onMetricChange,
 }: {
   trend: Dashboard['trend']
+  coverage: Dashboard['options']
   metric: Metric
   loading: boolean
   error: boolean
   retry: () => void
   onMetricChange: (metric: Metric) => void
 }) {
-  const labelPoint = (point: Point) => ({
-    index: point.index,
-    value: Number(point.value),
-    label: periodLabel(point),
-  })
-  const available = trend.current.length ? trend.current : trend.prior
-  const indices = [...new Set([0, Math.floor(available.length / 2), available.length - 1])].filter(
-    (index) => index >= 0 && index < available.length,
-  )
+  function observedBucket(point: Point) {
+    const { first_date: first, last_date: last } = coverage
+    const start = first && point.start < first ? first : point.start
+    const end = last && point.end > last ? last : point.end
+    return { ...point, start, end }
+  }
 
+  function labelPoint(point: Point) {
+    const bucket = observedBucket(point)
+    const days = (Date.parse(bucket.end) - Date.parse(bucket.start)) / millisecondsPerDay + 1
+    const shortened = trend.grain === 'week' && days < 7
+    return {
+      index: point.index,
+      value: Number(point.value),
+      label: `${periodLabel(bucket)}${shortened ? ` (${days} ${days === 1 ? 'day' : 'days'})` : ''}`,
+      shortened,
+    }
+  }
+
+  const priorPeriod = trend.prior_period
+  const canCompare =
+    Boolean(trend.current_period && !trend.current_period.partial) &&
+    Boolean(priorPeriod && !priorPeriod.partial) &&
+    trend.prior.length > 0
+  const selectedPoints = trend.current.map(labelPoint)
+  const priorPoints = canCompare ? trend.prior.map(labelPoint) : []
   const series = [
-    {
-      id: 'prior',
-      label: `Prior period${trend.prior_period?.partial ? ' (partial)' : ''}`,
-      points: trend.prior.map(labelPoint),
-      dashed: true,
-    },
-    {
-      id: 'current',
-      label: `Selected period${trend.current_period?.partial ? ' (partial)' : ''}`,
-      points: trend.current.map(labelPoint),
-    },
+    { id: 'prior', label: 'Prior period', points: priorPoints, dashed: true },
+    { id: 'current', label: 'Selected period', points: selectedPoints },
   ].filter((line) => line.points.length > 0)
+  const comparisonNote =
+    canCompare && priorPeriod
+      ? `Compared with ${periodLabel(priorPeriod)}.`
+      : !trend.current_period?.partial && priorPeriod?.partial
+        ? 'The prior period extends beyond the imported dates.'
+        : 'A comparable prior period is unavailable.'
+  const hasShortWeek = [...selectedPoints, ...priorPoints].some((point) => point.shortened)
 
   return (
     <Panel
@@ -82,12 +105,16 @@ export function DashboardTrend({
             key={`${trend.metric}-${trend.current_period?.start}-${trend.current_period?.end}`}
             label={`${metrics[trend.metric]} by ${trend.grain}`}
             series={series}
-            ticks={indices.map((index) => ({
-              index: available[index].index,
-              label: dateLabel(available[index].start),
+            ticks={trend.current.map(observedBucket).map(({ index, start }) => ({
+              index,
+              label: axisDates.format(new Date(`${start}T00:00:00Z`)),
             }))}
             format={(value) => valueLabel(trend.metric, value)}
           />
+          <p className="mt-2 text-xs text-muted">
+            {comparisonNote}
+            {hasShortWeek && ' Short weeks show their day count in the chart details.'}
+          </p>
         </div>
         {(loading || error) && (
           <div

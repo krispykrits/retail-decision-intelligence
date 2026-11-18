@@ -77,7 +77,6 @@ export function CommandCenterPage() {
   const pending = result?.key !== requestKey
   const data = result?.data
   const current = data?.summary.current_period
-  const prior = data?.summary.prior_period
   const [trendRetry, setTrendRetry] = useState(0)
   const trendKey = `${result?.key}:${metric}:${trendRetry}`
   const [trendResult, setTrendResult] = useState<{ key: string; data: Dashboard['trend'] | null }>()
@@ -195,6 +194,17 @@ export function CommandCenterPage() {
         </div>
       </header>
 
+      {!pending && current?.partial && data?.options.first_date && data.options.last_date && (
+        <p
+          role="status"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-ink"
+        >
+          This selection extends beyond the imported dates{' '}
+          {periodLabel({ start: data.options.first_date, end: data.options.last_date })}. Results
+          cover the available dates only.
+        </p>
+      )}
+
       {pending && !data ? (
         <Panel role="status" className="flex items-center gap-2 text-sm text-muted">
           <Spinner />
@@ -237,6 +247,7 @@ export function CommandCenterPage() {
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1.15fr_1.25fr_.85fr]">
             <DashboardTrend
               trend={trend ?? data.trend}
+              coverage={data.options}
               metric={metric}
               loading={!trendReady}
               error={trendError}
@@ -282,16 +293,6 @@ export function CommandCenterPage() {
               </ul>
             </Panel>
           </div>
-          {data.options.first_date && data.options.last_date && (
-            <p className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-nav">
-              <strong>About this view.</strong> Observed transaction data from{' '}
-              {periodLabel({ start: data.options.first_date, end: data.options.last_date })}.
-              {prior && <> Prior period {periodLabel(prior)}.</>}
-              {(current?.partial || prior?.partial) && (
-                <> Comparison changes are unavailable for periods outside the source date range.</>
-              )}
-            </p>
-          )}
         </>
       )}
     </div>

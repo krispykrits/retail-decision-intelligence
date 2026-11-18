@@ -119,6 +119,55 @@ describe('workspace shell', () => {
 })
 
 describe('Command Center', () => {
+  it('explains out-of-range selections and suppresses their prior comparison', async () => {
+    const user = userEvent.setup()
+    const current = { start: '2020-06-22', end: '2020-11-25', partial: true }
+    const prior = { start: '2020-01-18', end: '2020-06-21', partial: false }
+    const totals = {
+      lines: 4,
+      spend: '20.00',
+      households: 2,
+      baskets: 3,
+      units: 2,
+      avg_basket: '6.67',
+    }
+    const dashboard = vi.mocked(getDashboard)
+    dashboard.mockResolvedValueOnce({
+      ...emptyDashboard,
+      options: { first_date: '2018-08-17', last_date: '2020-08-15', regions: [], departments: [] },
+      summary: {
+        ...emptyDashboard.summary,
+        current: totals,
+        current_period: current,
+        prior_period: prior,
+      },
+      trend: {
+        ...emptyDashboard.trend,
+        grain: 'week',
+        current_period: current,
+        prior_period: prior,
+        current: [{ start: '2020-08-10', end: '2020-08-16', index: 7, value: '20.00' }],
+        prior: [{ start: '2020-06-13', end: '2020-06-19', index: 21, value: '10.00' }],
+      },
+    })
+    render(
+      <MemoryRouter initialEntries={['/command-center?start=2020-06-22&end=2020-11-25']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByText(/This selection extends beyond the imported dates/),
+    ).toBeVisible()
+    expect(screen.queryByText('Prior period', { exact: true })).not.toBeInTheDocument()
+    expect(
+      screen.getByLabelText(/Selected period, Aug 10, 2020 – Aug 15, 2020 \(6 days\)/),
+    ).toBeInTheDocument()
+    await user.click(screen.getByText('Analysis period'))
+    expect(screen.getByLabelText('End date')).toHaveAttribute('max', '2020-08-15')
+    expect(screen.getByLabelText('End date')).toHaveValue('2020-08-15')
+  })
+
   it('filters retail results, switches the trend metric, and opens evidence', async () => {
     const user = userEvent.setup()
     const current = { start: '2020-07-01', end: '2020-07-07', partial: false }
