@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   getDashboard,
@@ -41,6 +41,19 @@ function queryString(query: DashboardQuery) {
   return params.toString()
 }
 
+function loadRequest<T>(
+  load: (query: DashboardQuery, signal: AbortSignal) => Promise<T>,
+  query: DashboardQuery,
+  settle: (data: T | null) => void,
+) {
+  const controller = new AbortController()
+  function finish(data: T | null) {
+    if (!controller.signal.aborted) settle(data)
+  }
+  void load(query, controller.signal).then(finish, () => finish(null))
+  return () => controller.abort()
+}
+
 export function CommandCenterPage() {
   const { search, hash, key } = useLocation()
   const navigate = useNavigate()
@@ -48,6 +61,7 @@ export function CommandCenterPage() {
   const query = readQuery(search)
   const metric = query.metric ?? 'spend'
   const filterSearch = queryString({ ...query, metric: undefined })
+  const filters = useMemo(() => readQuery(filterSearch), [filterSearch])
   const [retry, setRetry] = useState(0)
   const requestKey = `${filterSearch}:${retry}`
   const [result, setResult] = useState<{
@@ -59,15 +73,19 @@ export function CommandCenterPage() {
   const data = result?.data
   const current = data?.summary.current_period
   const [trendRetry, setTrendRetry] = useState(0)
-  const trendKey = `${result?.key}:${metric}:${trendRetry}`
-  const [trendResult, setTrendResult] = useState<{ key: string; data: Dashboard['trend'] | null }>()
+  const dashboardKey = result?.key
+  const trendKey = `${metric}:${trendRetry}`
+  const [trendResult, setTrendResult] = useState<{
+    dashboardKey: string
+    key: string
+    data: Dashboard['trend'] | null
+  }>()
+  const scopedTrend = trendResult?.dashboardKey === dashboardKey ? trendResult : undefined
+  const matchingTrend = scopedTrend?.key === trendKey ? scopedTrend : undefined
   const defaultTrend = data?.trend.metric === metric ? data.trend : null
-  const trendReady = Boolean(defaultTrend || trendResult?.key === trendKey)
-  const trendError = !defaultTrend && trendResult?.key === trendKey && trendResult.data === null
-  const trend =
-    defaultTrend ??
-    (trendResult?.key.startsWith(`${result?.key}:`) ? trendResult.data : null) ??
-    data?.trend
+  const trendReady = Boolean(defaultTrend || matchingTrend)
+  const trendError = !defaultTrend && matchingTrend?.data === null
+  const trend = defaultTrend ?? scopedTrend?.data ?? data?.trend
 
   useEffect(() => {
     function dismissPeriodPicker(event: PointerEvent) {
@@ -81,43 +99,25 @@ export function CommandCenterPage() {
     return () => document.removeEventListener('pointerdown', dismissPeriodPicker, true)
   }, [])
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const filters = readQuery(filterSearch)
-    void getDashboard(filters, controller.signal).then(
-      (data) => {
-        if (!controller.signal.aborted) setResult({ key: requestKey, data, filters })
-      },
-      () => {
-        if (!controller.signal.aborted) setResult({ key: requestKey, data: null, filters })
-      },
-    )
-    return () => controller.abort()
-  }, [filterSearch, requestKey])
+  useEffect(
+    () =>
+      loadRequest(getDashboard, filters, (data) => setResult({ key: requestKey, data, filters })),
+    [filters, requestKey],
+  )
 
   useEffect(() => {
-    if (pending || !data?.summary.current || trendReady) return
-    const controller = new AbortController()
+    if (pending || !dashboardKey || !data?.summary.current || trendReady) return
     const period = data.summary.current_period
-    const filters = readQuery(filterSearch)
-    void getDashboardTrend(
-      {
-        ...filters,
-        start: period?.start ?? filters.start,
-        end: period?.end ?? filters.end,
-        metric,
-      },
-      controller.signal,
-    ).then(
-      (data) => {
-        if (!controller.signal.aborted) setTrendResult({ key: trendKey, data })
-      },
-      () => {
-        if (!controller.signal.aborted) setTrendResult({ key: trendKey, data: null })
-      },
+    const trendQuery = {
+      ...filters,
+      start: period?.start ?? filters.start,
+      end: period?.end ?? filters.end,
+      metric,
+    }
+    return loadRequest(getDashboardTrend, trendQuery, (data) =>
+      setTrendResult({ dashboardKey, key: trendKey, data }),
     )
-    return () => controller.abort()
-  }, [data, filterSearch, metric, pending, trendKey, trendReady])
+  }, [dashboardKey, data, filters, metric, pending, trendKey, trendReady])
 
   useEffect(() => {
     if (!pending && hash === '#performance-trend') {
@@ -129,6 +129,11 @@ export function CommandCenterPage() {
 
   function apply(filters: DashboardQuery) {
     void navigate({ pathname: dashboardPath, search: queryString(filters) })
+  }
+
+  function applyPeriod(filters: DashboardQuery) {
+    if (periodPicker.current) periodPicker.current.open = false
+    apply({ ...filters, metric: query.metric })
   }
 
   return (
@@ -171,14 +176,8 @@ export function CommandCenterPage() {
                 key={`${query.start ?? current?.start}-${query.end ?? current?.end}-${query.region}-${query.department}`}
                 query={query}
                 data={data}
-                apply={(filters) => {
-                  if (periodPicker.current) periodPicker.current.open = false
-                  apply({ ...filters, metric: query.metric })
-                }}
-                reset={() => {
-                  if (periodPicker.current) periodPicker.current.open = false
-                  apply({ metric: query.metric })
-                }}
+                apply={applyPeriod}
+                reset={() => applyPeriod({})}
               />
             </Panel>
           </details>

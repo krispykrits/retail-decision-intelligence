@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
-import { InfoTooltip } from '../../components/InfoTooltip'
-import { Panel } from '../../components/Panel'
-import { Icon } from '../../components/WorkspaceIcon'
+import { Panel, PanelHeading } from '../../components/Panel'
 import { percentLabel, valueLabel } from './format'
 
 const colors = ['#1848a5', '#2870ce', '#4389df', '#69a8f0', '#a2ccfc', '#b4c1d4']
@@ -33,20 +31,26 @@ export function DashboardBreakdown({
     direction: 'descending',
   })
   const isDepartment = breakdown.dimension === 'department'
-  const rows = breakdown.rows
-  const magnitudes = rows.map((row) => Number(row.current?.spend ?? 0))
-  const maximum = magnitudes.reduce((highest, value) => Math.max(highest, Math.abs(value)), 0)
-  const signed = magnitudes.some((value) => value < 0)
+  const contributionTitle = isDepartment ? 'Department contribution' : 'Commodity contribution'
+  const rows = breakdown.rows.map((row, index) => ({
+    row,
+    amount: Number(row.current?.spend ?? 0),
+    share: Number(row.share ?? 0),
+    color: sliceColor(index),
+  }))
+  const maximum = rows.reduce((highest, { amount }) => Math.max(highest, Math.abs(amount)), 0)
+  const signed = rows.some(({ amount }) => amount < 0)
   const slices = []
   let end = 0
-  for (const [index, row] of rows.entries()) {
-    const { name } = row
-    const share = Number(row.share ?? 0)
+  for (const {
+    row: { name },
+    share,
+    color,
+  } of rows) {
     if (share <= 0) continue
     const start = end
     end += share
     const angle = ((start + share / 2) / 100) * 2 * Math.PI
-    const color = sliceColor(index)
     slices.push({
       name,
       share,
@@ -77,11 +81,10 @@ export function DashboardBreakdown({
     }
   }
   const showDonut = slices.length > 0 && !signed
-  const tableRows = rows.map((row, index) => ({ row, index }))
   if (!isDepartment) {
     const byChange = sort.column === 'comparison'
     const direction = sort.direction === 'ascending' ? 1 : -1
-    tableRows.sort((a, b) => {
+    rows.sort((a, b) => {
       const left = byChange ? a.row.change?.percent : a.row.current?.spend
       const right = byChange ? b.row.change?.percent : b.row.current?.spend
       if (left == null || right == null) return Number(left == null) - Number(right == null)
@@ -121,19 +124,13 @@ export function DashboardBreakdown({
   }
   return (
     <Panel aria-labelledby="breakdown-title" className="flex flex-col">
-      <div className="relative flex items-center gap-2">
-        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-          <Icon name="pie" className="size-5 text-brand" />
-          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-        </h2>
-        <InfoTooltip label={isDepartment ? 'Department contribution' : 'Commodity contribution'}>
-          {isDepartment
-            ? 'Adds net spend by department for the selected dates and filters.'
-            : 'Adds net spend by commodity within the selected department and filters.'}{' '}
-          Each donut share divides that total by all net spend in the selection. Change compares the
-          same area with the prior period.
-        </InfoTooltip>
-      </div>
+      <PanelHeading id="breakdown-title" title={contributionTitle} icon="pie" className="relative">
+        {isDepartment
+          ? 'Adds net spend by department for the selected dates and filters.'
+          : 'Adds net spend by commodity within the selected department and filters.'}{' '}
+        Each donut share divides that total by all net spend in the selection. Change compares the
+        same area with the prior period.
+      </PanelHeading>
       <p className="mt-1 mb-3 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
@@ -238,10 +235,9 @@ export function DashboardBreakdown({
               isDepartment ? 'Department contribution rows' : 'Commodity contribution rows'
             }
           >
-            {tableRows.map(({ row, index }) => {
-              const amount = Number(row.current?.spend ?? 0)
+            {rows.map(({ row, amount, share, color }) => {
               const width = maximum > 0 ? (Math.abs(amount) / maximum) * (signed ? 50 : 100) : 0
-              const canFocusSlice = showDonut && Number(row.share) > 0
+              const canFocusSlice = showDonut && share > 0
               const focused = selected?.name === row.name
               return (
                 <tr key={row.name} className={focused ? 'bg-nav-selected' : undefined}>
@@ -250,7 +246,7 @@ export function DashboardBreakdown({
                       {showDonut && row.share != null && (
                         <span
                           className="mt-0.5 size-2 shrink-0 rounded-xs"
-                          style={{ backgroundColor: sliceColor(index) }}
+                          style={{ backgroundColor: color }}
                           aria-hidden="true"
                         />
                       )}

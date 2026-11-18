@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
-import { InfoTooltip } from '../../components/InfoTooltip'
-import { Panel } from '../../components/Panel'
-import { Icon, WorkspaceIcon } from '../../components/WorkspaceIcon'
+import { Panel, PanelHeading } from '../../components/Panel'
+import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
 export function DashboardSignals({ signals }: { signals: Dashboard['signals'] }) {
@@ -11,17 +10,17 @@ export function DashboardSignals({ signals }: { signals: Dashboard['signals'] })
 
   return (
     <Panel aria-labelledby="signals-title">
-      <div className="relative mb-2 flex items-center gap-2">
-        <h2 id="signals-title" className="flex items-center gap-2 text-base font-semibold">
-          <Icon name="search" className="size-5 text-brand" />
-          Notable changes &amp; investigation signals
-        </h2>
-        <InfoTooltip label="Investigation signals">
-          Compares the same filters across equal-length periods. Highlights the biggest dollar
-          increase and decrease among departments or commodities with transactions in both periods,
-          plus any change in net units.
-        </InfoTooltip>
-      </div>
+      <PanelHeading
+        id="signals-title"
+        title="Notable changes & investigation signals"
+        icon="search"
+        helpLabel="Investigation signals"
+        className="relative mb-2 text-base"
+      >
+        Compares the same filters across equal-length periods. Highlights the biggest dollar
+        increase and decrease among departments or commodities with transactions in both periods,
+        plus any change in net units.
+      </PanelHeading>
       {items.length ? (
         <DataTable
           columns={{

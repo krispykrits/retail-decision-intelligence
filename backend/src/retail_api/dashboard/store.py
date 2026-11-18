@@ -76,13 +76,6 @@ def month_index(value: date) -> int:
     return value.year * 12 + value.month - 1
 
 
-def grain_for(period: Period | None) -> Grain:
-    days = (period.end - period.start).days + 1 if period else 0
-    if days <= 31:
-        return "day"
-    return "week" if days <= 180 else "month"
-
-
 class DashboardStore:
     def __init__(self, db: Connection, filters: Filters) -> None:
         self.db = db
@@ -302,6 +295,11 @@ class DashboardStore:
             source_version=version,
         )
 
+    def current_buckets(self, grain: Grain | None = None) -> tuple[Grain, list[Bucket]]:
+        days = (self.current.end - self.current.start).days + 1 if self.current else 0
+        effective_grain = grain or ("day" if days <= 31 else "week" if days <= 180 else "month")
+        return effective_grain, self.buckets(self.current, effective_grain)
+
     def trend(self, metric: Metric, grain: Grain, current: list[Bucket]) -> Trend:
         def points(buckets: list[Bucket]) -> list[MetricPoint]:
             return [
@@ -320,7 +318,8 @@ class DashboardStore:
             prior=points(self.buckets(self.prior, grain)),
         )
 
-    def breakdown(self, dimension: Dimension) -> Breakdown:
+    def breakdown(self, dimension: Dimension | None = None) -> Breakdown:
+        dimension = dimension or ("commodity" if self.filters.department else "department")
         column = transactions.c.store_region if dimension == "region" else products.c[dimension]
 
         def grouping(period: Period | None) -> dict[str, Totals | None]:

@@ -1,9 +1,7 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
-import { InfoTooltip } from '../../components/InfoTooltip'
-import { Panel } from '../../components/Panel'
+import { Panel, PanelHeading } from '../../components/Panel'
 import { Spinner } from '../../components/Spinner'
 import { TrendChart } from '../../components/TrendChart'
-import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { metrics, periodLabel, valueLabel } from './format'
 
 const axisDates = new Intl.DateTimeFormat('en-US', {
@@ -30,21 +28,17 @@ export function DashboardTrend({
   retry: () => void
   onMetricChange: (metric: Metric) => void
 }) {
-  function observedBucket(point: Point) {
+  function labelPoint(point: Point) {
     const { first_date: first, last_date: last } = coverage
     const start = first && point.start < first ? first : point.start
     const end = last && point.end > last ? last : point.end
-    return { ...point, start, end }
-  }
-
-  function labelPoint(point: Point) {
-    const bucket = observedBucket(point)
-    const days = (Date.parse(bucket.end) - Date.parse(bucket.start)) / millisecondsPerDay + 1
+    const days = (Date.parse(end) - Date.parse(start)) / millisecondsPerDay + 1
     const shortened = trend.grain === 'week' && days < 7
     return {
       index: point.index,
+      start,
       value: Number(point.value),
-      label: `${periodLabel(bucket)}${shortened ? ` (${days} ${days === 1 ? 'day' : 'days'})` : ''}`,
+      label: `${periodLabel({ start, end })}${shortened ? ` (${days} ${days === 1 ? 'day' : 'days'})` : ''}`,
     }
   }
 
@@ -75,17 +69,11 @@ export function DashboardTrend({
     >
       <div className="relative mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 id="trend-title" className="flex items-center gap-2 font-semibold">
-              <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
-              Performance trend
-            </h2>
-            <InfoTooltip label="Performance trend">
-              Groups matching transactions into days, seven-day windows, or months. The prior series
-              uses the same filters over the equal-length period immediately before the selected
-              dates.
-            </InfoTooltip>
-          </div>
+          <PanelHeading id="trend-title" title="Performance trend" icon="/forecast">
+            Groups matching transactions into days, seven-day windows, or months. The prior series
+            uses the same filters over the equal-length period immediately before the selected
+            dates.
+          </PanelHeading>
           <p className="mt-0.5 text-sm text-muted">
             {{ day: 'Daily', week: 'Seven-day', month: 'Monthly' }[trend.grain]} totals
           </p>
@@ -111,7 +99,7 @@ export function DashboardTrend({
             key={`${trend.metric}-${trend.current_period?.start}-${trend.current_period?.end}`}
             label={`${metrics[trend.metric]} by ${trend.grain}`}
             series={series}
-            ticks={trend.current.map(observedBucket).map(({ index, start }) => ({
+            ticks={selectedPoints.map(({ index, start }) => ({
               index,
               label: axisDates.format(new Date(`${start}T00:00:00Z`)),
             }))}

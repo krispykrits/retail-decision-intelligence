@@ -16,7 +16,7 @@ from retail_api.dashboard.schemas import (
     Summary,
     Trend,
 )
-from retail_api.dashboard.store import DashboardStore, grain_for
+from retail_api.dashboard.store import DashboardStore
 
 router = APIRouter(
     prefix="/dashboard",
@@ -70,9 +70,7 @@ def summary(filters: DashboardFilters, request: Request, response: Response) -> 
         request,
         response,
         filters,
-        lambda store, version: store.summary(
-            store.buckets(store.current, grain_for(store.current)), version
-        ),
+        lambda store, version: store.summary(store.current_buckets()[1], version),
     )
 
 
@@ -89,10 +87,8 @@ def trends(
     response: Response,
 ) -> Trend:
     def read(store: DashboardStore, _: int) -> Trend:
-        effective_grain = filters.grain or grain_for(store.current)
-        return store.trend(
-            filters.metric, effective_grain, store.buckets(store.current, effective_grain)
-        )
+        grain, current = store.current_buckets(filters.grain)
+        return store.trend(filters.metric, grain, current)
 
     return read_dashboard(request, response, filters, read)
 
@@ -128,10 +124,7 @@ def signals(filters: DashboardFilters, request: Request, response: Response) -> 
         request,
         response,
         filters,
-        lambda store, version: store.signals(
-            store.summary([], version),
-            store.breakdown("commodity" if filters.department else "department"),
-        ),
+        lambda store, version: store.signals(store.summary([], version), store.breakdown()),
     )
 
 
@@ -142,10 +135,9 @@ def dashboard(
     response: Response,
 ) -> Dashboard:
     def read(store: DashboardStore, version: int) -> Dashboard:
-        grain = filters.grain or grain_for(store.current)
-        current = store.buckets(store.current, grain)
+        grain, current = store.current_buckets(filters.grain)
         stats = store.summary(current, version)
-        breakdown = store.breakdown("commodity" if filters.department else "department")
+        breakdown = store.breakdown()
         return Dashboard(
             options=store.options(),
             summary=stats,
