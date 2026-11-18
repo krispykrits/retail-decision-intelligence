@@ -1,11 +1,8 @@
 name: Deploy development
 
 on:
-  workflow_call:
-    inputs:
-      image:
-        required: true
-        type: string
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       image:
@@ -35,7 +32,6 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_app_image: ${{ inputs.image }}
       # Optional SMTP JSON; an unset secret leaves email operations visibly unavailable.
       TF_VAR_account_mail: ${{ secrets.ACCOUNT_MAIL || 'null' }}
     steps:
@@ -43,14 +39,35 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate project image and source revision
+      - name: Resolve and validate the verified image
+        env:
+          REQUESTED_IMAGE: ${{ inputs.image }}
         run: |
-          # Accept only an immutable project image whose source was merged into main.
-          [[ "$TF_VAR_app_image" =~ ^ghcr\.io/krispykrits/retail-decision-intelligence@sha256:[a-f0-9]{64}$ ]]
-          docker pull "$TF_VAR_app_image"
-          SOURCE_SHA=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$TF_VAR_app_image")
-          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
-          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
+          MAIN_TREE=$(git rev-parse 'HEAD^{tree}')
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            # A missing image means PR CI did not verify this exact tree. Stop before Azure login.
+            TAG="ghcr.io/krispykrits/retail-decision-intelligence:tree-$MAIN_TREE"
+            docker pull "$TAG"
+            IMAGE=$(docker image inspect --format '{{index .RepoDigests 0}}' "$TAG")
+          else
+            IMAGE="$REQUESTED_IMAGE"
+          fi
+
+          [[ "$IMAGE" =~ ^ghcr\.io/krispykrits/retail-decision-intelligence@sha256:[a-f0-9]{64}$ ]]
+          docker pull "$IMAGE"
+          SOURCE_TREE=$(docker image inspect --format '{{with index .Config.Labels "io.github.krispykrits.source-tree"}}{{.}}{{end}}' "$IMAGE")
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            [[ "$SOURCE_TREE" == "$MAIN_TREE" ]]
+          elif [[ -n "$SOURCE_TREE" ]]; then
+            # Manual redeploys can use an older verified tree on main.
+            git log --first-parent --format=%T HEAD | grep -Fx -- "$SOURCE_TREE" > /dev/null
+          else
+            # Images published before tree labels use the original revision check.
+            SOURCE_SHA=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$IMAGE")
+            [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+            git merge-base --is-ancestor "$SOURCE_SHA" HEAD
+          fi
+          echo "TF_VAR_app_image=$IMAGE" >> "$GITHUB_ENV"
       - uses: azure/login@0949e32778441b2c442592b7a0e6313466dc8f29 # v3.0.2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

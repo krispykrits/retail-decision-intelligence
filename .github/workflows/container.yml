@@ -2,10 +2,6 @@ name: Container
 
 on:
   workflow_call:
-    outputs:
-      image:
-        description: Verified image pinned to its registry digest.
-        value: ${{ jobs.build.outputs.image }}
 
 permissions:
   contents: read
@@ -14,24 +10,25 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    outputs:
-      image: ${{ steps.publish.outputs.image }}
     permissions:
       contents: read
       packages: write
     env:
       IMAGE_NAME: ghcr.io/krispykrits/retail-decision-intelligence
-      COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
       - name: Build combined frontend and API image
         run: |
-          # Build one UI/API image and record the repository and source commit.
+          # Name the image after the checked-out PR merge tree.
+          SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')
+          IMAGE="$IMAGE_NAME:tree-$SOURCE_TREE"
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
-            --label "org.opencontainers.image.revision=$COMMIT_SHA" \
-            --tag "$IMAGE_NAME:$COMMIT_SHA" .
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "io.github.krispykrits.source-tree=$SOURCE_TREE" \
+            --tag "$IMAGE" .
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
       - name: Verify container and SQL connectivity
         run: |
           # Generate and mask credentials used only by the disposable CI database.
@@ -62,13 +59,13 @@ jobs:
           echo "::add-mask::$RDI_DATABASE_URL"
           # Verify upgrades with the deployment identity's SQL permissions.
           docker run --interactive --rm --network rdi-test --env RDI_DATABASE_URL \
-            "$IMAGE_NAME:$COMMIT_SHA" python < tests/backend/smoke_migrations.py
+            "$IMAGE" python < tests/backend/smoke_migrations.py
           # Start the built app once, with a read-only filesystem and writable /tmp.
           docker run --detach --name rdi --network rdi-test --read-only \
             --tmpfs /tmp:rw,nosuid,size=16m --env RDI_DATABASE_URL \
             --env RDI_ENVIRONMENT=development \
             --env RDI_AUTH_SECRET --env RDI_PUBLIC_URL=https://ci.example \
-            --publish 127.0.0.1:8000:8000 "$IMAGE_NAME:$COMMIT_SHA"
+            --publish 127.0.0.1:8000:8000 "$IMAGE"
           # Wait until the API can query the migrated database.
           curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 \
             --max-time 3 http://127.0.0.1:8000/api/v1/ready
@@ -82,18 +79,15 @@ jobs:
             --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/ready)" = 503
           curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8000/api/v1/health
       - name: Publish verified image
-        id: publish
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Authenticate with GitHub's workflow token and publish only after checks pass.
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          docker push "$IMAGE_NAME:$COMMIT_SHA"
-          # Pass the immutable image reference to the development deployment.
-          IMAGE=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE_NAME:$COMMIT_SHA")
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "Verified image: \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
+          docker push "$IMAGE"
+          DIGEST=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")
+          printf 'Verified image: `%s`\n' "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
       - name: Container diagnostics
         if: failure()
         run: |
