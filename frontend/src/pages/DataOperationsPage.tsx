@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getDatasets,
   getImportHistory,
@@ -7,6 +7,7 @@ import {
   type ImportResult,
 } from '../api/imports'
 import { useSession } from '../auth/session'
+import { DataTable } from '../components/DataTable'
 import { ImportResults } from '../components/ImportResults'
 
 const datasets = [
@@ -49,33 +50,6 @@ function useRows<T>(load: (signal: AbortSignal) => Promise<T[]>, enabled = true)
   }
 
   return { rows, status, refresh }
-}
-
-function DatasetTable({
-  columns,
-  children,
-  busy,
-}: {
-  columns: ReactNode[]
-  children: ReactNode
-  busy?: boolean
-}) {
-  return (
-    <div className="overflow-x-auto" aria-busy={busy}>
-      <table className="w-full min-w-120 text-left text-sm [&_:is(th,td)]:px-3 [&_:is(th,td)]:py-2">
-        <thead className="bg-canvas">
-          <tr>
-            {columns.map((column, index) => (
-              <th key={index} scope="col">
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line border-b border-line">{children}</tbody>
-      </table>
-    </div>
-  )
 }
 
 export function DataOperationsPage() {
@@ -134,8 +108,13 @@ export function DataOperationsPage() {
             <h2 className={`mb-4 ${heading}`} id="upload-heading">
               Upload CSV files
             </h2>
-            <DatasetTable
-              columns={['Dataset', 'Selected file', <span className="sr-only">File actions</span>]}
+            <DataTable
+              className="min-w-120"
+              columns={{
+                dataset: 'Dataset',
+                file: 'Selected file',
+                actions: <span className="sr-only">File actions</span>,
+              }}
             >
               {datasets.map(([dataset, label]) => (
                 <tr key={dataset}>
@@ -175,7 +154,7 @@ export function DataOperationsPage() {
                   </td>
                 </tr>
               ))}
-            </DatasetTable>
+            </DataTable>
             <div className="mt-4 flex flex-wrap items-center gap-4">
               <button
                 className={`${focus} rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50`}
@@ -215,8 +194,14 @@ export function DataOperationsPage() {
               Refresh
             </button>
           </div>
-          <DatasetTable
-            columns={['Dataset', 'Records', 'Last import', 'Data range']}
+          <DataTable
+            className="min-w-120"
+            columns={{
+              dataset: 'Dataset',
+              records: 'Records',
+              lastImport: 'Last import',
+              range: 'Data range',
+            }}
             busy={inventory.status === 'loading'}
           >
             {datasets.map(([dataset, label]) => {
@@ -238,7 +223,7 @@ export function DataOperationsPage() {
                 </tr>
               )
             })}
-          </DatasetTable>
+          </DataTable>
           {inventory.status === 'loading' && (
             <p className="mt-2 text-sm text-muted" role="status">
               Loading stored datasets…
