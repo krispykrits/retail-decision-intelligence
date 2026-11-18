@@ -70,6 +70,61 @@
         "title": "CsrfToken",
         "type": "object"
       },
+      "Dataset": {
+        "enum": [
+          "households",
+          "products",
+          "transactions"
+        ],
+        "title": "Dataset",
+        "type": "string"
+      },
+      "DatasetSummary": {
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "records": {
+            "title": "Records",
+            "type": "integer"
+          },
+          "source_window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset",
+          "records",
+          "last_success",
+          "source_window",
+          "version"
+        ],
+        "title": "DatasetSummary",
+        "type": "object"
+      },
       "EmailRequest": {
         "properties": {
           "email": {
@@ -132,6 +187,110 @@
         },
         "title": "HealthResponse",
         "type": "object"
+      },
+      "ImportErrorRow": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "reason"
+        ],
+        "title": "ImportErrorRow",
+        "type": "object"
+      },
+      "ImportResult": {
+        "properties": {
+          "conflicts": {
+            "title": "Conflicts",
+            "type": "integer"
+          },
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "duplicates_skipped": {
+            "title": "Duplicates Skipped",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImportErrorRow"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "inserted": {
+            "title": "Inserted",
+            "type": "integer"
+          },
+          "processed": {
+            "title": "Processed",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportStatus"
+          }
+        },
+        "required": [
+          "import_id",
+          "dataset",
+          "filename",
+          "status",
+          "finished_at",
+          "processed",
+          "inserted",
+          "duplicates_skipped",
+          "conflicts",
+          "rejected",
+          "errors"
+        ],
+        "title": "ImportResult",
+        "type": "object"
+      },
+      "ImportStatus": {
+        "enum": [
+          "completed",
+          "completed_with_errors",
+          "failed"
+        ],
+        "title": "ImportStatus",
+        "type": "string"
       },
       "LinkToken": {
         "properties": {
@@ -230,6 +389,26 @@
         ],
         "title": "Role",
         "type": "string"
+      },
+      "SourceWindow": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "SourceWindow",
+        "type": "object"
       },
       "ValidationError": {
         "properties": {
@@ -859,6 +1038,42 @@
         ]
       }
     },
+    "/api/v1/datasets": {
+      "get": {
+        "description": "Returns record counts, last successful import, source date range and version.",
+        "operationId": "list_datasets_api_v1_datasets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetSummary"
+                  },
+                  "title": "Response List Datasets Api V1 Datasets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          }
+        },
+        "summary": "List stored retail datasets",
+        "tags": [
+          "Data Operations"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Public endpoint. Returns 200 while the API process can serve requests.\n\nDoes not query SQL or check email delivery. Use /ready for database readiness.",
@@ -878,6 +1093,254 @@
         "summary": "Check API process liveness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/imports": {
+      "get": {
+        "description": "Returns up to 20 recent imports with their counts and row error previews.",
+        "operationId": "list_imports_api_v1_imports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportResult"
+                  },
+                  "title": "Response List Imports Api V1 Imports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          }
+        },
+        "summary": "List recent imports",
+        "tags": [
+          "Data Operations"
+        ]
+      },
+      "post": {
+        "description": "Administrators can add rows to one dataset per request. Returns the stored result when processing finishes. Each file commits its valid new rows together.",
+        "operationId": "create_import_api_v1_imports_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "dataset": {
+                    "enum": [
+                      "households",
+                      "products",
+                      "transactions"
+                    ],
+                    "type": "string"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dataset",
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid multipart upload"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "CSV exceeds the configured limit"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Multipart form required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Choose a dataset and a CSV file"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Import service unavailable"
+          }
+        },
+        "summary": "Import a retail CSV",
+        "tags": [
+          "Data Operations"
+        ]
+      }
+    },
+    "/api/v1/imports/{import_id}": {
+      "get": {
+        "description": "Returns a stored import outcome and the first 20 conflict or rejection reasons.",
+        "operationId": "get_import_api_v1_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Import not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read an import result",
+        "tags": [
+          "Data Operations"
         ]
       }
     },

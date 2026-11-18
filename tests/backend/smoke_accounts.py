@@ -21,12 +21,15 @@ def main() -> None:
     base_url = "http://127.0.0.1:8000/api/v1"
     cookies: dict[str, str] = {}
 
-    def request(method: str, path: str, expected: int, body: object = None) -> dict[str, object]:
-        headers = {"Content-Type": "application/json"}
+    def request(method: str, path: str, expected: int, body: object = None, *, multipart: str = ""):
+        content_type = (
+            f"multipart/form-data; boundary={multipart}" if multipart else "application/json"
+        )
+        headers = {"Content-Type": content_type}
         if method != "GET":
             headers["X-CSRF-Token"] = str(request("GET", "/auth/csrf", 200)["token"])
         headers["Cookie"] = "; ".join(f"{key}={value}" for key, value in cookies.items())
-        data = None if body is None else json.dumps(body).encode()
+        data = body if multipart or body is None else json.dumps(body).encode()
         try:
             response = urlopen(
                 Request(base_url + path, data=data, headers=headers, method=method), timeout=10
@@ -44,6 +47,26 @@ def main() -> None:
             content = response.read()
             return json.loads(content) if content else {}
 
+    def upload(dataset: str, csv: str, expected: int = 200, name: str = "fixture.csv"):
+        boundary = uuid4().hex
+        body = (
+            f'--{boundary}\r\nContent-Disposition: form-data; name="dataset"\r\n\r\n'
+            f"{dataset}\r\n--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{name}"\r\n'
+            f"Content-Type: text/csv\r\n\r\n{csv}\r\n--{boundary}--\r\n"
+        )
+        return request("POST", "/imports", expected, body.encode(), multipart=boundary)
+
+    households = (
+        "HSHD_NUM,L,AGE_RANGE,MARITAL,INCOME_RANGE,HOMEOWNER,HSHD_COMPOSITION,HH_SIZE,CHILDREN\n"
+        "0010,Y,null,null,null,null,null,null,null\n"
+    )
+    products = (
+        "PRODUCT_NUM,DEPARTMENT,COMMODITY,BRAND_TY,NATURAL_ORGANIC_FLAG\n"
+        "00000001,FOOD,PRODUCE,PRIVATE,N\n"
+    )
+    transactions = "BASKET_NUM,HSHD_NUM,PURCHASE_,PRODUCT_NUM,SPEND,UNITS,STORE_R,WEEK_NUM,YEAR\n"
+    line = "00000001,0010,17-AUG-18,00000001,-.59,-1,CENTRAL,32,2018\n"
     engine = create_database_engine(Settings())
     account_id = uuid4()
     email = f"ci-{account_id.hex}@example.com"
@@ -62,12 +85,23 @@ def main() -> None:
             )
         request("POST", "/auth/login", 204, {"email": email, "password": password})
         assert request("GET", "/me", 200)["roles"] == ["Analyst"]
+        upload("households", households, expected=403)
         with Session(engine) as db, db.begin():
             account = db.get(Account, account_id)
             assert account is not None
             account.is_superuser = True
         assert request("GET", "/me", 200)["roles"] == ["Administrator"]
-        print("Account SQL smoke passed: session persistence and current role lookup.")
+        # Exercise multipart, nullable demographics, signed sales and repeat rows through ODBC.
+        assert upload("households", households)["inserted"] == 1
+        assert upload("products", products)["inserted"] == 1
+        assert upload("transactions", transactions + line * 2)["inserted"] == 2
+        duplicate = upload("transactions", transactions + line * 2, name="retry.csv")
+        assert duplicate["inserted"] == 0 and duplicate["duplicates_skipped"] == 2
+        invalid = upload("transactions", transactions + line.replace(",0010,", ",9999,"))
+        assert invalid["status"] == "completed_with_errors" and invalid["rejected"] == 1
+        assert request("GET", f"/imports/{invalid['import_id']}", 200) == invalid
+        assert [item["records"] for item in request("GET", "/datasets", 200)] == [1, 1, 2]
+        print("SQL Server smoke passed for account sessions, roles and CSV imports.")
     finally:
         with Session(engine) as db, db.begin():
             db.execute(delete(AccountSession).where(AccountSession.account_id == account_id))

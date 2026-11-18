@@ -171,6 +171,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List stored retail datasets
+         * @description Returns record counts, last successful import, source date range and version.
+         */
+        get: operations["list_datasets_api_v1_datasets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -185,6 +205,50 @@ export interface paths {
          *     Does not query SQL or check email delivery. Use /ready for database readiness.
          */
         get: operations["get_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List recent imports
+         * @description Returns up to 20 recent imports with their counts and row error previews.
+         */
+        get: operations["list_imports_api_v1_imports_get"];
+        put?: never;
+        /**
+         * Import a retail CSV
+         * @description Administrators can add rows to one dataset per request. Returns the stored result when processing finishes. Each file commits its valid new rows together.
+         */
+        post: operations["create_import_api_v1_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an import result
+         * @description Returns a stored import outcome and the first 20 conflict or rejection reasons.
+         */
+        get: operations["get_import_api_v1_imports__import_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -276,6 +340,22 @@ export interface components {
             /** Token */
             token: string;
         };
+        /**
+         * Dataset
+         * @enum {string}
+         */
+        Dataset: "households" | "products" | "transactions";
+        /** DatasetSummary */
+        DatasetSummary: {
+            dataset: components["schemas"]["Dataset"];
+            /** Last Success */
+            last_success: string | null;
+            /** Records */
+            records: number;
+            source_window: components["schemas"]["SourceWindow"] | null;
+            /** Version */
+            version: number;
+        };
         /** EmailRequest */
         EmailRequest: {
             /**
@@ -314,6 +394,49 @@ export interface components {
              */
             version: string;
         };
+        /** ImportErrorRow */
+        ImportErrorRow: {
+            /** Reason */
+            reason: string;
+            /** Row Number */
+            row_number: number;
+        };
+        /** ImportResult */
+        ImportResult: {
+            /** Conflicts */
+            conflicts: number;
+            dataset: components["schemas"]["Dataset"];
+            /** Detail */
+            detail?: string | null;
+            /** Duplicates Skipped */
+            duplicates_skipped: number;
+            /** Errors */
+            errors: components["schemas"]["ImportErrorRow"][];
+            /** Filename */
+            filename: string;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+            /**
+             * Import Id
+             * Format: uuid
+             */
+            import_id: string;
+            /** Inserted */
+            inserted: number;
+            /** Processed */
+            processed: number;
+            /** Rejected */
+            rejected: number;
+            status: components["schemas"]["ImportStatus"];
+        };
+        /**
+         * ImportStatus
+         * @enum {string}
+         */
+        ImportStatus: "completed" | "completed_with_errors" | "failed";
         /** LinkToken */
         LinkToken: {
             /** Token */
@@ -357,6 +480,19 @@ export interface components {
          * @enum {string}
          */
         Role: "Analyst" | "Administrator";
+        /** SourceWindow */
+        SourceWindow: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -838,6 +974,35 @@ export interface operations {
             };
         };
     };
+    list_datasets_api_v1_datasets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetSummary"][];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_health: {
         parameters: {
             query?: never;
@@ -854,6 +1019,196 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_imports_api_v1_imports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"][];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrator and valid CSRF token required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_import_api_v1_imports_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** @enum {string} */
+                    dataset: "households" | "products" | "transactions";
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Invalid multipart upload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrator and valid CSRF token required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description CSV exceeds the configured limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Multipart form required */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Choose a dataset and a CSV file */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Import service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_import_api_v1_imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrator and valid CSRF token required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Import not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

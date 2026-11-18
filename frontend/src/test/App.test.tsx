@@ -5,8 +5,15 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
 import { SessionContext } from '../auth/session'
+import { getDatasets, uploadCsv, type ImportResult } from '../api/imports'
 
-function render(view: ReactNode) {
+vi.mock('../api/imports', () => ({
+  getDatasets: vi.fn().mockResolvedValue([]),
+  getImportHistory: vi.fn().mockResolvedValue([]),
+  uploadCsv: vi.fn(),
+}))
+
+function render(view: ReactNode, administrator = false) {
   return renderView(
     <SessionContext.Provider
       value={{
@@ -14,7 +21,7 @@ function render(view: ReactNode) {
           id: 'test-account',
           email: 'analyst@example.com',
           display_name: 'Retail analyst',
-          roles: ['Analyst'],
+          roles: [administrator ? 'Administrator' : 'Analyst'],
         },
         status: 'ready',
         refresh: vi.fn(),
@@ -75,5 +82,76 @@ describe('workspace shell', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+  })
+})
+
+describe('data operations', () => {
+  it('shows the inventory to an analyst without upload or history controls', async () => {
+    render(
+      <MemoryRouter initialEntries={['/data']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('No records have been imported yet.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Import files' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Import history')).not.toBeInTheDocument()
+  })
+
+  it('imports dependencies first and keeps a file with errors available for retry', async () => {
+    const user = userEvent.setup()
+    const upload = vi.mocked(uploadCsv)
+    const inventory = vi.mocked(getDatasets)
+    inventory.mockClear()
+    upload.mockImplementation(
+      async (dataset, file) =>
+        ({
+          import_id: dataset,
+          dataset,
+          filename: file.name,
+          status: dataset === 'transactions' ? 'completed_with_errors' : 'completed',
+          finished_at: '2026-11-17T21:00:00Z',
+          processed: 1,
+          inserted: dataset === 'transactions' ? 0 : 1,
+          duplicates_skipped: 0,
+          conflicts: 0,
+          rejected: dataset === 'transactions' ? 1 : 0,
+          errors:
+            dataset === 'transactions'
+              ? [{ row_number: 2, reason: 'Product ID is missing from stored products.' }]
+              : [],
+        }) satisfies ImportResult,
+    )
+    render(
+      <MemoryRouter initialEntries={['/data']}>
+        <App />
+      </MemoryRouter>,
+      true,
+    )
+    await user.upload(
+      screen.getByLabelText('Choose Transactions CSV'),
+      new File(['line'], 'lines.csv'),
+    )
+    await user.upload(
+      screen.getByLabelText('Choose Products CSV'),
+      new File(['item'], 'products.csv'),
+    )
+    await user.upload(
+      screen.getByLabelText('Choose Households CSV'),
+      new File(['household'], 'households.csv'),
+    )
+    await user.click(screen.getByRole('button', { name: 'Import files' }))
+
+    expect(await screen.findByText('Completed with errors')).toBeVisible()
+    expect(upload.mock.calls.map(([dataset]) => dataset)).toEqual([
+      'households',
+      'products',
+      'transactions',
+    ])
+    expect(inventory).toHaveBeenCalledTimes(2)
+    await user.click(screen.getByText('Row errors'))
+    expect(screen.getByText('Row 2 · Product ID is missing from stored products.')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Import files' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Remove Transactions file' }))
+    expect(screen.getByRole('button', { name: 'Import files' })).toBeDisabled()
   })
 })

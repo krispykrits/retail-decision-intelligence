@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     public_url: str = "http://localhost:5173"
     auth_secret: SecretStr | None = None
     mail: MailSettings | None = None
+    import_max_bytes: int = Field(default=192 * 1024 * 1024, ge=25 * 1024 * 1024)
 
     @model_validator(mode="after")
     def validate_configuration(self) -> "Settings":

@@ -5,6 +5,7 @@ import { WorkspacePage } from '../pages/WorkspacePage'
 import { workspaces } from './workspaces'
 import { RequireAccount } from '../auth/RequireAccount'
 import { AccountPage } from '../pages/AccountPage'
+import { DataOperationsPage } from '../pages/DataOperationsPage'
 
 export function App() {
   return (
@@ -17,7 +18,13 @@ export function App() {
             <Route
               key={workspace.path}
               path={workspace.path}
-              element={<WorkspacePage workspace={workspace} />}
+              element={
+                workspace.path === '/data' ? (
+                  <DataOperationsPage />
+                ) : (
+                  <WorkspacePage workspace={workspace} />
+                )
+              }
             />
           ))}
           <Route path="*" element={<NotFoundPage />} />
