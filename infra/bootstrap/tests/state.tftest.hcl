@@ -12,6 +12,9 @@ mock_provider "azurerm" {
   mock_resource "azurerm_storage_queue" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/queueServices/default/queues/csv-imports" }
   }
+  mock_data "azurerm_log_analytics_workspace" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.OperationalInsights/workspaces/rdi-test-logs" }
+  }
   mock_data "azurerm_container_app" {
     defaults = {
       id                           = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/containerApps/rdi-test-app"
@@ -23,6 +26,13 @@ mock_provider "azurerm" {
     defaults = {
       id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rdi-test-api"
     }
+  }
+}
+
+mock_provider "azapi" {
+  override_during = plan
+  mock_resource "azapi_resource" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/managedEnvironments/rdi-test-worker-env" }
   }
 }
 

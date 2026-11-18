@@ -9,13 +9,29 @@ data "azapi_resource" "import_storage" {
   resource_id = "${data.azurerm_resource_group.project.id}/providers/Microsoft.Storage/storageAccounts/${var.import_storage_account}/${each.value.path}"
 }
 
+# The Express web environment cannot host Container Apps Jobs.
+data "azapi_resource" "import_environment" {
+  count                  = var.import_storage_account == null ? 0 : 1
+  type                   = "Microsoft.App/managedEnvironments@2026-07-01"
+  name                   = "${var.name_prefix}-worker-env"
+  parent_id              = data.azurerm_resource_group.project.id
+  response_export_values = ["properties.environmentMode"]
+
+  lifecycle {
+    postcondition {
+      condition     = self.output.properties.environmentMode == "WorkloadProfiles"
+      error_message = "The import job requires a standard Workload Profiles environment."
+    }
+  }
+}
+
 # The queue starts jobs as needed. The web app can continue scaling to zero.
 resource "azurerm_container_app_job" "imports" {
   count                        = var.import_storage_account == null ? 0 : 1
   name                         = "${var.name_prefix}-imports"
   resource_group_name          = local.resource_group_name
   location                     = local.location
-  container_app_environment_id = azurerm_container_app_environment.app.id
+  container_app_environment_id = data.azapi_resource.import_environment[0].id
   workload_profile_name        = "Consumption"
   replica_timeout_in_seconds   = 1800
   replica_retry_limit          = 0

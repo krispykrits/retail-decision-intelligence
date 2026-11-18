@@ -53,7 +53,7 @@ resource "random_password" "accounts" {
 
 # Deploy the combined React/FastAPI image after database setup completes.
 resource "azurerm_container_app" "app" {
-  depends_on                   = [terraform_data.database_access, data.azapi_resource.import_storage]
+  depends_on                   = [terraform_data.database_access, azurerm_container_app_job.imports]
   name                         = "${var.name_prefix}-app"
   resource_group_name          = local.resource_group_name
   container_app_environment_id = azurerm_container_app_environment.app.id

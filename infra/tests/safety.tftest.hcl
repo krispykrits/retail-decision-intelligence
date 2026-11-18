@@ -26,7 +26,15 @@ mock_provider "azurerm" {
 
 }
 
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  override_during = plan
+  mock_data "azapi_resource" {
+    defaults = {
+      id     = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/managedEnvironments/rdi-test-worker-env"
+      output = { properties = { environmentMode = "WorkloadProfiles" } }
+    }
+  }
+}
 mock_provider "random" {}
 
 variables {
@@ -93,9 +101,11 @@ run "queued_imports_run_on_demand" {
     condition = (
       azurerm_container_app.app.template[0].min_replicas == 0 &&
       azurerm_container_app_job.imports[0].resource_group_name == var.resource_group_name &&
+      azurerm_container_app_job.imports[0].container_app_environment_id == data.azapi_resource.import_environment[0].id &&
+      azurerm_container_app_job.imports[0].container_app_environment_id != azurerm_container_app_environment.app.id &&
       azurerm_container_app_job.imports[0].event_trigger_config[0].scale[0].min_executions == 0 &&
       azurerm_container_app_job.imports[0].template[0].container[0].image == var.app_image
     )
-    error_message = "Use an on-demand import job in the app resource group with the deployed image."
+    error_message = "Use an on-demand import job in a separate standard environment with the deployed image."
   }
 }
