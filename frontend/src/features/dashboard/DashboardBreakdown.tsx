@@ -6,11 +6,12 @@ import { percentLabel, valueLabel } from './format'
 
 const colors = ['#1848a5', '#2870ce', '#4389df', '#69a8f0', '#a2ccfc', '#b4c1d4']
 const donutWidth = 228
-const donutHeight = 166
+const donutHeight = 176
 const centerX = donutWidth / 2
 const centerY = donutHeight / 2
-const radius = 70
+const radius = 77
 const labelGap = 15
+const minimumInlineShare = 7
 
 const sliceColor = (index: number) => colors[Math.min(index, colors.length - 1)]
 
@@ -51,13 +52,17 @@ export function DashboardBreakdown({
       name,
       share,
       stop: `${color} ${start}% ${end}%`,
+      color,
+      angle,
       x: centerX + radius * Math.sin(angle),
       y: centerY - radius * Math.cos(angle),
     })
   }
   const labels = []
   for (const left of [true, false]) {
-    const side = slices.filter((slice) => slice.x < centerX === left).sort((a, b) => a.y - b.y)
+    const side = slices
+      .filter(({ share, x }) => share < minimumInlineShare && (left ? x < centerX : x >= centerX))
+      .sort((a, b) => a.y - b.y)
     let previousY = 10 - labelGap
     for (const [index, slice] of side.entries()) {
       const maxY = donutHeight - 10 - (side.length - 1 - index) * labelGap
@@ -110,8 +115,28 @@ export function DashboardBreakdown({
               viewBox={`0 0 ${donutWidth} ${donutHeight}`}
               className="pointer-events-none absolute inset-0 size-full"
             >
+              {slices
+                .filter(({ share }) => share >= minimumInlineShare)
+                .map(({ name, share, color, angle }) => {
+                  const percentage = `${share.toFixed(1)}%`
+                  const labelRadius = radius * 0.83
+                  const darkSlice = color === colors[0] || color === colors[1]
+                  return (
+                    <text
+                      key={name}
+                      x={centerX + labelRadius * Math.sin(angle)}
+                      y={centerY - labelRadius * Math.cos(angle)}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      aria-label={`${name} ${percentage}`}
+                      className={`text-[11px] font-semibold tabular-nums ${darkSlice ? 'fill-white' : 'fill-ink'}`}
+                    >
+                      {percentage}
+                    </text>
+                  )
+                })}
               {labels.map(({ name, share, x, y, left, labelY }) => {
-                const elbow = left ? 42 : donutWidth - 42
+                const elbow = left ? 36 : donutWidth - 36
                 const textX = elbow + (left ? -3 : 3)
                 const percentage = `${share.toFixed(1)}%`
                 return (
