@@ -5,65 +5,88 @@ import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
-export function DashboardSignals({ signals }: { signals: Dashboard['signals'] }) {
+export function DashboardSignals({
+  signals,
+  departmentSelected,
+}: {
+  signals: Dashboard['signals']
+  departmentSelected: boolean
+}) {
+  const items = signals.items.filter(
+    ({ type }) =>
+      type === 'volume' || (!departmentSelected && (type === 'growth' || type === 'decline')),
+  )
+
   return (
     <Panel aria-labelledby="signals-title">
-      <h2 id="signals-title" className="mb-3 flex items-center gap-2 text-base font-semibold">
+      <h2 id="signals-title" className="flex items-center gap-2 text-base font-semibold">
         <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
         Notable changes &amp; investigation signals
       </h2>
-      {signals.items.length ? (
+      {items.length ? (
         <DataTable
           columns={{
-            evidence: 'Observed change',
-            delta: 'vs. prior period',
-            action: 'Investigation',
+            area: 'Area',
+            delta: 'Change vs. prior period',
+            meaning: 'What changed',
+            action: 'Suggested investigation',
           }}
-          className="text-xs [&_:is(th,td)]:py-2"
+          className="mt-2 text-xs"
           viewportClassName="rounded-none! border-0!"
         >
-          {signals.items.map((signal) => (
-            <tr key={signal.type}>
-              <td>
-                <p className="font-medium">{signal.reason}</p>
-                <p className="text-xs text-muted">
-                  {valueLabel(signal.metric, signal.evidence.prior)} to{' '}
-                  {valueLabel(signal.metric, signal.evidence.current)}
-                  {' · '}
-                  {valueLabel('units', signal.evidence.prior_lines)} to{' '}
-                  {valueLabel('units', signal.evidence.current_lines)} lines
-                </p>
-              </td>
-              <td
-                className={
-                  Number(signal.delta.amount) < 0
-                    ? 'font-semibold text-error'
-                    : 'font-semibold text-success'
-                }
-              >
-                {signal.delta.percent == null
-                  ? valueLabel(signal.metric, signal.delta.amount)
-                  : percentLabel(signal.delta.percent)}
-              </td>
-              <td>
-                <Link
-                  to={{
-                    pathname: signal.route,
-                    search: new URLSearchParams(signal.route_filters).toString(),
-                    hash: 'performance-trend',
-                  }}
-                  className="inline-block rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold whitespace-nowrap no-underline hover:bg-blue-100"
-                  aria-label={`View trend for ${signal.evidence.name}`}
-                >
-                  View trend →
-                </Link>
-              </td>
-            </tr>
-          ))}
+          {items.map((signal) => {
+            const { metric, delta, evidence } = signal
+            const volume = signal.type === 'volume'
+            const before = valueLabel(metric, evidence.prior)
+            const after = valueLabel(metric, evidence.current)
+            const amount = Number(delta.amount)
+            const change =
+              delta.percent == null
+                ? `${amount > 0 ? '+' : ''}${valueLabel(metric, delta.amount)}`
+                : percentLabel(delta.percent)
+
+            return (
+              <tr key={signal.type}>
+                <th scope="row" className="font-semibold">
+                  <span className="flex items-center gap-2">
+                    <WorkspaceIcon
+                      path={volume ? '/baskets' : '/merchandise'}
+                      className="size-4 shrink-0 text-brand"
+                    />
+                    {volume ? 'Net units' : evidence.name}
+                  </span>
+                </th>
+                <td>
+                  <span
+                    className={`inline-block rounded-md px-1.5 py-0.5 font-semibold whitespace-nowrap tabular-nums ${amount < 0 ? 'bg-red-50 text-error' : 'bg-emerald-50 text-success'}`}
+                  >
+                    {change}
+                  </span>
+                </td>
+                <td className="min-w-36 text-ink">
+                  {volume ? 'Net units' : 'Net spend'} went from {before} in the prior period to{' '}
+                  {after} in the selected period.
+                </td>
+                <td>
+                  <Link
+                    to={{
+                      pathname: signal.route,
+                      search: new URLSearchParams(signal.route_filters).toString(),
+                      hash: 'performance-trend',
+                    }}
+                    className="inline-block rounded-md bg-blue-50 px-2 py-1 font-semibold whitespace-nowrap no-underline hover:bg-blue-100"
+                    aria-label={`View trend for ${evidence.name}`}
+                  >
+                    {volume ? 'Review units trend' : 'Review spend trend'} →
+                  </Link>
+                </td>
+              </tr>
+            )
+          })}
         </DataTable>
       ) : (
-        <p className="text-sm text-muted">
-          No changes can be flagged with the available evidence for this selection.
+        <p className="mt-2 text-sm text-muted">
+          No additional changes to investigate for this selection.
         </p>
       )}
     </Panel>

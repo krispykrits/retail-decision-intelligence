@@ -263,7 +263,10 @@ export function CommandCenterPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-            <DashboardSignals signals={data.signals} />
+            <DashboardSignals
+              signals={data.signals}
+              departmentSelected={data.breakdown.dimension === 'commodity'}
+            />
             <Panel aria-labelledby="explore-title">
               <h2
                 id="explore-title"

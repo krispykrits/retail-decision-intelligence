@@ -254,7 +254,7 @@ describe('Command Center', () => {
       await trendLoaded
       return { ...emptyDashboard.trend, metric, current: [point] }
     })
-    dashboard.mockImplementation(async ({ metric = 'spend', department }) => {
+    dashboard.mockImplementation(async ({ metric = 'spend', department }): Promise<Dashboard> => {
       if (department) await departmentLoaded
       return {
         ...emptyDashboard,
@@ -338,6 +338,42 @@ describe('Command Center', () => {
               },
               source_version: 1,
             },
+            {
+              severity: 'info',
+              type: 'engagement',
+              reason: 'Active households rose across the selection.',
+              metric: 'households',
+              delta: { amount: '1', percent: '100' },
+              comparison: prior,
+              route: '/command-center',
+              route_filters: { metric: 'households' },
+              evidence: {
+                name: 'Active households',
+                current: '2',
+                prior: '1',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
+            },
+            {
+              severity: 'info',
+              type: 'volume',
+              reason: 'Net units rose across the selection.',
+              metric: 'units',
+              delta: { amount: '10', percent: '100' },
+              comparison: prior,
+              route: '/command-center',
+              route_filters: { metric: 'units' },
+              evidence: {
+                name: 'Net units',
+                current: '20',
+                prior: '10',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
+            },
           ],
         },
       }
@@ -349,7 +385,14 @@ describe('Command Center', () => {
         </MemoryRouter>,
       )
       expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
-      expect(screen.getByText('Net spend rose in FOOD.')).toBeVisible()
+      expect(
+        screen.getByText(
+          'Net spend went from $8.00 in the prior period to $20.00 in the selected period.',
+        ),
+      ).toBeVisible()
+      expect(
+        screen.queryByRole('link', { name: 'View trend for Active households' }),
+      ).not.toBeInTheDocument()
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Region'), 'EAST')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
@@ -409,10 +452,8 @@ describe('Command Center', () => {
         expect.objectContaining({ region: 'EAST', department: 'FOOD' }),
         expect.any(AbortSignal),
       )
-      expect(screen.getByRole('link', { name: 'View trend for FOOD' })).toHaveAttribute(
-        'href',
-        expect.stringContaining('department=FOOD'),
-      )
+      expect(screen.queryByRole('link', { name: 'View trend for FOOD' })).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'View trend for Net units' })).toBeVisible()
 
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Department'), '')
