@@ -167,16 +167,9 @@ export function DashboardBreakdown({
                   <td className="min-w-24">
                     {row.current ? (
                       <>
-                        <div className="flex flex-wrap items-baseline gap-x-1.5">
-                          <span className="font-medium tabular-nums">
-                            {valueLabel('spend', row.current.spend)}
-                          </span>
-                          {row.share != null && (
-                            <span className="text-xs text-muted">
-                              {Number(row.share).toFixed(1)}%
-                            </span>
-                          )}
-                        </div>
+                        <span className="font-medium tabular-nums">
+                          {valueLabel('spend', row.current.spend)}
+                        </span>
                         {!showDonut && (
                           <div className="relative mt-1 h-1.5 rounded bg-canvas" aria-hidden="true">
                             <span
