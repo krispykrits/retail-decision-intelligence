@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     auth_secret: SecretStr | None = None
     mail: MailSettings | None = None
     import_max_bytes: int = Field(default=192 * 1024 * 1024, ge=25 * 1024 * 1024)
+    import_storage_account: str | None = Field(default=None, pattern=r"^[a-z0-9]{3,24}$")
 
     @model_validator(mode="after")
     def validate_configuration(self) -> "Settings":

@@ -188,6 +188,24 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImportCapabilities": {
+        "properties": {
+          "direct_upload": {
+            "title": "Direct Upload",
+            "type": "boolean"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "direct_upload",
+          "max_bytes"
+        ],
+        "title": "ImportCapabilities",
+        "type": "object"
+      },
       "ImportErrorRow": {
         "properties": {
           "reason": {
@@ -205,6 +223,49 @@
         ],
         "title": "ImportErrorRow",
         "type": "object"
+      },
+      "ImportJob": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportJobStatus"
+          }
+        },
+        "required": [
+          "import_id",
+          "filename",
+          "status"
+        ],
+        "title": "ImportJob",
+        "type": "object"
+      },
+      "ImportJobStatus": {
+        "enum": [
+          "awaiting_upload",
+          "queued",
+          "processing",
+          "finished"
+        ],
+        "title": "ImportJobStatus",
+        "type": "string"
       },
       "ImportResult": {
         "properties": {
@@ -291,6 +352,25 @@
         ],
         "title": "ImportStatus",
         "type": "string"
+      },
+      "ImportUpload": {
+        "properties": {
+          "import_id": {
+            "format": "uuid",
+            "title": "Import Id",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "import_id",
+          "upload_url"
+        ],
+        "title": "ImportUpload",
+        "type": "object"
       },
       "LinkToken": {
         "properties": {
@@ -408,6 +488,31 @@
           "end"
         ],
         "title": "SourceWindow",
+        "type": "object"
+      },
+      "StartImportUpload": {
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "StartImportUpload",
         "type": "object"
       },
       "ValidationError": {
@@ -1093,6 +1198,234 @@
         "summary": "Check API process liveness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/import-capabilities": {
+      "get": {
+        "operationId": "import_capabilities_api_v1_import_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCapabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          }
+        },
+        "summary": "Import Capabilities",
+        "tags": [
+          "Data Operations"
+        ]
+      }
+    },
+    "/api/v1/import-jobs": {
+      "post": {
+        "operationId": "start_import_upload_api_v1_import_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartImportUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportUpload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Import Upload",
+        "tags": [
+          "Data Operations"
+        ]
+      }
+    },
+    "/api/v1/import-jobs/{import_id}": {
+      "get": {
+        "operationId": "get_import_job_api_v1_import_jobs__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Import Job",
+        "tags": [
+          "Data Operations"
+        ]
+      }
+    },
+    "/api/v1/import-jobs/{import_id}/submit": {
+      "post": {
+        "operationId": "submit_import_api_v1_import_jobs__import_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Administrator and valid CSRF token required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Import",
+        "tags": [
+          "Data Operations"
         ]
       }
     },

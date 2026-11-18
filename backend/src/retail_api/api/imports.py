@@ -1,7 +1,8 @@
 from collections.abc import AsyncGenerator
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from azure.core.exceptions import AzureError, ResourceNotFoundError
 from fastapi import APIRouter, HTTPException, Request, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
@@ -9,8 +10,19 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 
 from retail_api.accounts.models import AccountUser
 from retail_api.accounts.schemas import ErrorResponse
-from retail_api.imports import store
-from retail_api.imports.schemas import Dataset, DatasetSummary, ImportResult
+from retail_api.imports import jobs, store
+from retail_api.imports.job_schema import jobs as job_table
+from retail_api.imports.schemas import (
+    Dataset,
+    DatasetSummary,
+    ImportCapabilities,
+    ImportJob,
+    ImportJobStatus,
+    ImportResult,
+    ImportUpload,
+    StartImportUpload,
+)
+from retail_api.imports.storage import ImportStorage
 
 router = APIRouter(tags=["Data Operations"])
 MULTIPART_OVERHEAD = 16 * 1024
@@ -89,7 +101,10 @@ async def upload_form(request: Request, limit: int) -> FormData:
     },
 )
 async def create_import(request: Request, response: Response) -> ImportResult:
-    limit: int = request.app.state.settings.import_max_bytes
+    settings = request.app.state.settings
+    if settings.import_storage_account:
+        raise HTTPException(409, "Use a direct upload for this environment.")
+    limit: int = settings.import_max_bytes
     form = await upload_form(request, limit)
     try:
         uploaded = form.get("file")
@@ -120,6 +135,96 @@ def require_admin(request: Request) -> None:
     account: AccountUser = request.state.account
     if not account.is_superuser:
         raise HTTPException(403, "Administrator access required")
+
+
+@router.get("/import-capabilities", responses=AUTH_ERRORS)
+def import_capabilities(request: Request) -> ImportCapabilities:
+    require_admin(request)
+    settings = request.app.state.settings
+    return ImportCapabilities(
+        direct_upload=bool(settings.import_storage_account), max_bytes=settings.import_max_bytes
+    )
+
+
+@router.post("/import-jobs", response_model=ImportUpload, status_code=201, responses=AUTH_ERRORS)
+def start_import_upload(
+    upload: StartImportUpload, request: Request, response: Response
+) -> ImportUpload:
+    require_admin(request)
+    settings = request.app.state.settings
+    if not settings.import_storage_account:
+        raise HTTPException(409, "Direct uploads are unavailable in this environment.")
+    if upload.size_bytes > settings.import_max_bytes:
+        raise HTTPException(413, "The CSV is larger than the configured upload limit.")
+    filename = upload.filename.replace("\\", "/").rsplit("/", 1)[-1]
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(422, "Choose a CSV file.")
+
+    import_id = uuid4()
+    storage = ImportStorage(settings)
+    try:
+        url = storage.upload_url(import_id)
+    except AzureError as error:
+        raise HTTPException(503, "Import storage is temporarily unavailable.") from error
+    finally:
+        storage.close()
+
+    with request.app.state.database.begin() as connection:
+        jobs.create_job(connection, import_id, upload, filename[:120])
+    response.headers["Cache-Control"] = "no-store"
+    return ImportUpload(import_id=import_id, upload_url=url)
+
+
+@router.post("/import-jobs/{import_id}/submit", status_code=202, responses=AUTH_ERRORS)
+def submit_import(import_id: UUID, request: Request, response: Response) -> ImportJob:
+    require_admin(request)
+    settings = request.app.state.settings
+    if not settings.import_storage_account:
+        raise HTTPException(409, "Direct uploads are unavailable in this environment.")
+    engine = request.app.state.database
+    response.headers["Cache-Control"] = "no-store"
+    with engine.connect() as connection:
+        row = jobs.get_job(connection, import_id)
+        if row is None:
+            raise HTTPException(404, "Import not found.")
+        status = jobs.job_status(connection, row)
+        if status.status != ImportJobStatus.AWAITING_UPLOAD:
+            return status
+
+    storage = ImportStorage(settings)
+    try:
+        if storage.blob(import_id).get_blob_properties().size != row.size_bytes:
+            raise HTTPException(422, "The uploaded file size does not match the request.")
+        # Send first. If this response is lost, submitting again is safe because jobs
+        # share an import ID and consequently a single committed outcome.
+        storage.queue.send_message(str(import_id), time_to_live=-1)
+    except ResourceNotFoundError as error:
+        raise HTTPException(409, "The upload has not finished.") from error
+    except AzureError as error:
+        raise HTTPException(503, "Import storage is temporarily unavailable.") from error
+    finally:
+        storage.close()
+
+    with engine.begin() as connection:
+        connection.execute(
+            job_table.update()
+            .where(job_table.c.id == import_id, job_table.c.queued_at.is_(None))
+            .values(queued_at=jobs.now())
+        )
+        queued = jobs.get_job(connection, import_id)
+        assert queued is not None
+        return jobs.job_status(connection, queued)
+
+
+@router.get("/import-jobs/{import_id}", responses=AUTH_ERRORS)
+def get_import_job(import_id: UUID, request: Request, response: Response) -> ImportJob:
+    require_admin(request)
+    response.headers["Cache-Control"] = "no-store"
+    with request.app.state.database.connect() as connection:
+        row = jobs.get_job(connection, import_id)
+        if row is None:
+            raise HTTPException(404, "Import not found.")
+        return jobs.job_status(connection, row)
 
 
 @router.get(

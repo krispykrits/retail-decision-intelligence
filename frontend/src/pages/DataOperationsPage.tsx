@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getDatasets,
   getImportHistory,
+  pendingImportId,
+  resumeImport,
   uploadCsv,
   type Dataset,
   type ImportResult,
@@ -45,10 +47,10 @@ function useRows<T>(load: (signal: AbortSignal) => Promise<T[]>, enabled = true)
     return () => controller.abort()
   }, [enabled, load, refreshCount])
 
-  function refresh() {
+  const refresh = useCallback(() => {
     setStatus('loading')
     setRefreshCount((count) => count + 1)
-  }
+  }, [])
 
   return { rows, status, refresh }
 }
@@ -57,7 +59,10 @@ export function DataOperationsPage() {
   const { account } = useSession()
   const administrator = account?.roles.includes('Administrator') ?? false
   const [files, setFiles] = useState<Partial<Record<Dataset, File>>>({})
-  const [progress, setProgress] = useState<string | null>(null)
+  const [progress, setProgress] = useState<string | null>(() =>
+    administrator && pendingImportId() ? 'Checking import status…' : null,
+  )
+  const activeRequest = useRef<AbortController | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [results, setResults] = useState<ImportResult[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -67,35 +72,82 @@ export function DataOperationsPage() {
     const file = files[dataset]
     return file ? [{ dataset, label, file }] : []
   })
+  const { refresh: refreshInventory } = inventory
+  const { refresh: refreshHistory } = history
   const uploading = progress !== null
+
+  const continueImport = useCallback(
+    async (id: string, controller: AbortController) => {
+      try {
+        const result = await resumeImport(id, setProgress, controller.signal)
+        if (!controller.signal.aborted) setResults((current) => [...current, result])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setUploadError(
+            error instanceof Error ? error.message : 'Import status could not be loaded.',
+          )
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setProgress(null)
+          refreshInventory()
+          refreshHistory()
+        }
+      }
+    },
+    [refreshInventory, refreshHistory],
+  )
+
+  useEffect(() => {
+    const pending = administrator && pendingImportId()
+    if (pending) {
+      const controller = new AbortController()
+      activeRequest.current = controller
+      void Promise.resolve().then(() => {
+        if (!controller.signal.aborted) return continueImport(pending, controller)
+      })
+    }
+    return () => activeRequest.current?.abort()
+  }, [administrator, continueImport])
 
   function selectFile(dataset: Dataset, file?: File) {
     setFiles((current) => ({ ...current, [dataset]: file }))
   }
 
   async function importFiles() {
-    if (uploading || !queued.length || !administrator) return
+    if (uploading || !administrator) return
+    const controller = new AbortController()
+    activeRequest.current = controller
     setUploadError('')
     setResults([])
+    const pending = pendingImportId()
+    if (pending) {
+      setProgress('Checking import status…')
+      await continueImport(pending, controller)
+      return
+    }
 
     try {
       for (const [index, { dataset, label, file }] of queued.entries()) {
         setProgress(`Importing ${label} (${index + 1} of ${queued.length})…`)
-        const result = await uploadCsv(dataset, file)
+        const result = await uploadCsv(dataset, file, setProgress, controller.signal)
         setResults((current) => [...current, result])
         if (result.status === 'failed') break
         if (result.status === 'completed') selectFile(dataset)
       }
     } catch (error) {
+      if (controller.signal.aborted) return
       setUploadError(
         error instanceof Error && error.name !== 'TypeError'
           ? error.message
           : 'The import result could not be confirmed. Refresh or retry the same file.',
       )
     } finally {
-      setProgress(null)
-      inventory.refresh()
-      history.refresh()
+      if (!controller.signal.aborted) {
+        setProgress(null)
+        refreshInventory()
+        refreshHistory()
+      }
     }
   }
 
@@ -160,10 +212,10 @@ export function DataOperationsPage() {
               <button
                 className={`${focus} rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50`}
                 type="button"
-                disabled={uploading || !queued.length}
+                disabled={uploading || (!queued.length && !pendingImportId())}
                 onClick={importFiles}
               >
-                {uploading ? 'Importing…' : 'Import files'}
+                {uploading ? 'Importing…' : pendingImportId() ? 'Resume import' : 'Import files'}
               </button>
               <p className="text-sm text-muted">
                 Adds new records. Existing records are preserved.

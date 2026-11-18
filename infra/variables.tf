@@ -71,3 +71,14 @@ variable "account_mail" {
   sensitive = true
   default   = null
 }
+
+variable "import_storage_account" {
+  description = "Operator-provisioned account for the queued CSV import job."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.import_storage_account == null ? true : can(regex("^[a-z0-9]{3,24}$", var.import_storage_account))
+    error_message = "Use a valid Azure Storage account name."
+  }
+}

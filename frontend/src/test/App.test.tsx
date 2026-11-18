@@ -10,6 +10,8 @@ import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../
 vi.mock('../api/imports', () => ({
   getDatasets: vi.fn().mockResolvedValue([]),
   getImportHistory: vi.fn().mockResolvedValue([]),
+  pendingImportId: vi.fn().mockReturnValue(null),
+  resumeImport: vi.fn(),
   uploadCsv: vi.fn(),
 }))
 

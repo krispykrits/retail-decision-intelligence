@@ -2,7 +2,7 @@ from datetime import date, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Dataset(StrEnum):
@@ -48,3 +48,33 @@ class DatasetSummary(BaseModel):
     last_success: datetime | None
     source_window: SourceWindow | None
     version: int
+
+
+class StartImportUpload(BaseModel):
+    dataset: Dataset
+    filename: str = Field(min_length=1, max_length=255)
+    size_bytes: int = Field(gt=0)
+
+
+class ImportUpload(BaseModel):
+    import_id: UUID
+    upload_url: str
+
+
+class ImportJobStatus(StrEnum):
+    AWAITING_UPLOAD = "awaiting_upload"
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    FINISHED = "finished"
+
+
+class ImportJob(BaseModel):
+    import_id: UUID
+    filename: str
+    status: ImportJobStatus
+    result: ImportResult | None = None
+
+
+class ImportCapabilities(BaseModel):
+    direct_upload: bool
+    max_bytes: int

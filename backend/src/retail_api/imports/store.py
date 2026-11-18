@@ -202,10 +202,17 @@ def record_result(connection: sa.Connection, result: ImportResult, file_hash: st
     )
 
 
-def import_csv(engine: sa.Engine, dataset: Dataset, filename: str, file: BinaryIO) -> ImportResult:
+def import_csv(
+    engine: sa.Engine,
+    dataset: Dataset,
+    filename: str,
+    file: BinaryIO,
+    *,
+    import_id: UUID | None = None,
+) -> ImportResult:
     file_hash = sha256(file)
     result = ImportResult(
-        import_id=uuid4(),
+        import_id=import_id or uuid4(),
         dataset=dataset,
         filename=filename,
         status=ImportStatus.COMPLETED,
@@ -235,6 +242,9 @@ def import_csv(engine: sa.Engine, dataset: Dataset, filename: str, file: BinaryI
                     sa.select(sa.literal(dataset), sa.literal(0)).where(~existing.exists()),
                 )
             )
+            # A re-delivered job uses the same ID even if it lost its queue acknowledgment.
+            if import_id is not None and (saved := read_import(connection, import_id)):
+                return saved
             previous_count = connection.scalar(
                 sa.select(import_runs.c.processed)
                 .select_from(import_files.join(import_runs))
@@ -277,6 +287,8 @@ def import_csv(engine: sa.Engine, dataset: Dataset, filename: str, file: BinaryI
             else ("The database could not confirm this import. Retrying the same file is safe.")
         )
         if isinstance(error, sa.exc.SQLAlchemyError):
+            if import_id is not None:
+                raise ImportUnavailable(result.detail) from error
             logger.warning("Import %s failed (%s)", result.import_id, type(error).__name__)
         try:
             with engine.begin() as connection:
