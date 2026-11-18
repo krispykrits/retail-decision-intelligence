@@ -315,7 +315,7 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
     signals = client.get(f"{base}/signals", params=filters).json()
     growth = next(signal for signal in signals["items"] if signal["type"] == "growth")
     assert growth["evidence"]["current_lines"] > 0
-    assert growth["route"] == "/command-center"
+    assert growth["route"] == "/merchandise"
     assert (
         client.get(base, params=growth["route_filters"]).json()["breakdown"]["dimension"]
         == "commodity"
@@ -325,6 +325,14 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
     assert narrowed["summary"]["current"]["households"] == 1
     assert narrowed["trend"]["current"][0]["value"] == "20.0000"
     assert narrowed["breakdown"]["rows"][0]["name"] == "PRODUCE"
+    volume = next(signal for signal in narrowed["signals"]["items"] if signal["type"] == "volume")
+    assert volume["route"] == "/baskets"
+    assert volume["route_filters"] == {
+        **filters,
+        "department": "FOOD",
+        "region": "EAST",
+        "metric": "units",
+    }
 
     trend = client.get(f"{base}/trends", params={**filters, "metric": "units", "grain": "week"})
     assert [point["value"] for point in trend.json()["current"]] == ["2"]

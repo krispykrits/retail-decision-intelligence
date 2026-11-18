@@ -321,7 +321,7 @@ describe('Command Center', () => {
               metric: 'spend',
               delta,
               comparison: prior,
-              route: '/command-center',
+              route: '/merchandise',
               route_filters: {
                 start: current.start,
                 end: current.end,
@@ -345,7 +345,7 @@ describe('Command Center', () => {
               metric: 'households',
               delta: { amount: '1', percent: '100' },
               comparison: prior,
-              route: '/command-center',
+              route: '/customers',
               route_filters: { metric: 'households' },
               evidence: {
                 name: 'Active households',
@@ -363,7 +363,7 @@ describe('Command Center', () => {
               metric: 'units',
               delta: { amount: '10', percent: '100' },
               comparison: prior,
-              route: '/command-center',
+              route: '/baskets',
               route_filters: { metric: 'units' },
               evidence: {
                 name: 'Net units',
@@ -390,9 +390,7 @@ describe('Command Center', () => {
           'Net spend went from $8.00 in the prior period to $20.00 in the selected period.',
         ),
       ).toBeVisible()
-      expect(
-        screen.queryByRole('link', { name: 'View trend for Active households' }),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Active households/ })).not.toBeInTheDocument()
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Region'), 'EAST')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
@@ -452,8 +450,10 @@ describe('Command Center', () => {
         expect.objectContaining({ region: 'EAST', department: 'FOOD' }),
         expect.any(AbortSignal),
       )
-      expect(screen.queryByRole('link', { name: 'View trend for FOOD' })).not.toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'View trend for Net units' })).toBeVisible()
+      expect(
+        screen.queryByRole('link', { name: 'Explore merchandise for FOOD' }),
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Explore baskets for Net units' })).toBeVisible()
 
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Department'), '')
@@ -464,6 +464,17 @@ describe('Command Center', () => {
         expect.objectContaining({ region: 'EAST', department: undefined }),
         expect.any(AbortSignal),
       )
+      const merchandise = screen.getByRole('link', { name: 'Explore merchandise for FOOD' })
+      expect(merchandise).toHaveAttribute(
+        'href',
+        expect.stringMatching(/^\/merchandise\?.*department=FOOD/),
+      )
+      expect(screen.getByRole('link', { name: 'Explore baskets for Net units' })).toHaveAttribute(
+        'href',
+        '/baskets?metric=units',
+      )
+      await user.click(merchandise)
+      expect(await screen.findByRole('heading', { name: 'Merchandise Intelligence' })).toBeVisible()
     } finally {
       dashboard.mockResolvedValue(emptyDashboard)
     }

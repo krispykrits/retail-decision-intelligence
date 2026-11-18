@@ -37,6 +37,7 @@ export function DashboardSignals({
           {items.map((signal) => {
             const { metric, delta, evidence } = signal
             const volume = signal.type === 'volume'
+            const action = volume ? 'Explore baskets' : 'Explore merchandise'
             const before = valueLabel(metric, evidence.prior)
             const after = valueLabel(metric, evidence.current)
             const amount = Number(delta.amount)
@@ -72,12 +73,11 @@ export function DashboardSignals({
                     to={{
                       pathname: signal.route,
                       search: new URLSearchParams(signal.route_filters).toString(),
-                      hash: 'performance-trend',
                     }}
                     className="inline-block rounded-md bg-blue-50 px-2 py-1 font-semibold whitespace-nowrap no-underline hover:bg-blue-100"
-                    aria-label={`View trend for ${evidence.name}`}
+                    aria-label={`${action} for ${evidence.name}`}
                   >
-                    {volume ? 'Review units trend' : 'Review spend trend'} →
+                    {action} →
                   </Link>
                 </td>
               </tr>

@@ -401,7 +401,7 @@ class DashboardStore:
                     metric="spend",
                     delta=row.change,
                     comparison=self.prior,
-                    route="/command-center",
+                    route="/merchandise",
                     route_filters={**route_filters, "department": row.name, "metric": "spend"},
                     evidence=Evidence(
                         name=row.name,
@@ -427,7 +427,7 @@ class DashboardStore:
                     metric=metric,
                     delta=delta,
                     comparison=self.prior,
-                    route="/command-center",
+                    route="/baskets" if volume else "/customers",
                     route_filters={**route_filters, "metric": metric},
                     evidence=Evidence(
                         name=name,
