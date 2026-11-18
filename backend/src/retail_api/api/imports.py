@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from azure.core.exceptions import AzureError, ResourceNotFoundError
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -10,19 +10,16 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 
 from retail_api.accounts.models import AccountUser
 from retail_api.accounts.schemas import ErrorResponse
-from retail_api.imports import jobs, store
-from retail_api.imports.job_schema import jobs as job_table
+from retail_api.imports import queries, service, store
 from retail_api.imports.schemas import (
     Dataset,
     DatasetSummary,
     ImportCapabilities,
     ImportJob,
-    ImportJobStatus,
     ImportResult,
     ImportUpload,
     StartImportUpload,
 )
-from retail_api.imports.storage import ImportStorage
 
 router = APIRouter(tags=["Data Operations"])
 MULTIPART_OVERHEAD = 16 * 1024
@@ -32,12 +29,28 @@ AUTH_ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 
+def upload_too_large() -> HTTPException:
+    return HTTPException(413, "The CSV is larger than the configured upload limit.")
+
+
+def validate_upload_size(size: int | None, limit: int) -> None:
+    if size is None or size > limit:
+        raise upload_too_large()
+
+
+def csv_filename(filename: str) -> str:
+    basename = filename.replace("\\", "/").rsplit("/", 1)[-1]
+    if not basename.lower().endswith(".csv"):
+        raise HTTPException(422, "Choose a CSV file.")
+    return basename[:120]
+
+
 async def limit_body(request: Request, limit: int) -> AsyncGenerator[bytes, None]:
     received = 0
     async for chunk in request.stream():
         received += len(chunk)
         if received > limit:
-            raise HTTPException(413, "The CSV is larger than the configured upload limit.")
+            raise upload_too_large()
         yield chunk
 
 
@@ -46,7 +59,7 @@ async def upload_form(request: Request, limit: int) -> FormData:
         raise HTTPException(415, "Send the dataset and CSV as multipart form data.")
     if request.headers.get("content-length", "").isdigit():
         if int(request.headers["content-length"]) > limit + MULTIPART_OVERHEAD:
-            raise HTTPException(413, "The CSV is larger than the configured upload limit.")
+            raise upload_too_large()
     try:
         return await MultiPartParser(
             request.headers,
@@ -115,16 +128,11 @@ async def create_import(request: Request, response: Response) -> ImportResult:
             dataset = Dataset(dataset_name)
         except ValueError as error:
             raise HTTPException(422, "Choose Households, Products or Transactions.") from error
-        filename = (uploaded.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
-        if not filename.lower().endswith(".csv"):
-            raise HTTPException(422, "Choose a CSV file.")
-        if uploaded.size is None or uploaded.size > limit:
-            raise HTTPException(413, "The CSV is larger than the configured upload limit.")
+        filename = csv_filename(uploaded.filename or "")
+        validate_upload_size(uploaded.size, limit)
         engine = request.app.state.database
         response.headers["Cache-Control"] = "no-store"
-        return await run_in_threadpool(
-            store.import_csv, engine, dataset, filename[:120], uploaded.file
-        )
+        return await run_in_threadpool(store.import_csv, engine, dataset, filename, uploaded.file)
     except store.ImportUnavailable as error:
         raise HTTPException(503, str(error)) from error
     finally:
@@ -154,25 +162,15 @@ def start_import_upload(
     settings = request.app.state.settings
     if not settings.import_storage_account:
         raise HTTPException(409, "Direct uploads are unavailable in this environment.")
-    if upload.size_bytes > settings.import_max_bytes:
-        raise HTTPException(413, "The CSV is larger than the configured upload limit.")
-    filename = upload.filename.replace("\\", "/").rsplit("/", 1)[-1]
-    if not filename.lower().endswith(".csv"):
-        raise HTTPException(422, "Choose a CSV file.")
+    validate_upload_size(upload.size_bytes, settings.import_max_bytes)
+    filename = csv_filename(upload.filename)
 
-    import_id = uuid4()
-    storage = ImportStorage(settings)
     try:
-        url = storage.upload_url(import_id)
+        result = service.start_upload(request.app.state.database, settings, upload, filename)
     except AzureError as error:
         raise HTTPException(503, "Import storage is temporarily unavailable.") from error
-    finally:
-        storage.close()
-
-    with request.app.state.database.begin() as connection:
-        jobs.create_job(connection, import_id, upload, filename[:120])
     response.headers["Cache-Control"] = "no-store"
-    return ImportUpload(import_id=import_id, upload_url=url)
+    return result
 
 
 @router.post("/import-jobs/{import_id}/submit", status_code=202, responses=AUTH_ERRORS)
@@ -181,39 +179,17 @@ def submit_import(import_id: UUID, request: Request, response: Response) -> Impo
     settings = request.app.state.settings
     if not settings.import_storage_account:
         raise HTTPException(409, "Direct uploads are unavailable in this environment.")
-    engine = request.app.state.database
     response.headers["Cache-Control"] = "no-store"
-    with engine.connect() as connection:
-        row = jobs.get_job(connection, import_id)
-        if row is None:
-            raise HTTPException(404, "Import not found.")
-        status = jobs.job_status(connection, row)
-        if status.status != ImportJobStatus.AWAITING_UPLOAD:
-            return status
-
-    storage = ImportStorage(settings)
     try:
-        if storage.blob(import_id).get_blob_properties().size != row.size_bytes:
-            raise HTTPException(422, "The uploaded file size does not match the request.")
-        # Send first. If this response is lost, submitting again is safe because jobs
-        # share an import ID and consequently a single committed outcome.
-        storage.queue.send_message(str(import_id), time_to_live=-1)
+        return service.submit_upload(request.app.state.database, settings, import_id)
+    except service.ImportJobNotFound as error:
+        raise HTTPException(404, "Import not found.") from error
+    except service.UploadSizeMismatch as error:
+        raise HTTPException(422, "The uploaded file size does not match the request.") from error
     except ResourceNotFoundError as error:
         raise HTTPException(409, "The upload has not finished.") from error
     except AzureError as error:
         raise HTTPException(503, "Import storage is temporarily unavailable.") from error
-    finally:
-        storage.close()
-
-    with engine.begin() as connection:
-        connection.execute(
-            job_table.update()
-            .where(job_table.c.id == import_id, job_table.c.queued_at.is_(None))
-            .values(queued_at=jobs.now())
-        )
-        queued = jobs.get_job(connection, import_id)
-        assert queued is not None
-        return jobs.job_status(connection, queued)
 
 
 @router.get("/import-jobs/{import_id}", responses=AUTH_ERRORS)
@@ -221,10 +197,10 @@ def get_import_job(import_id: UUID, request: Request, response: Response) -> Imp
     require_admin(request)
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        row = jobs.get_job(connection, import_id)
-        if row is None:
-            raise HTTPException(404, "Import not found.")
-        return jobs.job_status(connection, row)
+        try:
+            return service.get_status(connection, import_id)
+        except service.ImportJobNotFound as error:
+            raise HTTPException(404, "Import not found.") from error
 
 
 @router.get(
@@ -237,7 +213,7 @@ def list_imports(request: Request, response: Response) -> list[ImportResult]:
     require_admin(request)
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        return store.import_history(connection)
+        return queries.import_history(connection)
 
 
 @router.get(
@@ -250,7 +226,7 @@ def get_import(import_id: UUID, request: Request, response: Response) -> ImportR
     require_admin(request)
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        result = store.read_import(connection, import_id)
+        result = queries.read_import(connection, import_id)
     if result is None:
         raise HTTPException(404, "Import not found")
     return result
@@ -265,4 +241,4 @@ def get_import(import_id: UUID, request: Request, response: Response) -> ImportR
 def list_datasets(request: Request, response: Response) -> list[DatasetSummary]:
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        return store.inventory(connection)
+        return queries.inventory(connection)

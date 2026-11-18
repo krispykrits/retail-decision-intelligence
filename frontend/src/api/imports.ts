@@ -1,5 +1,6 @@
 import { csrfHeaders } from './accounts'
 import { client } from './client'
+import { errorDetail } from './errorDetail'
 import type { components } from './schema'
 
 export type Dataset = components['schemas']['Dataset']
@@ -18,11 +19,16 @@ export async function getImportHistory(signal?: AbortSignal): Promise<ImportResu
   return data
 }
 
-async function uploadLocally(dataset: Dataset, file: File): Promise<ImportResult> {
-  const headers = await csrfHeaders()
+async function uploadLocally(
+  dataset: Dataset,
+  file: File,
+  signal?: AbortSignal,
+): Promise<ImportResult> {
+  const headers = await csrfHeaders(signal)
   const { data, error } = await client.POST('/api/v1/imports', {
     body: { dataset, file: file.name },
-    params: { header: { 'X-CSRF-Token': headers['X-CSRF-Token'] } },
+    params: { header: headers },
+    signal,
     bodySerializer: (body) => {
       const form = new FormData()
       form.set('dataset', body.dataset)
@@ -32,9 +38,10 @@ async function uploadLocally(dataset: Dataset, file: File): Promise<ImportResult
   })
   if (!data) {
     throw new Error(
-      error && typeof error.detail === 'string'
-        ? error.detail
-        : 'The import result could not be confirmed. Refresh or retry the same file.',
+      errorDetail(
+        error,
+        'The import result could not be confirmed. Refresh or retry the same file.',
+      ),
     )
   }
   return data
@@ -70,8 +77,7 @@ export async function resumeImport(
       const job = status.data
       if (!job) {
         if (status.response.status === 404) sessionStorage.removeItem(pendingImportKey)
-        const detail = status.error?.detail
-        throw new Error(typeof detail === 'string' ? detail : 'Import status could not be loaded.')
+        throw new Error(errorDetail(status.error, 'Import status could not be loaded.'))
       }
       if (job.result) {
         if (pendingImportId() === id) sessionStorage.removeItem(pendingImportKey)
@@ -81,13 +87,12 @@ export async function resumeImport(
       if (job.status === 'awaiting_upload') {
         const submission = await client.POST('/api/v1/import-jobs/{import_id}/submit', {
           params,
-          headers: await csrfHeaders(),
+          headers: await csrfHeaders(signal),
           signal,
         })
         if (!submission.data) {
-          const detail = submission.error?.detail
           throw new Error(
-            typeof detail === 'string' ? detail : 'The upload is saved. Resume to submit it.',
+            errorDetail(submission.error, 'The upload is saved. Resume to submit it.'),
           )
         }
       }
@@ -113,17 +118,15 @@ export async function uploadCsv(
   if (file.size > capabilities.max_bytes) {
     throw new Error('The CSV is larger than the configured upload limit.')
   }
-  if (!capabilities.direct_upload) return uploadLocally(dataset, file)
+  if (!capabilities.direct_upload) return uploadLocally(dataset, file, signal)
 
   const { data: ticket, error } = await client.POST('/api/v1/import-jobs', {
-    headers: await csrfHeaders(),
+    headers: await csrfHeaders(signal),
     body: { dataset, filename: file.name, size_bytes: file.size },
     signal,
   })
   if (!ticket) {
-    throw new Error(
-      typeof error?.detail === 'string' ? error.detail : 'The upload could not be started.',
-    )
+    throw new Error(errorDetail(error, 'The upload could not be started.'))
   }
 
   progress?.(`Uploading ${file.name}…`)

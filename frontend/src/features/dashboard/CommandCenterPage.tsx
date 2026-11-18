@@ -1,91 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import {
-  getDashboard,
-  getDashboardTrend,
-  type Dashboard,
-  type DashboardQuery,
-} from '../api/dashboard'
-import { workspaces } from '../app/workspaces'
-import { Panel } from '../components/Panel'
-import { Icon } from '../components/WorkspaceIcon'
-import { WorkspaceHeader } from '../components/layout/WorkspaceHeader'
-import { DashboardBreakdown } from '../features/dashboard/DashboardBreakdown'
-import { DashboardFilters } from '../features/dashboard/DashboardFilters'
-import { DashboardSkeleton } from '../features/dashboard/DashboardSkeleton'
-import { DashboardSignals } from '../features/dashboard/DashboardSignals'
-import { DashboardSummary } from '../features/dashboard/DashboardSummary'
-import { DashboardTakeaways } from '../features/dashboard/DashboardTakeaways'
-import { DashboardTrend } from '../features/dashboard/DashboardTrend'
-import { isMetric, periodLabel } from '../features/dashboard/format'
-
-const dashboardPath = workspaces[0].path
-function readQuery(search: string): DashboardQuery {
-  const params = new URLSearchParams(search)
-  const metric = params.get('metric')
-  const region = params.get('region')
-  return {
-    start: params.get('start') || undefined,
-    end: params.get('end') || undefined,
-    region: (region || undefined) as DashboardQuery['region'],
-    department: params.get('department') || undefined,
-    metric: isMetric(metric) ? metric : 'spend',
-  }
-}
-
-function queryString(query: DashboardQuery) {
-  const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(query)) {
-    if (value && (key !== 'metric' || value !== 'spend')) params.set(key, value)
-  }
-  return params.toString()
-}
-
-function loadRequest<T>(
-  load: (query: DashboardQuery, signal: AbortSignal) => Promise<T>,
-  query: DashboardQuery,
-  settle: (data: T | null) => void,
-) {
-  const controller = new AbortController()
-  function finish(data: T | null) {
-    if (!controller.signal.aborted) settle(data)
-  }
-  void load(query, controller.signal).then(finish, () => finish(null))
-  return () => controller.abort()
-}
+import type { DashboardQuery } from '../../api/dashboard'
+import { commandCenterPath, dataOperationsPath } from '../../app/workspaces'
+import { Panel } from '../../components/Panel'
+import { Icon } from '../../components/WorkspaceIcon'
+import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
+import { DashboardBreakdown } from './DashboardBreakdown'
+import { DashboardFilters } from './DashboardFilters'
+import { DashboardSkeleton } from './DashboardSkeleton'
+import { DashboardSignals } from './DashboardSignals'
+import { DashboardSummary } from './DashboardSummary'
+import { DashboardTakeaways } from './DashboardTakeaways'
+import { DashboardTrend } from './DashboardTrend'
+import { periodLabel } from './format'
+import { queryString } from './query'
+import { useDashboard } from './useDashboard'
 
 export function CommandCenterPage() {
   const { search, hash, key } = useLocation()
   const navigate = useNavigate()
   const periodPicker = useRef<HTMLDetailsElement>(null)
-  const query = readQuery(search)
-  const metric = query.metric ?? 'spend'
-  const filterSearch = queryString({ ...query, metric: undefined })
-  const filters = useMemo(() => readQuery(filterSearch), [filterSearch])
-  const [retry, setRetry] = useState(0)
-  const requestKey = `${filterSearch}:${retry}`
-  const [result, setResult] = useState<{
-    key: string
-    data: Dashboard | null
-    filters: DashboardQuery
-  }>()
-  const pending = result?.key !== requestKey
-  const data = result?.data
-  const current = data?.summary.current_period
-  const [trendRetry, setTrendRetry] = useState(0)
-  const dashboardKey = result?.key
-  const trendKey = `${metric}:${trendRetry}`
-  const [trendResult, setTrendResult] = useState<{
-    dashboardKey: string
-    key: string
-    data: Dashboard['trend'] | null
-  }>()
-  const scopedTrend = trendResult?.dashboardKey === dashboardKey ? trendResult : undefined
-  const matchingTrend = scopedTrend?.key === trendKey ? scopedTrend : undefined
-  const defaultTrend = data?.trend.metric === metric ? data.trend : null
-  const trendReady = Boolean(defaultTrend || matchingTrend)
-  const trendError = !defaultTrend && matchingTrend?.data === null
-  const trend = defaultTrend ?? scopedTrend?.data ?? data?.trend
+  const {
+    query,
+    metric,
+    result,
+    pending,
+    data,
+    current,
+    trend,
+    trendReady,
+    trendError,
+    retry,
+    retryTrend,
+  } = useDashboard(search)
 
   useEffect(() => {
     function dismissPeriodPicker(event: PointerEvent) {
@@ -99,26 +46,6 @@ export function CommandCenterPage() {
     return () => document.removeEventListener('pointerdown', dismissPeriodPicker, true)
   }, [])
 
-  useEffect(
-    () =>
-      loadRequest(getDashboard, filters, (data) => setResult({ key: requestKey, data, filters })),
-    [filters, requestKey],
-  )
-
-  useEffect(() => {
-    if (pending || !dashboardKey || !data?.summary.current || trendReady) return
-    const period = data.summary.current_period
-    const trendQuery = {
-      ...filters,
-      start: period?.start ?? filters.start,
-      end: period?.end ?? filters.end,
-      metric,
-    }
-    return loadRequest(getDashboardTrend, trendQuery, (data) =>
-      setTrendResult({ dashboardKey, key: trendKey, data }),
-    )
-  }, [dashboardKey, data, filters, metric, pending, trendKey, trendReady])
-
   useEffect(() => {
     if (!pending && hash === '#performance-trend') {
       const trend = document.getElementById('performance-trend')
@@ -128,7 +55,7 @@ export function CommandCenterPage() {
   }, [hash, key, pending])
 
   function apply(filters: DashboardQuery) {
-    void navigate({ pathname: dashboardPath, search: queryString(filters) })
+    void navigate({ pathname: commandCenterPath, search: queryString(filters) })
   }
 
   function applyPeriod(filters: DashboardQuery) {
@@ -139,7 +66,7 @@ export function CommandCenterPage() {
   return (
     <div className="space-y-3 md:space-y-4">
       <WorkspaceHeader
-        path={dashboardPath}
+        path={commandCenterPath}
         status={pending && data ? 'Updating retail performance…' : undefined}
       >
         {data?.options.first_date && (
@@ -198,11 +125,11 @@ export function CommandCenterPage() {
             <button
               type="button"
               className="rounded-lg border border-line px-3 py-1.5 text-link hover:bg-nav-hover"
-              onClick={() => setRetry(retry + 1)}
+              onClick={retry}
             >
               Retry
             </button>
-            {search && <Link to={dashboardPath}>Reset filters</Link>}
+            {search && <Link to={commandCenterPath}>Reset filters</Link>}
           </div>
         </Panel>
       ) : !data.summary.current ? (
@@ -216,7 +143,7 @@ export function CommandCenterPage() {
               : 'Check Data Operations for the current dataset status.'}
           </p>
           {!current && (
-            <Link className="mt-3 inline-block text-sm font-semibold" to="/data">
+            <Link className="mt-3 inline-block text-sm font-semibold" to={dataOperationsPath}>
               Open Data Operations →
             </Link>
           )}
@@ -232,7 +159,7 @@ export function CommandCenterPage() {
               metric={metric}
               loading={!trendReady}
               error={trendError}
-              retry={() => setTrendRetry((attempt) => attempt + 1)}
+              retry={retryTrend}
               onMetricChange={(metric) => apply({ ...query, metric })}
             />
             <DashboardBreakdown

@@ -4,8 +4,8 @@ from uuid import UUID
 import sqlalchemy as sa
 
 from retail_api.imports.job_schema import jobs
+from retail_api.imports.queries import read_import
 from retail_api.imports.schemas import ImportJob, ImportJobStatus, StartImportUpload
-from retail_api.imports.store import read_import
 
 
 def now() -> datetime:
@@ -27,6 +27,22 @@ def create_job(
             size_bytes=upload.size_bytes,
             created_at=now(),
         )
+    )
+
+
+def mark_queued(connection: sa.Connection, import_id: UUID) -> None:
+    connection.execute(
+        jobs.update()
+        .where(jobs.c.id == import_id, jobs.c.queued_at.is_(None))
+        .values(queued_at=now())
+    )
+
+
+def mark_started(connection: sa.Connection, import_id: UUID) -> None:
+    connection.execute(
+        jobs.update()
+        .where(jobs.c.id == import_id, jobs.c.started_at.is_(None))
+        .values(started_at=now())
     )
 
 

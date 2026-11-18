@@ -1,6 +1,9 @@
+export const commandCenterPath = '/command-center'
+export const dataOperationsPath = '/data'
+
 export const workspaces = [
   {
-    path: '/command-center',
+    path: commandCenterPath,
     title: 'Command Center',
     description:
       'Compare retail performance across periods and investigate changes in spend, sales volume, and household shopping activity.',
@@ -30,7 +33,11 @@ export const workspaces = [
     title: 'Household 360',
     description: 'Household search and purchase history.',
   },
-  { path: '/data', title: 'Data Operations', description: 'Dataset uploads and import results.' },
+  {
+    path: dataOperationsPath,
+    title: 'Data Operations',
+    description: 'Dataset uploads and import results.',
+  },
 ] as const
 
 export type Workspace = (typeof workspaces)[number]

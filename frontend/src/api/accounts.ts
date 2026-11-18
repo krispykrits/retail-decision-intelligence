@@ -1,4 +1,5 @@
 import { client } from './client'
+import { errorDetail } from './errorDetail'
 import type { components } from './schema'
 
 export type Account = components['schemas']['AccountRead']
@@ -16,15 +17,16 @@ export class AccountError extends Error {
 async function checkResponse(response: Response): Promise<void> {
   if (response.ok) return
   const body: unknown = await response.json().catch(() => null)
-  const detail = body && typeof body === 'object' && 'detail' in body ? body.detail : null
   throw new AccountError(
-    typeof detail === 'string' ? detail : 'The request could not be completed. Check your entries.',
+    errorDetail(body, 'The request could not be completed. Check your entries.'),
     response.status,
   )
 }
 
-export async function csrfHeaders(): Promise<Record<string, string>> {
-  const { data, response } = await client.GET('/api/v1/auth/csrf', { cache: 'no-store' })
+type CsrfHeaders = { 'X-CSRF-Token': string }
+
+export async function csrfHeaders(signal?: AbortSignal): Promise<CsrfHeaders> {
+  const { data, response } = await client.GET('/api/v1/auth/csrf', { cache: 'no-store', signal })
   await checkResponse(response)
   if (!data) throw new Error('Account access is unavailable')
   return { 'X-CSRF-Token': data.token }
@@ -37,12 +39,17 @@ export async function getCurrentAccount(signal?: AbortSignal): Promise<Account |
   return data ?? null
 }
 
-export async function signIn(email: string, password: string): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/login', {
-    body: { email, password },
-    headers: await csrfHeaders(),
-  })
+async function postAccount(
+  send: (headers: CsrfHeaders) => Promise<{ response: Response }>,
+): Promise<void> {
+  const { response } = await send(await csrfHeaders())
   await checkResponse(response)
+}
+
+export function signIn(email: string, password: string): Promise<void> {
+  return postAccount((headers) =>
+    client.POST('/api/v1/auth/login', { body: { email, password }, headers }),
+  )
 }
 
 export async function signOut(): Promise<void> {
@@ -51,42 +58,28 @@ export async function signOut(): Promise<void> {
   if (response.status !== 401) await checkResponse(response)
 }
 
-export async function registerAccount(body: Registration): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/register', {
-    body,
-    headers: await csrfHeaders(),
-  })
-  await checkResponse(response)
+export function registerAccount(body: Registration): Promise<void> {
+  return postAccount((headers) => client.POST('/api/v1/auth/register', { body, headers }))
 }
 
-export async function requestRecovery(email: string): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/forgot-password', {
-    body: { email },
-    headers: await csrfHeaders(),
-  })
-  await checkResponse(response)
+export function requestRecovery(email: string): Promise<void> {
+  return postAccount((headers) =>
+    client.POST('/api/v1/auth/forgot-password', { body: { email }, headers }),
+  )
 }
 
-export async function requestVerification(email: string): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/request-verify', {
-    body: { email },
-    headers: await csrfHeaders(),
-  })
-  await checkResponse(response)
+export function requestVerification(email: string): Promise<void> {
+  return postAccount((headers) =>
+    client.POST('/api/v1/auth/request-verify', { body: { email }, headers }),
+  )
 }
 
-export async function verifyEmail(token: string): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/verify', {
-    body: { token },
-    headers: await csrfHeaders(),
-  })
-  await checkResponse(response)
+export function verifyEmail(token: string): Promise<void> {
+  return postAccount((headers) => client.POST('/api/v1/auth/verify', { body: { token }, headers }))
 }
 
-export async function resetPassword(token: string, password: string): Promise<void> {
-  const { response } = await client.POST('/api/v1/auth/reset-password', {
-    body: { token, password },
-    headers: await csrfHeaders(),
-  })
-  await checkResponse(response)
+export function resetPassword(token: string, password: string): Promise<void> {
+  return postAccount((headers) =>
+    client.POST('/api/v1/auth/reset-password', { body: { token, password }, headers }),
+  )
 }

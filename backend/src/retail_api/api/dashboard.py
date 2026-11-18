@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from retail_api.accounts.schemas import ErrorResponse
+from retail_api.dashboard.queries import DashboardQueries
 from retail_api.dashboard.schemas import (
     Breakdown,
     Dashboard,
@@ -16,7 +17,7 @@ from retail_api.dashboard.schemas import (
     Summary,
     Trend,
 )
-from retail_api.dashboard.store import DashboardStore
+from retail_api.dashboard.service import DashboardService
 
 router = APIRouter(
     prefix="/dashboard",
@@ -39,23 +40,22 @@ class BreakdownFilters(Filters):
 
 
 def read_dashboard[T](
-    request: Request, response: Response, filters: Filters, read: Callable[[DashboardStore, int], T]
+    request: Request, response: Response, filters: Filters, read: Callable[[DashboardService], T]
 ) -> T:
     if filters.start and filters.end and filters.start > filters.end:
         raise HTTPException(422, "Start date must be on or before end date.")
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as db:
-        store = DashboardStore(db, filters)
-        version = store.version
-        result = read(store, version)
-        if version != store.source_version():
+        service = DashboardService(DashboardQueries(db, filters))
+        result = read(service)
+        if service.source_changed():
             raise HTTPException(503, "The transactions changed while loading. Please retry.")
         return result
 
 
 @router.get("/filter-options", summary="List dashboard filters and available transaction dates")
 def filter_options(request: Request, response: Response) -> FilterOptions:
-    return read_dashboard(request, response, Filters(), lambda store, _: store.options())
+    return read_dashboard(request, response, Filters(), DashboardService.options)
 
 
 @router.get(
@@ -70,7 +70,7 @@ def summary(filters: DashboardFilters, request: Request, response: Response) -> 
         request,
         response,
         filters,
-        lambda store, version: store.summary(store.current_buckets()[1], version),
+        DashboardService.summary,
     )
 
 
@@ -86,11 +86,9 @@ def trends(
     request: Request,
     response: Response,
 ) -> Trend:
-    def read(store: DashboardStore, _: int) -> Trend:
-        grain, current = store.current_buckets(filters.grain)
-        return store.trend(filters.metric, grain, current)
-
-    return read_dashboard(request, response, filters, read)
+    return read_dashboard(
+        request, response, filters, lambda service: service.trend(filters.metric, filters.grain)
+    )
 
 
 @router.get(
@@ -107,7 +105,7 @@ def breakdown(
     response: Response,
 ) -> Breakdown:
     return read_dashboard(
-        request, response, filters, lambda store, _: store.breakdown(filters.dimension)
+        request, response, filters, lambda service: service.breakdown(filters.dimension)
     )
 
 
@@ -124,7 +122,7 @@ def signals(filters: DashboardFilters, request: Request, response: Response) -> 
         request,
         response,
         filters,
-        lambda store, version: store.signals(store.summary([], version), store.breakdown()),
+        DashboardService.signals,
     )
 
 
@@ -134,16 +132,6 @@ def dashboard(
     request: Request,
     response: Response,
 ) -> Dashboard:
-    def read(store: DashboardStore, version: int) -> Dashboard:
-        grain, current = store.current_buckets(filters.grain)
-        stats = store.summary(current, version)
-        breakdown = store.breakdown()
-        return Dashboard(
-            options=store.options(),
-            summary=stats,
-            trend=store.trend(filters.metric, grain, current),
-            breakdown=breakdown,
-            signals=store.signals(stats, breakdown),
-        )
-
-    return read_dashboard(request, response, filters, read)
+    return read_dashboard(
+        request, response, filters, lambda service: service.overview(filters.metric, filters.grain)
+    )

@@ -105,7 +105,19 @@ def main() -> None:
         assert len(history) == 5 and history[0] == invalid, history
         assert history[1] == duplicate, history
         assert [item["records"] for item in request("GET", "/datasets", 200)] == [1, 1, 2]
-        print("SQL Server smoke passed for account sessions, roles, CSV imports and history.")
+        prior = "00000002,0010,2018-02-16,00000001,2.00,1,CENTRAL,7,2018\n"
+        assert upload("transactions", transactions + prior)["inserted"] == 1
+        query = "?start=2018-08-17&end=2018-08-17&region=CENTRAL&department=FOOD"
+        overview = request("GET", f"/dashboard{query}", 200)
+        assert overview["summary"]["current"]["lines"] == 2
+        assert overview["summary"]["inactivity"] == {
+            "days": 180,
+            "eligible": 1,
+            "inactive": 1,
+            "as_of": "2018-08-17",
+        }
+        assert request("GET", f"/dashboard/trends{query}", 200) == overview["trend"]
+        print("SQL Server smoke passed for account sessions, CSV imports, history, and dashboard.")
     finally:
         with Session(engine) as db, db.begin():
             db.execute(delete(AccountSession).where(AccountSession.account_id == account_id))

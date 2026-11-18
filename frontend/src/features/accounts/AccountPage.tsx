@@ -8,9 +8,10 @@ import {
   resetPassword,
   signIn,
   verifyEmail,
-} from '../api/accounts'
-import { useSession } from '../auth/session'
-import { Spinner } from '../components/Spinner'
+} from '../../api/accounts'
+import { useSession } from '../../auth/session'
+import { Spinner } from '../../components/Spinner'
+import { commandCenterPath } from '../../app/workspaces'
 
 const titles = {
   login: 'Sign in',
@@ -51,7 +52,7 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
     requestedDestination.startsWith('/') &&
     !requestedDestination.startsWith('//')
       ? requestedDestination
-      : '/command-center'
+      : commandCenterPath
   if (account && currentMode === 'login') return <Navigate to={destination} replace />
   const passwordRequired = ['login', 'register', 'reset'].includes(currentMode)
   const emailRequired = !['verify', 'reset'].includes(currentMode)

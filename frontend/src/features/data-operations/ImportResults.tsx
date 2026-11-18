@@ -1,4 +1,4 @@
-import type { ImportResult } from '../api/imports'
+import type { ImportResult } from '../../api/imports'
 
 const statusLabel = {
   completed: 'Completed',
