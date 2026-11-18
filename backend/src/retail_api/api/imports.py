@@ -10,7 +10,7 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 
 from retail_api.accounts.models import AccountUser
 from retail_api.accounts.schemas import ErrorResponse
-from retail_api.imports import jobs, store
+from retail_api.imports import jobs, queries, store
 from retail_api.imports.job_schema import jobs as job_table
 from retail_api.imports.schemas import (
     Dataset,
@@ -237,7 +237,7 @@ def list_imports(request: Request, response: Response) -> list[ImportResult]:
     require_admin(request)
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        return store.import_history(connection)
+        return queries.import_history(connection)
 
 
 @router.get(
@@ -250,7 +250,7 @@ def get_import(import_id: UUID, request: Request, response: Response) -> ImportR
     require_admin(request)
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        result = store.read_import(connection, import_id)
+        result = queries.read_import(connection, import_id)
     if result is None:
         raise HTTPException(404, "Import not found")
     return result
@@ -265,4 +265,4 @@ def get_import(import_id: UUID, request: Request, response: Response) -> ImportR
 def list_datasets(request: Request, response: Response) -> list[DatasetSummary]:
     response.headers["Cache-Control"] = "no-store"
     with request.app.state.database.connect() as connection:
-        return store.inventory(connection)
+        return queries.inventory(connection)

@@ -8,13 +8,13 @@ import pytest
 from fastapi.testclient import TestClient
 from pwdlib import PasswordHash
 from pydantic import SecretStr
-from sqlalchemy import func, select
+from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
 
 from retail_api.accounts.models import Account
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
-from retail_api.imports import store
+from retail_api.imports import queries, store
 from retail_api.imports.schema_v1 import households, transactions
 from retail_api.imports.schemas import Dataset, ImportStatus
 from retail_api.main import create_app
@@ -159,8 +159,38 @@ def test_failed_import_rolls_back_and_concurrent_retries_share_no_rows(
         with ThreadPoolExecutor(max_workers=2) as executor:
             assert sorted(executor.map(import_file, range(2))) == [(0, 1), (1, 0)]
         with engine.connect() as db:
-            assert store.read_import(db, failed.import_id) == failed
+            assert queries.read_import(db, failed.import_id) == failed
             assert db.scalar(select(func.count()).select_from(households)) == 1
+    finally:
+        engine.dispose()
+
+
+def test_import_history_batches_bounded_error_previews(settings: Settings) -> None:
+    engine = create_database_engine(settings)
+    try:
+        for name in ("first.csv", "second.csv"):
+            result = store.import_csv(
+                engine, Dataset.HOUSEHOLDS, name, BytesIO(HOUSEHOLDS + b"invalid\n" * 25)
+            )
+            assert result.rejected == 25
+        store.import_csv(engine, Dataset.HOUSEHOLDS, "clean.csv", BytesIO(HOUSEHOLDS + HOUSEHOLD))
+
+        statements = []
+
+        @event.listens_for(engine, "before_cursor_execute")
+        def count_query(connection, cursor, statement, parameters, context, executemany):
+            statements.append(statement)
+
+        with engine.connect() as connection:
+            history = queries.import_history(connection)
+
+        assert len(statements) == 2
+        assert [run.filename for run in history] == ["clean.csv", "second.csv", "first.csv"]
+        assert [run.errors for run in history[:1]] == [[]]
+        assert [[error.row_number for error in run.errors] for run in history[1:]] == [
+            list(range(2, 22)),
+            list(range(2, 22)),
+        ]
     finally:
         engine.dispose()
 
@@ -235,7 +265,7 @@ def test_direct_upload_survives_redelivery(
             result = store.import_csv(
                 engine, Dataset.HOUSEHOLDS, "households.csv", source, import_id=UUID(import_id)
             )
-        assert store.read_import(connection, UUID(import_id)) == result
+        assert queries.read_import(connection, UUID(import_id)) == result
         assert connection.scalar(select(func.count()).select_from(households)) == 1
     state = client.get(path).json()
     assert state["status"] == "finished" and state["result"]["inserted"] == 1
@@ -365,6 +395,11 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
     assert by_region["rows"][0]["name"] == "EAST"
     assert client.get(f"{base}/summary", params=filters).json() == summary
     assert client.get(f"{base}/filter-options").json() == dashboard["options"]
+
+    for metric in ("spend", "households", "baskets", "units", "avg_basket"):
+        params = {**filters, "metric": metric, "grain": "week", "department": "FOOD"}
+        overview_trend = client.get(base, params=params).json()["trend"]
+        assert client.get(f"{base}/trends", params=params).json() == overview_trend
 
     partial = client.get(base, params={**filters, "end": "2020-07-08"}).json()
     assert partial["summary"]["current_period"]["partial"]

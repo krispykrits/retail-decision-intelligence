@@ -12,7 +12,7 @@ from azure.storage.queue import QueueMessage
 
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
-from retail_api.imports import store
+from retail_api.imports import queries, store
 from retail_api.imports.job_schema import jobs
 from retail_api.imports.jobs import get_job, now
 from retail_api.imports.schemas import Dataset, ImportResult, ImportStatus
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 def finish_failed(engine: sa.Engine, row: sa.RowMapping, detail: str) -> None:
     with engine.begin() as connection:
-        if store.read_import(connection, row.id) is not None:
+        if queries.read_import(connection, row.id) is not None:
             return
         store.record_result(
             connection,
@@ -59,7 +59,9 @@ def process_message(
 
     with engine.begin() as connection:
         row = get_job(connection, import_id)
-        already_finished = row is not None and store.read_import(connection, import_id) is not None
+        already_finished = (
+            row is not None and queries.read_import(connection, import_id) is not None
+        )
         if row is not None and not already_finished:
             connection.execute(
                 jobs.update()

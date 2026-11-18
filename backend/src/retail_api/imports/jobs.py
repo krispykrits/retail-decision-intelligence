@@ -4,8 +4,8 @@ from uuid import UUID
 import sqlalchemy as sa
 
 from retail_api.imports.job_schema import jobs
+from retail_api.imports.queries import read_import
 from retail_api.imports.schemas import ImportJob, ImportJobStatus, StartImportUpload
-from retail_api.imports.store import read_import
 
 
 def now() -> datetime:

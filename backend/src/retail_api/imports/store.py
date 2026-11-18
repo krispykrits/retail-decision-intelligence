@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 
 from retail_api.imports.csv_source import InvalidCSV, csv_rows
+from retail_api.imports.queries import error_preview, read_import
 from retail_api.imports.schema_v1 import (
     dataset_state,
     households,
@@ -22,16 +23,11 @@ from retail_api.imports.schema_v1 import (
 )
 from retail_api.imports.schemas import (
     Dataset,
-    DatasetSummary,
-    ImportErrorRow,
     ImportResult,
     ImportStatus,
-    SourceWindow,
 )
 
 BATCH_SIZE = 5_000
-HISTORY_LIMIT = 20
-ERROR_PREVIEW = 20
 DUPLICATE = "Already stored"
 CONFLICT = "ID already exists with different values."
 logger = logging.getLogger(__name__)
@@ -298,84 +294,4 @@ def import_csv(
                 record_result(connection, result, file_hash)
         except sa.exc.SQLAlchemyError as unavailable:
             raise ImportUnavailable(result.detail) from unavailable
-    return result
-
-
-def error_preview(connection: sa.Connection, import_id: UUID) -> list[ImportErrorRow]:
-    return [
-        ImportErrorRow(row_number=row.row_number, reason=row.reason)
-        for row in connection.execute(
-            sa.select(import_errors.c.row_number, import_errors.c.reason)
-            .where(import_errors.c.import_id == import_id)
-            .order_by(import_errors.c.row_number)
-            .limit(ERROR_PREVIEW)
-        )
-    ]
-
-
-def import_query() -> sa.Select[tuple[object, ...]]:
-    return sa.select(
-        import_runs.c.id.label("import_id"),
-        *(column for column in import_runs.c if column.name != "id"),
-        import_files.c.dataset,
-        import_files.c.filename,
-    ).select_from(import_runs.join(import_files))
-
-
-def import_result(connection: sa.Connection, row: sa.RowMapping) -> ImportResult:
-    return ImportResult.model_validate(
-        {
-            **row,
-            "finished_at": row["finished_at"].replace(tzinfo=UTC),
-            "errors": error_preview(connection, row["import_id"]),
-        }
-    )
-
-
-def read_import(connection: sa.Connection, import_id: UUID) -> ImportResult | None:
-    row = connection.execute(import_query().where(import_runs.c.id == import_id)).mappings().first()
-    return import_result(connection, row) if row else None
-
-
-def import_history(connection: sa.Connection) -> list[ImportResult]:
-    # SQL Server requires this result to finish before fetching each run's error preview.
-    rows = (
-        connection.execute(
-            import_query()
-            .order_by(import_runs.c.finished_at.desc(), import_runs.c.id)
-            .limit(HISTORY_LIMIT)
-        )
-        .mappings()
-        .all()
-    )
-    return [import_result(connection, row) for row in rows]
-
-
-def inventory(connection: sa.Connection) -> list[DatasetSummary]:
-    result = []
-    for dataset, table in tables.items():
-        start: sa.ColumnElement[Any] = sa.null()
-        end: sa.ColumnElement[Any] = sa.null()
-        if dataset is Dataset.TRANSACTIONS:
-            start = sa.func.min(table.c.purchase_date)
-            end = sa.func.max(table.c.purchase_date)
-        metrics = (
-            sa.select(sa.func.count().label("records"), start.label("start"), end.label("end"))
-            .select_from(table)
-            .subquery()
-        )
-        row = connection.execute(
-            sa.select(dataset_state, metrics).select_from(
-                metrics.outerjoin(dataset_state, dataset_state.c.dataset == dataset)
-            )
-        ).one()
-        result.append(
-            DatasetSummary(
-                dataset=dataset,
-                records=row.records,
-                source_window=SourceWindow(start=row.start, end=row.end) if row.start else None,
-                last_success=row.last_success.replace(tzinfo=UTC) if row.last_success else None,
-                version=row.version or 0,
-            )
-        )
     return result
