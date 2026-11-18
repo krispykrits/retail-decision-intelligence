@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { workspaces } from '../../app/workspaces'
 import { AccountMenu } from '../AccountMenu'
+import { WorkspaceIcon } from '../WorkspaceIcon'
 
 export function AppShell() {
   return (
@@ -8,7 +9,7 @@ export function AppShell() {
       <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">
         Skip to content
       </a>
-      <aside className="border-b border-line bg-sidebar p-4 md:w-60 md:shrink-0 md:border-r md:border-b-0 md:py-6">
+      <aside className="border-b border-line bg-sidebar p-4 md:w-64 md:shrink-0 md:border-r md:border-b-0 md:py-6">
         <Link
           className="block px-3 pt-2 pb-5 text-lg leading-tight font-semibold tracking-tight text-ink no-underline md:pb-8"
           to="/command-center"
@@ -23,14 +24,15 @@ export function AppShell() {
               key={workspace.path}
               to={workspace.path}
               className={({ isActive }) =>
-                `rounded-lg border px-3 py-2.5 text-sm no-underline transition-colors ${
+                `flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm no-underline transition-colors ${
                   isActive
                     ? 'border-brand/20 bg-nav-selected font-semibold text-link'
                     : 'border-transparent text-nav hover:bg-nav-hover'
                 }`
               }
             >
-              {workspace.title}
+              <WorkspaceIcon path={workspace.path} />
+              <span>{workspace.title}</span>
             </NavLink>
           ))}
         </nav>
