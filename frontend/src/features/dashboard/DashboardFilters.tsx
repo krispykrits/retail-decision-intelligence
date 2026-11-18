@@ -50,7 +50,7 @@ export function DashboardFilters({
   return (
     <form
       aria-label="Dashboard filters"
-      aria-describedby={first && last ? 'dashboard-date-coverage' : undefined}
+      aria-describedby="dashboard-date-coverage"
       className="flex flex-wrap items-end gap-3"
       onSubmit={submit}
       onChange={(event) => {
@@ -58,11 +58,13 @@ export function DashboardFilters({
         input.setCustomValidity('')
       }}
     >
-      {first && last && (
-        <p id="dashboard-date-coverage" className="w-full text-xs text-muted">
-          Imported dates {periodLabel({ start: first, end: last })}
+      <div id="dashboard-date-coverage" className="w-full space-y-1 text-xs text-muted">
+        {first && last && <p>Imported dates {periodLabel({ start: first, end: last })}</p>}
+        <p>
+          The default range covers up to 90 days ending on the latest imported transaction date.
+          The prior period is the same number of days immediately before your selection.
         </p>
-      )}
+      </div>
       <label className="grid gap-1 text-xs font-semibold text-nav">
         Start date
         <input
