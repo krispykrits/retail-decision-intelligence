@@ -2,8 +2,6 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
@@ -60,7 +58,7 @@ jobs:
     uses: ./.github/workflows/infrastructure.yml
 
   container:
-    needs: check
+    needs: [check, infrastructure]
     permissions:
       contents: read
       packages: write
@@ -76,13 +74,3 @@ jobs:
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: test "$RESULTS" = 'success success success'
-
-  development:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [gate, container]
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/deploy.yml
-    with:
-      image: ${{ needs.container.outputs.image }}
