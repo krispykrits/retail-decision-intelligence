@@ -1,6 +1,5 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
 import { Panel, PanelHeading } from '../../components/Panel'
-import { Skeleton } from '../../components/Skeleton'
 import { TrendChart } from '../../components/TrendChart'
 import { metrics, periodLabel, valueLabel } from './format'
 
@@ -112,7 +111,33 @@ export function DashboardTrend({
         </div>
         {loading ? (
           <div role="status" className="absolute inset-0 flex flex-col gap-2 py-2">
-            <Skeleton className="min-h-32 flex-1" />
+            <svg
+              aria-hidden="true"
+              className="min-h-0 w-full flex-1 motion-safe:animate-pulse"
+              viewBox="0 0 480 190"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path
+                className="stroke-line"
+                d="M40 20H466 M40 55H466 M40 90H466 M40 125H466 M40 160H466"
+                strokeWidth="2"
+              />
+              <path className="stroke-field-line" d="M40 20V160H466" strokeWidth="1.5" />
+              <path
+                className="stroke-brand/45"
+                d="M40 132L93 110L146 119L199 78L252 92L305 62L358 78L411 44L466 53"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                className="stroke-line"
+                d="M6 20H28 M6 55H28 M6 90H28 M6 125H28 M6 160H28 M40 177H79 M167 177H206 M296 177H335 M427 177H466"
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+            </svg>
             <span className="text-xs text-muted">Updating trend…</span>
           </div>
         ) : (

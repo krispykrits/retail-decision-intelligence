@@ -442,6 +442,7 @@ describe('Command Center', () => {
       await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(screen.getByText('Updating retail performance…')).toBeVisible()
+      expect(screen.getByText('Applying filters…')).toBeVisible()
       expect(contribution).toBeVisible()
       finishDepartment()
       expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()

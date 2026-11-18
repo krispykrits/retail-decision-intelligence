@@ -147,15 +147,23 @@ export function CommandCenterPage() {
             ref={periodPicker}
             className="group justify-self-start sm:relative md:col-start-1 md:row-start-2 xl:col-start-2 xl:row-start-1"
           >
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-brand/40">
+            <summary className="relative flex cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-brand/40">
               <Icon name="calendar" className="size-5 text-brand" />
               <span className="grid">
                 <span className="text-xs text-muted">Analysis period</span>
                 <span className="font-semibold">
-                  {current ? periodLabel(current) : 'Choose dates'}
+                  {pending ? 'Applying filters…' : current ? periodLabel(current) : 'Choose dates'}
                 </span>
               </span>
               <Icon name="chevron" className="ml-1 size-4 text-muted group-open:rotate-180" />
+              {pending && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-2 bottom-0 h-0.5 overflow-hidden rounded-full bg-nav-selected"
+                >
+                  <span className="block h-full w-1/3 rounded-full bg-brand motion-safe:animate-filter-progress" />
+                </span>
+              )}
             </summary>
             <Panel className="absolute right-4 left-4 z-20 mt-2 sm:right-auto sm:left-0 sm:w-100 xl:right-0 xl:left-auto">
               <DashboardFilters

@@ -259,7 +259,7 @@ export function DataOperationsPage() {
             </button>
           </div>
           <DataTable
-            className={`${tableStyle} min-w-85 ${administrator ? "xl:h-full xl:[&_thead]:h-8" : ""}`}
+            className={`${tableStyle} min-w-85 ${administrator ? 'xl:h-full xl:[&_thead]:h-8' : ''}`}
             viewportLabel="Stored dataset records"
             columns={{
               dataset: 'Dataset',

@@ -19,6 +19,16 @@
   --color-success: #176344;
   --color-error: #a52e39;
   --shadow-panel: 0 1px 2px rgb(25 40 67 / 4%), 0 6px 20px rgb(25 40 67 / 4%);
+  --animate-filter-progress: filter-progress 1.4s ease-in-out infinite;
+
+  @keyframes filter-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 }
 
 @layer base {
