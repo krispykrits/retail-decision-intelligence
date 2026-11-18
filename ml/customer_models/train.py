@@ -1,6 +1,8 @@
 """Manually train, evaluate and publish customer models from the imported SQL datasets."""
 
 import argparse
+import json
+import sys
 from datetime import UTC, date, datetime
 from io import BytesIO
 from pathlib import Path
@@ -20,7 +22,7 @@ from ml.customer_models.training import scores, train_model
 from retail_api.config import Settings
 from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
 from retail_api.customers.queries import publish, source_versions
-from retail_api.customers.schemas import ModelEvidence, ModelType
+from retail_api.customers.schemas import Metrics, ModelEvidence, ModelType
 from retail_api.customers.training_source import Profile
 from retail_api.database import create_database_engine
 
@@ -206,6 +208,32 @@ def command_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def scalar_metrics(metrics: Metrics) -> dict[str, float]:
+    values = metrics.model_dump(
+        include={"mae", "rmse", "pr_auc", "roc_auc", "brier", "precision", "recall"},
+        exclude_none=True,
+    )
+    if metrics.rmse is not None:
+        values["mse"] = metrics.rmse**2
+    return values
+
+
+def print_metrics(evidence: ModelEvidence) -> None:
+    evaluation = evidence.evaluation
+    if evaluation and evaluation.candidate is not None and evaluation.baseline is not None:
+        print(
+            json.dumps(
+                {
+                    "model": evidence.model,
+                    "candidate": scalar_metrics(evaluation.candidate),
+                    "baseline": scalar_metrics(evaluation.baseline),
+                }
+            )
+        )
+    if evidence.status != "available":
+        print(f"{evidence.model}: {evidence.reason}", file=sys.stderr)
+
+
 def main() -> None:
     parser = command_parser()
     arguments = parser.parse_args()
@@ -221,7 +249,7 @@ def main() -> None:
     engine = create_database_engine(settings, connect_timeout=30, query_timeout=120)
     try:
         for evidence in run(engine, arguments):
-            print(evidence.model_dump_json())
+            print_metrics(evidence)
     except ValueError as error:
         parser.error(str(error))
     finally:
