@@ -66,14 +66,13 @@ export function DashboardBreakdown({
           ? 'Negative bars show net returns and adjustments.'
           : 'Net spend and share of the selected period.'}
       </p>
-      <div className="flex flex-1 flex-col gap-4">
+      <div
+        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(6rem,1fr)_minmax(0,2fr)] lg:content-center lg:items-center' : ''}`}
+      >
         {showDonut && (
-          <figure
-            aria-label="Share of net spend"
-            className="mx-auto flex w-full max-w-52 flex-1 flex-col justify-center"
-          >
+          <figure aria-label="Share of net spend" className="mx-auto w-full max-w-44">
             <div
-              className="relative mx-auto grid aspect-square w-48 max-w-full shrink-0 place-items-center rounded-full"
+              className="relative mx-auto grid aspect-square w-40 max-w-full place-items-center rounded-full"
               style={{
                 background: `conic-gradient(${slices.map((slice) => slice.stop).join(', ')})`,
               }}
@@ -124,7 +123,7 @@ export function DashboardBreakdown({
           <DataTable
             columns={columns}
             className="text-xs [&_:is(th,td)]:px-2 [&_thead]:sticky [&_thead]:top-0"
-            viewportClassName="max-h-56 focus-visible:outline-2 focus-visible:outline-focus"
+            viewportClassName="max-h-52 focus-visible:outline-2 focus-visible:outline-focus"
             viewportLabel={
               isDepartment ? 'Department contribution rows' : 'Commodity contribution rows'
             }
