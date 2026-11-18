@@ -48,11 +48,11 @@ export function DashboardBreakdown({
           : 'Net spend and share of the selected period.'}
       </p>
       <div
-        className={`grid items-center gap-3 ${showDonut ? '@[26rem]:grid-cols-[minmax(7.5rem,1fr)_minmax(0,2fr)]' : ''}`}
+        className={`grid items-start gap-3 ${showDonut ? '@[26rem]:grid-cols-[minmax(7.5rem,1fr)_minmax(0,2fr)]' : ''}`}
       >
         {showDonut && (
           <div
-            className="relative mx-auto grid aspect-square w-36 max-w-full place-items-center rounded-full @[26rem]:w-full"
+            className="relative mx-auto grid aspect-square w-36 max-w-full place-items-center rounded-full @[26rem]:mt-3 @[26rem]:w-full @[26rem]:max-w-44"
             style={{ background: `conic-gradient(${slices.join(', ')})` }}
             aria-hidden="true"
           >
@@ -65,7 +65,14 @@ export function DashboardBreakdown({
           </div>
         )}
         <div className="min-w-0">
-          <DataTable columns={columns} className="text-xs [&_:is(th,td)]:px-2">
+          <DataTable
+            columns={columns}
+            className="text-xs [&_:is(th,td)]:px-2 [&_thead]:sticky [&_thead]:top-0"
+            viewportClassName="max-h-56 focus-visible:outline-2 focus-visible:outline-focus"
+            viewportLabel={
+              isDepartment ? 'Department contribution rows' : 'Commodity contribution rows'
+            }
+          >
             {rows.map((row, index) => {
               const amount = Number(row.current?.spend ?? 0)
               const width = maximum > 0 ? (Math.abs(amount) / maximum) * (signed ? 50 : 100) : 0

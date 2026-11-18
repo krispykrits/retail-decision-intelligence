@@ -5,11 +5,26 @@ type DataTableProps = {
   children: ReactNode
   busy?: boolean
   className?: string
+  viewportClassName?: string
+  viewportLabel?: string
 }
 
-export function DataTable({ columns, children, busy, className = '' }: DataTableProps) {
+export function DataTable({
+  columns,
+  children,
+  busy,
+  className = '',
+  viewportClassName = '',
+  viewportLabel,
+}: DataTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line" aria-busy={busy}>
+    <div
+      className={`overflow-auto rounded-xl border border-line ${viewportClassName}`}
+      aria-busy={busy}
+      aria-label={viewportLabel}
+      role={viewportLabel ? 'region' : undefined}
+      tabIndex={viewportLabel ? 0 : undefined}
+    >
       <table
         className={`w-full text-left text-sm [&_:is(th,td)]:px-3 [&_:is(th,td)]:py-2 ${className}`}
       >
