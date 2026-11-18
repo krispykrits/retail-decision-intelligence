@@ -13,8 +13,7 @@ from azure.storage.queue import QueueMessage
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
 from retail_api.imports import queries, store
-from retail_api.imports.job_schema import jobs
-from retail_api.imports.jobs import get_job, now
+from retail_api.imports.jobs import get_job, mark_started, now
 from retail_api.imports.schemas import Dataset, ImportResult, ImportStatus
 from retail_api.imports.storage import ImportStorage
 
@@ -63,11 +62,7 @@ def process_message(
             row is not None and queries.read_import(connection, import_id) is not None
         )
         if row is not None and not already_finished:
-            connection.execute(
-                jobs.update()
-                .where(jobs.c.id == import_id, jobs.c.started_at.is_(None))
-                .values(started_at=now())
-            )
+            mark_started(connection, import_id)
     if row is None or already_finished:
         storage.queue.delete_message(message)
         return

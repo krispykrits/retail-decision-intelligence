@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import * as api from '../api/accounts'
-import { AccountPage } from '../pages/AccountPage'
+import { AccountPage } from '../features/accounts/AccountPage'
 import { RequireAccount } from '../auth/RequireAccount'
 import { SessionProvider } from '../auth/SessionProvider'
 

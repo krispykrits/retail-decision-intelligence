@@ -30,6 +30,22 @@ def create_job(
     )
 
 
+def mark_queued(connection: sa.Connection, import_id: UUID) -> None:
+    connection.execute(
+        jobs.update()
+        .where(jobs.c.id == import_id, jobs.c.queued_at.is_(None))
+        .values(queued_at=now())
+    )
+
+
+def mark_started(connection: sa.Connection, import_id: UUID) -> None:
+    connection.execute(
+        jobs.update()
+        .where(jobs.c.id == import_id, jobs.c.started_at.is_(None))
+        .values(started_at=now())
+    )
+
+
 def job_status(connection: sa.Connection, row: sa.RowMapping) -> ImportJob:
     result = read_import(connection, row.id)
     status = ImportJobStatus.AWAITING_UPLOAD

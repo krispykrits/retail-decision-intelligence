@@ -203,7 +203,7 @@ def test_direct_upload_survives_redelivery(
 
     from azure.storage.queue import QueueMessage
 
-    from retail_api.api import imports as imports_api
+    from retail_api.imports import service
     from retail_api.imports.worker import process_message
 
     client = signed_in
@@ -236,7 +236,7 @@ def test_direct_upload_survives_redelivery(
         def close(self):
             pass
 
-    monkeypatch.setattr(imports_api, "ImportStorage", FakeStorage)
+    monkeypatch.setattr(service, "ImportStorage", FakeStorage)
     payload = {"dataset": "households", "filename": "households.csv", "size_bytes": len(contents)}
 
     def post(path, **kwargs):

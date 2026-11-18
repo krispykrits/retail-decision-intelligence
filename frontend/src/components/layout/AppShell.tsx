@@ -1,11 +1,11 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router-dom'
-import { workspaces } from '../../app/workspaces'
+import { commandCenterPath, dataOperationsPath, workspaces } from '../../app/workspaces'
 import { AccountMenu } from '../AccountMenu'
 import { WorkspaceIcon } from '../WorkspaceIcon'
 
 export function AppShell() {
-  const isCommandCenter = useMatch('/command-center')
-  const isDataOperations = useMatch('/data')
+  const isCommandCenter = useMatch(commandCenterPath)
+  const isDataOperations = useMatch(dataOperationsPath)
   const hasWorkspaceHeader = Boolean(isCommandCenter || isDataOperations)
   return (
     <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">
@@ -17,7 +17,7 @@ export function AppShell() {
       >
         <Link
           className="block px-3 pt-2 pb-5 text-lg leading-tight font-semibold tracking-tight text-ink no-underline md:pb-8"
-          to="/command-center"
+          to={commandCenterPath}
         >
           Retail Decision
           <br />

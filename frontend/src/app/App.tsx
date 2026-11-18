@@ -2,15 +2,15 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { WorkspacePage } from '../pages/WorkspacePage'
-import { workspaces, type Workspace } from './workspaces'
+import { commandCenterPath, dataOperationsPath, workspaces, type Workspace } from './workspaces'
 import { RequireAccount } from '../auth/RequireAccount'
-import { AccountPage } from '../pages/AccountPage'
-import { DataOperationsPage } from '../pages/DataOperationsPage'
-import { CommandCenterPage } from '../pages/CommandCenterPage'
+import { AccountPage } from '../features/accounts/AccountPage'
+import { DataOperationsPage } from '../features/data-operations/DataOperationsPage'
+import { CommandCenterPage } from '../features/dashboard/CommandCenterPage'
 
 const workspacePages: Partial<Record<Workspace['path'], typeof CommandCenterPage>> = {
-  '/command-center': CommandCenterPage,
-  '/data': DataOperationsPage,
+  [commandCenterPath]: CommandCenterPage,
+  [dataOperationsPath]: DataOperationsPage,
 }
 
 export function App() {
@@ -19,7 +19,7 @@ export function App() {
       <Route path="/account/:mode" element={<AccountPage />} />
       <Route element={<RequireAccount />}>
         <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/command-center" replace />} />
+          <Route index element={<Navigate to={commandCenterPath} replace />} />
           {workspaces.map((workspace) => {
             const Page = workspacePages[workspace.path]
             return (

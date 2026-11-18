@@ -44,6 +44,11 @@ python scripts/smoke_deployment.py http://127.0.0.1:8000
 
 ## Architecture
 
+- Frontend pages, hooks, and components live under `frontend/src/features` by
+  feature. Shared UI lives in `components` and HTTP clients live in `api`.
+- Backend routes handle HTTP, feature services coordinate use cases, and query
+  and persistence modules own SQL.
+
 ```mermaid
 flowchart TD
     Browser["Analyst browser"] -->|HTTPS| App
