@@ -89,12 +89,12 @@ export function DashboardBreakdown({
           : 'Net spend and share of the selected period.'}
       </p>
       <div
-        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,2fr)_minmax(0,3fr)] lg:items-start' : ''}`}
+        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,1fr)_minmax(11rem,1fr)] lg:items-start' : ''}`}
       >
         {showDonut && (
           <figure
             aria-label="Share of net spend"
-            className="relative mx-auto grid w-full max-w-56 place-items-center"
+            className="relative mx-auto grid w-full max-w-56 place-items-center lg:max-w-64"
             style={{ aspectRatio: `${donutWidth} / ${donutHeight}` }}
           >
             <div
