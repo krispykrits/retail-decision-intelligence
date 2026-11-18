@@ -331,7 +331,7 @@ export function DataOperationsPage() {
               >
                 <Icon name="clock" className="size-5 text-brand" />
                 <span id="history-heading">Import history</span>
-                <Icon name="chevron" className="ml-auto text-muted group-open:rotate-180" />
+                <Icon name="chevron" className="ml-auto size-4 text-muted group-open:rotate-180" />
               </summary>
               {historyOpen && history.status === 'loading' && (
                 <div className="mt-4 grid gap-3" role="status">
