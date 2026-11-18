@@ -254,7 +254,11 @@ export function CommandCenterPage() {
               retry={() => setTrendRetry((attempt) => attempt + 1)}
               onMetricChange={(metric) => apply({ ...query, metric })}
             />
-            <DashboardBreakdown breakdown={data.breakdown} netSpend={data.summary.current.spend} />
+            <DashboardBreakdown
+              key={result?.key}
+              breakdown={data.breakdown}
+              netSpend={data.summary.current.spend}
+            />
             <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
           </div>
 

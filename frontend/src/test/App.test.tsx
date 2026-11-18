@@ -283,11 +283,22 @@ describe('Command Center', () => {
           rows: [
             {
               name: department ? 'PRODUCE' : 'FOOD',
-              current: department ? totals : { ...totals, spend: '19.56' },
+              current: { ...totals, spend: department ? '17.00' : '19.56' },
               prior: null,
               change: null,
-              share: department ? '100' : '97.8',
+              share: department ? '85' : '97.8',
             },
+            ...(department
+              ? ['BAKERY', 'DAIRY', 'DELI', 'FROZEN FOOD', 'DRY GOODS', 'BEVERAGES'].map(
+                  (name) => ({
+                    name,
+                    current: { ...totals, spend: '0.50' },
+                    prior: null,
+                    change: null,
+                    share: '2.5',
+                  }),
+                )
+              : []),
             ...(!department
               ? [
                   {
@@ -377,6 +388,14 @@ describe('Command Center', () => {
       finishDepartment()
       expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()
       expect(screen.getByText('PRODUCE')).toBeVisible()
+      const commodity = screen.getByRole('button', { name: 'DRY GOODS' })
+      await user.click(commodity)
+      expect(commodity).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('figure', { name: 'Share of net spend' })).toHaveTextContent(
+        '2.5%DRY GOODS',
+      )
+      await user.click(commodity)
+      expect(commodity).toHaveAttribute('aria-pressed', 'false')
       expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
       expect(dashboard).toHaveBeenLastCalledWith(
         expect.objectContaining({ region: 'EAST', department: 'FOOD' }),

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
 import { Panel } from '../../components/Panel'
@@ -13,7 +14,8 @@ const radius = 77
 const labelGap = 15
 const minimumInlineShare = 7
 
-const sliceColor = (index: number) => colors[Math.min(index, colors.length - 1)]
+const sliceColor = (index: number) =>
+  colors[index === 0 ? 0 : 1 + ((index - 1) % (colors.length - 1))]
 
 export function DashboardBreakdown({
   breakdown,
@@ -22,27 +24,17 @@ export function DashboardBreakdown({
   breakdown: Dashboard['breakdown']
   netSpend: string
 }) {
+  const [selectedName, setSelectedName] = useState<string>()
   const isDepartment = breakdown.dimension === 'department'
   const rows = breakdown.rows
   const magnitudes = rows.map((row) => Number(row.current?.spend ?? 0))
   const maximum = magnitudes.reduce((highest, value) => Math.max(highest, Math.abs(value)), 0)
   const signed = magnitudes.some((value) => value < 0)
-  const leadingCount = colors.length - 1
-  const chartShares = rows.slice(0, leadingCount).map((row) => ({
-    name: row.name,
-    share: Number(row.share ?? 0),
-  }))
-  if (rows.length > leadingCount) {
-    const others = rows.slice(leadingCount)
-    chartShares.push({
-      name: others.length === 1 ? others[0].name : 'Other categories',
-      share: others.reduce((sum, row) => sum + Number(row.share ?? 0), 0),
-    })
-  }
-
   const slices = []
   let end = 0
-  for (const [index, { name, share }] of chartShares.entries()) {
+  for (const [index, row] of rows.entries()) {
+    const { name } = row
+    const share = Number(row.share ?? 0)
     if (share <= 0) continue
     const start = end
     end += share
@@ -51,17 +43,23 @@ export function DashboardBreakdown({
     slices.push({
       name,
       share,
-      stop: `${color} ${start}% ${end}%`,
+      start,
+      end,
       color,
       angle,
       x: centerX + radius * Math.sin(angle),
       y: centerY - radius * Math.cos(angle),
     })
   }
+  const selected = slices.find(({ name }) => name === selectedName)
+  const showSmallLabels = slices.length <= colors.length
   const labels = []
   for (const left of [true, false]) {
     const side = slices
-      .filter(({ share, x }) => share < minimumInlineShare && (left ? x < centerX : x >= centerX))
+      .filter(
+        ({ share, x }) =>
+          showSmallLabels && share < minimumInlineShare && (left ? x < centerX : x >= centerX),
+      )
       .sort((a, b) => a.y - b.y)
     let previousY = 10 - labelGap
     for (const [index, slice] of side.entries()) {
@@ -101,14 +99,27 @@ export function DashboardBreakdown({
               className="grid aspect-square place-items-center rounded-full"
               style={{
                 width: `${(2 * radius * 100) / donutWidth}%`,
-                background: `conic-gradient(${slices.map((slice) => slice.stop).join(', ')})`,
+                background: `conic-gradient(${slices
+                  .map(
+                    ({ name, color, start, end }) =>
+                      `${selected && selected.name !== name ? `${color}38` : color} ${start}% ${end}%`,
+                  )
+                  .join(', ')})`,
               }}
             >
-              <div className="grid size-[66%] place-content-center rounded-full bg-surface text-center">
+              <div
+                className="grid size-[66%] place-content-center rounded-full bg-surface px-1 text-center"
+                aria-live="polite"
+              >
                 <span className="text-xs font-semibold tabular-nums">
-                  {valueLabel('spend', netSpend)}
+                  {selected ? `${selected.share.toFixed(1)}%` : valueLabel('spend', netSpend)}
                 </span>
-                <span className="text-[0.65rem] text-muted">Net spend</span>
+                <span
+                  className="line-clamp-2 text-[0.65rem] leading-tight wrap-break-word text-muted"
+                  title={selected?.name}
+                >
+                  {selected?.name ?? 'Net spend'}
+                </span>
               </div>
             </div>
             <svg
@@ -116,7 +127,7 @@ export function DashboardBreakdown({
               className="pointer-events-none absolute inset-0 size-full"
             >
               {slices
-                .filter(({ share }) => share >= minimumInlineShare)
+                .filter(({ share }) => !selected && share >= minimumInlineShare)
                 .map(({ name, share, color, angle }) => {
                   const percentage = `${share.toFixed(1)}%`
                   const labelRadius = radius * 0.83
@@ -135,31 +146,32 @@ export function DashboardBreakdown({
                     </text>
                   )
                 })}
-              {labels.map(({ name, share, x, y, left, labelY }) => {
-                const elbow = left ? 36 : donutWidth - 36
-                const textX = elbow + (left ? -3 : 3)
-                const percentage = `${share.toFixed(1)}%`
-                return (
-                  <g key={name}>
-                    <path
-                      d={`M ${x} ${y} L ${elbow} ${labelY}`}
-                      className="stroke-muted"
-                      fill="none"
-                      aria-hidden="true"
-                    />
-                    <text
-                      x={textX}
-                      y={labelY}
-                      textAnchor={left ? 'end' : 'start'}
-                      dominantBaseline="middle"
-                      aria-label={`${name} ${percentage}`}
-                      className="fill-ink text-[11px] font-semibold tabular-nums"
-                    >
-                      {percentage}
-                    </text>
-                  </g>
-                )
-              })}
+              {!selected &&
+                labels.map(({ name, share, x, y, left, labelY }) => {
+                  const elbow = left ? 36 : donutWidth - 36
+                  const textX = elbow + (left ? -3 : 3)
+                  const percentage = `${share.toFixed(1)}%`
+                  return (
+                    <g key={name}>
+                      <path
+                        d={`M ${x} ${y} L ${elbow} ${labelY}`}
+                        className="stroke-muted"
+                        fill="none"
+                        aria-hidden="true"
+                      />
+                      <text
+                        x={textX}
+                        y={labelY}
+                        textAnchor={left ? 'end' : 'start'}
+                        dominantBaseline="middle"
+                        aria-label={`${name} ${percentage}`}
+                        className="fill-ink text-[11px] font-semibold tabular-nums"
+                      >
+                        {percentage}
+                      </text>
+                    </g>
+                  )
+                })}
             </svg>
           </figure>
         )}
@@ -175,8 +187,10 @@ export function DashboardBreakdown({
             {rows.map((row, index) => {
               const amount = Number(row.current?.spend ?? 0)
               const width = maximum > 0 ? (Math.abs(amount) / maximum) * (signed ? 50 : 100) : 0
+              const canFocusSlice = !isDepartment && showDonut && Number(row.share) > 0
+              const focused = selected?.name === row.name
               return (
-                <tr key={row.name}>
+                <tr key={row.name} className={focused ? 'bg-nav-selected' : undefined}>
                   <th scope="row" className="font-medium">
                     <span className="flex items-start gap-1.5">
                       {showDonut && row.share != null && (
@@ -186,7 +200,18 @@ export function DashboardBreakdown({
                           aria-hidden="true"
                         />
                       )}
-                      {row.name}
+                      {canFocusSlice ? (
+                        <button
+                          type="button"
+                          aria-pressed={focused}
+                          onClick={() => setSelectedName(focused ? undefined : row.name)}
+                          className="cursor-pointer text-left text-link underline-offset-2 hover:underline"
+                        >
+                          {row.name}
+                        </button>
+                      ) : (
+                        row.name
+                      )}
                     </span>
                   </th>
                   <td className="whitespace-nowrap">
