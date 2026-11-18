@@ -56,7 +56,7 @@ export function DashboardBreakdown({
     comparison: 'Change',
   }
   return (
-    <Panel aria-labelledby="breakdown-title" className="@container self-start">
+    <Panel aria-labelledby="breakdown-title" className="flex flex-col">
       <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
         <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
         {isDepartment ? 'Department contribution' : 'Commodity contribution'}
@@ -66,13 +66,14 @@ export function DashboardBreakdown({
           ? 'Negative bars show net returns and adjustments.'
           : 'Net spend and share of the selected period.'}
       </p>
-      <div
-        className={`grid items-start gap-3 ${showDonut ? '@[26rem]:grid-cols-[minmax(7.5rem,1fr)_minmax(0,2fr)]' : ''}`}
-      >
+      <div className="flex flex-1 flex-col gap-4">
         {showDonut && (
-          <figure aria-label="Share of net spend" className="mx-auto w-full max-w-44">
+          <figure
+            aria-label="Share of net spend"
+            className="mx-auto flex w-full max-w-52 flex-1 flex-col justify-center"
+          >
             <div
-              className="relative mx-auto grid aspect-square w-36 max-w-full place-items-center rounded-full @[26rem]:w-full"
+              className="relative mx-auto grid aspect-square w-48 max-w-full shrink-0 place-items-center rounded-full"
               style={{
                 background: `conic-gradient(${slices.map((slice) => slice.stop).join(', ')})`,
               }}
