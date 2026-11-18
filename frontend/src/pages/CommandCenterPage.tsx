@@ -7,12 +7,12 @@ import {
   type DashboardQuery,
 } from '../api/dashboard'
 import { workspaces } from '../app/workspaces'
-import { AccountMenu } from '../components/AccountMenu'
 import { Panel } from '../components/Panel'
-import { Spinner } from '../components/Spinner'
-import { Icon, WorkspaceIcon } from '../components/WorkspaceIcon'
+import { Icon } from '../components/WorkspaceIcon'
+import { WorkspaceHeader } from '../components/layout/WorkspaceHeader'
 import { DashboardBreakdown } from '../features/dashboard/DashboardBreakdown'
 import { DashboardFilters } from '../features/dashboard/DashboardFilters'
+import { DashboardSkeleton } from '../features/dashboard/DashboardSkeleton'
 import { DashboardSignals } from '../features/dashboard/DashboardSignals'
 import { DashboardSummary } from '../features/dashboard/DashboardSummary'
 import { DashboardTakeaways } from '../features/dashboard/DashboardTakeaways'
@@ -138,24 +138,10 @@ export function CommandCenterPage() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <header className="grid items-start gap-3 border-b border-line pb-3 md:grid-cols-[minmax(0,1fr)_auto] xl:grid-cols-[minmax(0,1fr)_auto_auto]">
-        <div className="flex min-w-0 items-center gap-3">
-          <WorkspaceIcon path="/command-center" className="size-8 shrink-0 text-brand" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Command Center</h1>
-            {pending && data ? (
-              <p role="status" className="mt-0.5 flex items-center gap-2 text-sm text-muted">
-                <Spinner />
-                Updating retail performance…
-              </p>
-            ) : (
-              <p className="mt-0.5 text-sm text-muted">{workspaces[0].description}</p>
-            )}
-          </div>
-        </div>
-        <div className="contents md:col-start-2 md:row-start-1 md:block md:max-w-72 md:justify-self-end xl:col-start-3">
-          <AccountMenu />
-        </div>
+      <WorkspaceHeader
+        path={dashboardPath}
+        status={pending && data ? 'Updating retail performance…' : undefined}
+      >
         {data?.options.first_date && (
           <details
             ref={periodPicker}
@@ -182,7 +168,7 @@ export function CommandCenterPage() {
             </Panel>
           </details>
         )}
-      </header>
+      </WorkspaceHeader>
 
       {!pending && current?.partial && data?.options.first_date && data.options.last_date && (
         <p
@@ -196,10 +182,7 @@ export function CommandCenterPage() {
       )}
 
       {pending && !data ? (
-        <Panel role="status" className="flex items-center gap-2 text-sm text-muted">
-          <Spinner />
-          Loading retail performance…
-        </Panel>
+        <DashboardSkeleton />
       ) : !data ? (
         <Panel role="alert">
           <h2 className="font-semibold">Retail performance couldn’t be loaded</h2>

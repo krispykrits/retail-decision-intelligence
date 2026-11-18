@@ -522,7 +522,11 @@ describe('data operations', () => {
         <App />
       </MemoryRouter>,
     )
+    const inventory = screen.getByRole('region', { name: 'Stored dataset records' })
+    expect(inventory).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Loading stored datasets…')
     expect(await screen.findByText('No records have been imported yet.')).toBeVisible()
+    expect(inventory).toHaveAttribute('aria-busy', 'false')
     expect(screen.queryByRole('button', { name: 'Import files' })).not.toBeInTheDocument()
     expect(screen.queryByText('Import history')).not.toBeInTheDocument()
   })

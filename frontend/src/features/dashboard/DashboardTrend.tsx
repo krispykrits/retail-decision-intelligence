@@ -1,6 +1,6 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
 import { Panel, PanelHeading } from '../../components/Panel'
-import { Spinner } from '../../components/Spinner'
+import { Skeleton } from '../../components/Skeleton'
 import { TrendChart } from '../../components/TrendChart'
 import { metrics, periodLabel, valueLabel } from './format'
 
@@ -94,7 +94,10 @@ export function DashboardTrend({
         </label>
       </div>
       <div className="relative min-h-48" aria-busy={loading}>
-        <div className={loading || error ? 'opacity-20' : undefined} inert={loading || error}>
+        <div
+          className={loading ? 'invisible' : error ? 'opacity-20' : undefined}
+          inert={loading || error}
+        >
           <TrendChart
             key={`${trend.metric}-${trend.current_period?.start}-${trend.current_period?.end}`}
             label={`${metrics[trend.metric]} by ${trend.grain}`}
@@ -107,24 +110,23 @@ export function DashboardTrend({
           />
           <p className="mt-2 text-xs text-muted">{comparisonNote}</p>
         </div>
-        {(loading || error) && (
-          <div
-            className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-ink"
-            role={error ? 'alert' : 'status'}
-          >
-            {error ? (
-              <>
-                Trend couldn’t load.
-                <button type="button" className="font-semibold text-link underline" onClick={retry}>
-                  Retry
-                </button>
-              </>
-            ) : (
-              <>
-                <Spinner /> Updating trend…
-              </>
-            )}
+        {loading ? (
+          <div role="status" className="absolute inset-0 flex flex-col gap-2 py-2">
+            <Skeleton className="min-h-32 flex-1" />
+            <span className="text-xs text-muted">Updating trend…</span>
           </div>
+        ) : (
+          error && (
+            <div
+              className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-ink"
+              role="alert"
+            >
+              Trend couldn’t load.
+              <button type="button" className="font-semibold text-link underline" onClick={retry}>
+                Retry
+              </button>
+            </div>
+          )
         )}
       </div>
     </Panel>

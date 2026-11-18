@@ -22,7 +22,7 @@ export function PanelHeading({
   id: string
   title: string
   icon: IconName
-  children: ReactNode
+  children?: ReactNode
   helpLabel?: string
   className?: string
 }) {
@@ -32,7 +32,7 @@ export function PanelHeading({
         <Icon name={icon} className="size-5 text-brand" />
         {title}
       </h2>
-      <InfoTooltip label={helpLabel}>{children}</InfoTooltip>
+      {children && <InfoTooltip label={helpLabel}>{children}</InfoTooltip>}
     </div>
   )
 }
