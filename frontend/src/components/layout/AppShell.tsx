@@ -1,15 +1,18 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useMatch } from 'react-router-dom'
 import { workspaces } from '../../app/workspaces'
 import { AccountMenu } from '../AccountMenu'
 import { WorkspaceIcon } from '../WorkspaceIcon'
 
 export function AppShell() {
+  const isCommandCenter = useMatch('/command-center')
   return (
-    <div className="flex min-h-screen flex-col bg-canvas font-sans text-ink md:flex-row">
+    <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">
       <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">
         Skip to content
       </a>
-      <aside className="border-b border-line bg-sidebar p-4 md:w-64 md:shrink-0 md:border-r md:border-b-0 md:py-6">
+      <aside
+        className={`border-b border-line bg-sidebar p-4 md:shrink-0 md:border-r md:border-b-0 md:py-6 ${isCommandCenter ? 'md:w-58' : 'md:w-64'}`}
+      >
         <Link
           className="block px-3 pt-2 pb-5 text-lg leading-tight font-semibold tracking-tight text-ink no-underline md:pb-8"
           to="/command-center"
@@ -38,10 +41,20 @@ export function AppShell() {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-surface px-4 py-3 md:px-8">
-          <AccountMenu />
-        </header>
-        <main className="max-w-7xl px-4 py-6 md:px-8 md:py-10" id="main-content" tabIndex={-1}>
+        {!isCommandCenter && (
+          <header className="md:flex md:flex-wrap md:items-center md:justify-end md:gap-3 md:border-b md:border-line md:bg-surface md:px-8 md:py-3">
+            <AccountMenu />
+          </header>
+        )}
+        <main
+          className={
+            isCommandCenter
+              ? 'mx-auto max-w-400 p-4 lg:p-5'
+              : 'max-w-7xl px-4 py-6 md:px-8 md:py-10'
+          }
+          id="main-content"
+          tabIndex={-1}
+        >
           <Outlet />
         </main>
       </div>

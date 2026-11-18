@@ -12,6 +12,7 @@ Requires Python 3.12, Node.js 24, uv 0.13.6, and Make.
 make setup
 make local-account
 uv run --project backend python -m retail_api.accounts.admin 'you@example.com'  # optional: promote to Administrator
+make migrate
 make dev-api  # terminal 1
 make dev-web  # terminal 2
 ```

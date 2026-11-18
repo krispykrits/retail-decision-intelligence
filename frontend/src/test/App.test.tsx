@@ -1,11 +1,41 @@
-import { render as renderView, screen } from '@testing-library/react'
+import { render as renderView, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
+import { TrendChart } from '../components/TrendChart'
 import { SessionContext } from '../auth/session'
+import { getDashboard, getDashboardTrend, type Dashboard } from '../api/dashboard'
 import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
+
+const emptyDashboard: Dashboard = {
+  options: { first_date: null, last_date: null, regions: [], departments: [] },
+  summary: {
+    current: null,
+    prior: null,
+    current_period: null,
+    prior_period: null,
+    changes: {},
+    cohorts: null,
+    inactivity: null,
+    sparkline: [],
+    source_version: 0,
+  },
+  trend: {
+    metric: 'spend',
+    grain: 'day',
+    current_period: null,
+    prior_period: null,
+    current: [],
+    prior: [],
+  },
+  breakdown: { dimension: 'department', current_period: null, prior_period: null, rows: [] },
+  signals: { items: [] },
+}
+
+vi.mock('../api/dashboard', () => ({ getDashboard: vi.fn(), getDashboardTrend: vi.fn() }))
+vi.mocked(getDashboard).mockResolvedValue(emptyDashboard)
 
 vi.mock('../api/imports', () => ({
   getDatasets: vi.fn().mockResolvedValue([]),
@@ -46,14 +76,16 @@ const expectedRoutes = [
 ] as const
 
 describe('workspace shell', () => {
-  it('opens Command Center by default', () => {
+  it('opens Command Center by default', async () => {
     render(
       <MemoryRouter>
         <App />
       </MemoryRouter>,
     )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Command Center')
-    expect(screen.getByRole('heading', { name: 'Not available yet' })).toBeVisible()
+    expect(
+      await screen.findByRole('heading', { name: 'No transactions imported yet' }),
+    ).toBeVisible()
   })
 
   it.each(expectedRoutes)('supports the %s deep link', (path, title) => {
@@ -84,6 +116,402 @@ describe('workspace shell', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+  })
+})
+
+describe('Command Center', () => {
+  it('highlights the matching trend buckets and keeps their difference after clicking', async () => {
+    const user = userEvent.setup()
+    render(
+      <TrendChart
+        label="Spend comparison"
+        series={[
+          {
+            id: 'prior',
+            label: 'Prior period',
+            points: [{ index: 2, value: 40, label: 'Jul 13–19' }],
+          },
+          {
+            id: 'current',
+            label: 'Selected period',
+            points: [
+              { index: 2, value: 45, label: 'Aug 3–9' },
+              { index: 3, value: 20, label: 'Aug 10–16' },
+            ],
+          },
+        ]}
+        ticks={[]}
+        format={(value) => `$${value.toFixed(2)}`}
+      />,
+    )
+
+    expect(screen.getByText('$10.00')).toBeInTheDocument()
+    expect(screen.getByText('$30.00')).toBeInTheDocument()
+
+    const prior = screen.getByRole('button', { name: /Prior period, Jul 13–19/ })
+    const current = screen.getByRole('button', { name: /Selected period, Aug 3–9/ })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    await user.hover(current)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
+    await user.unhover(current)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    await user.click(current)
+    await user.unhover(current)
+    expect(prior).toHaveAttribute('aria-pressed', 'true')
+    expect(current).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
+
+    await user.click(screen.getByRole('button', { name: /Selected period, Aug 10–16/ }))
+    expect(prior).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText('+$5.00')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Unavailable')).toHaveLength(2)
+
+    await user.click(screen.getByRole('group', { name: 'Spend comparison' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+    await user.click(current)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
+    await user.click(document.body)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(current).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('explains out-of-range selections and suppresses their prior comparison', async () => {
+    const user = userEvent.setup()
+    const current = { start: '2020-06-22', end: '2020-11-25', partial: true }
+    const prior = { start: '2020-01-18', end: '2020-06-21', partial: false }
+    const totals = {
+      lines: 4,
+      spend: '20.00',
+      households: 2,
+      baskets: 3,
+      units: 2,
+      avg_basket: '6.67',
+    }
+    const dashboard = vi.mocked(getDashboard)
+    dashboard.mockResolvedValueOnce({
+      ...emptyDashboard,
+      options: { first_date: '2018-08-17', last_date: '2020-08-15', regions: [], departments: [] },
+      summary: {
+        ...emptyDashboard.summary,
+        current: totals,
+        current_period: current,
+        prior_period: prior,
+      },
+      trend: {
+        ...emptyDashboard.trend,
+        grain: 'week',
+        current_period: current,
+        prior_period: prior,
+        current: [{ start: '2020-08-10', end: '2020-08-16', index: 7, value: '20.00' }],
+        prior: [{ start: '2020-06-13', end: '2020-06-19', index: 21, value: '10.00' }],
+      },
+    })
+    render(
+      <MemoryRouter initialEntries={['/command-center?start=2020-06-22&end=2020-11-25']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByText(/This selection extends beyond the imported dates/),
+    ).toBeVisible()
+    expect(screen.queryByText('Prior period', { exact: true })).not.toBeInTheDocument()
+    expect(
+      screen.getByLabelText(/Selected period, Aug 10, 2020 – Aug 15, 2020 \(6 days\)/),
+    ).toBeInTheDocument()
+    await user.click(screen.getByText('Analysis period'))
+    expect(screen.getByLabelText('End date')).toHaveAttribute('max', '2020-08-15')
+    expect(screen.getByLabelText('End date')).toHaveValue('2020-08-15')
+  })
+
+  it('filters retail results, switches the trend metric, and opens evidence', async () => {
+    const user = userEvent.setup()
+    const current = { start: '2020-07-01', end: '2020-07-07', partial: false }
+    const prior = { start: '2020-06-24', end: '2020-06-30', partial: false }
+    const totals = {
+      lines: 4,
+      spend: '20.00',
+      households: 2,
+      baskets: 3,
+      units: 2,
+      avg_basket: '6.67',
+    }
+    const delta = { amount: '12.00', percent: '150.0' }
+    const dashboard = vi.mocked(getDashboard)
+    dashboard.mockClear()
+    let finishDepartment = () => {}
+    let finishTrend = () => {}
+    const departmentLoaded = new Promise<void>((resolve) => {
+      finishDepartment = resolve
+    })
+    const trendLoaded = new Promise<void>((resolve) => {
+      finishTrend = resolve
+    })
+    const point = { index: 0, start: current.start, end: current.start, value: '2' }
+    const getTrend = vi.mocked(getDashboardTrend)
+    getTrend.mockImplementation(async ({ metric = 'spend' }) => {
+      await trendLoaded
+      return { ...emptyDashboard.trend, metric, current: [point] }
+    })
+    dashboard.mockImplementation(async ({ metric = 'spend', department }): Promise<Dashboard> => {
+      if (department) await departmentLoaded
+      return {
+        ...emptyDashboard,
+        options: {
+          first_date: prior.start,
+          last_date: current.end,
+          regions: ['EAST', 'CENTRAL'],
+          departments: ['FOOD'],
+        },
+        summary: {
+          ...emptyDashboard.summary,
+          current: totals,
+          current_period: current,
+          prior_period: prior,
+          changes: { spend: delta },
+          source_version: 1,
+        },
+        trend: {
+          ...emptyDashboard.trend,
+          metric,
+          current: [point],
+        },
+        breakdown: {
+          ...emptyDashboard.breakdown,
+          dimension: department ? 'commodity' : 'department',
+          rows: [
+            {
+              name: department ? 'PRODUCE' : 'FOOD',
+              current: { ...totals, spend: department ? '17.00' : '19.56' },
+              prior: null,
+              change: department ? { amount: '-3', percent: '-15' } : null,
+              share: department ? '85' : '97.8',
+            },
+            ...(department
+              ? ['BAKERY', 'DAIRY', 'DELI', 'FROZEN FOOD', 'DRY GOODS', 'BEVERAGES'].map(
+                  (name) => ({
+                    name,
+                    current: { ...totals, spend: '0.50' },
+                    prior: null,
+                    change: name === 'BAKERY' ? { amount: '0.25', percent: '100' } : null,
+                    share: '2.5',
+                  }),
+                )
+              : []),
+            ...(!department
+              ? [
+                  {
+                    name: 'PHARMA',
+                    current: { ...totals, spend: '0.44' },
+                    prior: null,
+                    change: null,
+                    share: '2.2',
+                  },
+                ]
+              : []),
+          ],
+        },
+        signals: {
+          items: [
+            {
+              severity: 'info',
+              type: 'growth',
+              reason: department ? 'Net spend rose in BAKERY.' : 'Net spend rose in FOOD.',
+              metric: 'spend',
+              delta,
+              comparison: prior,
+              route: '/merchandise',
+              route_filters: {
+                start: current.start,
+                end: current.end,
+                region: 'EAST',
+                department: 'FOOD',
+                ...(department ? { commodity: 'BAKERY' } : {}),
+                metric: 'spend',
+              },
+              evidence: {
+                name: department ? 'BAKERY' : 'FOOD',
+                current: '20.00',
+                prior: '8.00',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
+            },
+            {
+              severity: 'info',
+              type: 'engagement',
+              reason: 'Active households rose across the selection.',
+              metric: 'households',
+              delta: { amount: '1', percent: '100' },
+              comparison: prior,
+              route: '/customers',
+              route_filters: { metric: 'households' },
+              evidence: {
+                name: 'Active households',
+                current: '2',
+                prior: '1',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
+            },
+            {
+              severity: 'info',
+              type: 'volume',
+              reason: 'Net units rose across the selection.',
+              metric: 'units',
+              delta: { amount: '10', percent: '100' },
+              comparison: prior,
+              route: '/baskets',
+              route_filters: { metric: 'units' },
+              evidence: {
+                name: 'Net units',
+                current: '20',
+                prior: '10',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
+            },
+          ],
+        },
+      }
+    })
+    try {
+      render(
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>,
+      )
+      expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
+      expect(
+        screen.getByText(
+          'Net spend went from $8.00 in the prior period to $20.00 in the selected period.',
+        ),
+      ).toBeVisible()
+      expect(screen.queryByRole('link', { name: /Active households/ })).not.toBeInTheDocument()
+      const periodTrigger = screen.getByText('Analysis period')
+      const periodPicker = periodTrigger.closest('details')
+      await user.click(periodTrigger)
+      expect(periodPicker).toHaveAttribute('open')
+      await user.click(screen.getByLabelText('Start date'))
+      expect(periodPicker).toHaveAttribute('open')
+      await user.click(screen.getByRole('heading', { name: 'Command Center' }))
+      expect(periodPicker).not.toHaveAttribute('open')
+      await user.click(periodTrigger)
+      await user.selectOptions(screen.getByLabelText('Region'), 'EAST')
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+      expect(dashboard).toHaveBeenLastCalledWith(
+        expect.objectContaining({ region: 'EAST', start: current.start, end: current.end }),
+        expect.any(AbortSignal),
+      )
+      const selector = await screen.findByLabelText('Trend metric')
+      const contribution = screen.getByRole('heading', { name: 'Department contribution' })
+      const dashboardRequests = dashboard.mock.calls.length
+      await user.selectOptions(selector, 'units')
+      expect(screen.getByText('Updating trend…')).toBeVisible()
+      expect(contribution).toBeVisible()
+      expect(selector).toHaveFocus()
+      expect(dashboard).toHaveBeenCalledTimes(dashboardRequests)
+      expect(getTrend).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          region: 'EAST',
+          start: current.start,
+          end: current.end,
+          metric: 'units',
+        }),
+        expect.any(AbortSignal),
+      )
+      finishTrend()
+      expect(await screen.findByRole('group', { name: 'Net units by day' })).toBeVisible()
+
+      expect(screen.queryByRole('link', { name: /^FOOD$/ })).not.toBeInTheDocument()
+      expect(screen.getByLabelText('FOOD 97.8%')).toBeVisible()
+      expect(screen.getByLabelText('PHARMA 2.2%')).toBeVisible()
+      const department = screen.getByRole('button', { name: 'PHARMA' })
+      await user.click(department)
+      expect(department).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('figure', { name: 'Share of net spend' })).toHaveTextContent(
+        '2.2%PHARMA',
+      )
+      expect(contribution).toBeVisible()
+      expect(dashboard).toHaveBeenCalledTimes(dashboardRequests)
+      await user.click(screen.getByText('Analysis period'))
+      await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+      expect(screen.getByText('Updating retail performance…')).toBeVisible()
+      expect(contribution).toBeVisible()
+      finishDepartment()
+      expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()
+      expect(screen.getByText('PRODUCE')).toBeVisible()
+      expect(screen.getByText('EAST · FOOD')).toBeVisible()
+      expect(screen.getByRole('heading', { name: 'Which commodity led net spend' })).toBeVisible()
+      const commodityTable = within(
+        screen.getByRole('region', { name: 'Commodity contribution rows' }),
+      )
+      const spend = commodityTable.getByRole('button', { name: 'Sort by Net spend' })
+      const change = commodityTable.getByRole('button', { name: 'Sort by Change' })
+      const firstCommodity = () => commodityTable.getAllByRole('rowheader')[0]
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
+      await user.click(spend)
+      expect(firstCommodity()).toHaveTextContent('BAKERY')
+      expect(spend.closest('th')).toHaveAttribute('aria-sort', 'ascending')
+      await user.click(change)
+      expect(firstCommodity()).toHaveTextContent('BAKERY')
+      expect(change.closest('th')).toHaveAttribute('aria-sort', 'descending')
+      await user.click(change)
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
+      expect(change.closest('th')).toHaveAttribute('aria-sort', 'ascending')
+      await user.click(spend)
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
+      expect(spend.closest('th')).toHaveAttribute('aria-sort', 'descending')
+      const commodity = screen.getByRole('button', { name: 'DRY GOODS' })
+      await user.click(commodity)
+      expect(commodity).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('figure', { name: 'Share of net spend' })).toHaveTextContent(
+        '2.5%DRY GOODS',
+      )
+      await user.click(commodity)
+      expect(commodity).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
+      expect(dashboard).toHaveBeenLastCalledWith(
+        expect.objectContaining({ region: 'EAST', department: 'FOOD' }),
+        expect.any(AbortSignal),
+      )
+      expect(
+        screen.queryByRole('link', { name: 'Explore merchandise for FOOD' }),
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Explore baskets for Net units' })).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Explore merchandise for BAKERY' })).toHaveAttribute(
+        'href',
+        expect.stringContaining('department=FOOD&commodity=BAKERY'),
+      )
+
+      await user.click(screen.getByText('Analysis period'))
+      await user.selectOptions(screen.getByLabelText('Department'), '')
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+      expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
+      expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
+      expect(dashboard).toHaveBeenLastCalledWith(
+        expect.objectContaining({ region: 'EAST', department: undefined }),
+        expect.any(AbortSignal),
+      )
+      const merchandise = screen.getByRole('link', { name: 'Explore merchandise for FOOD' })
+      expect(merchandise).toHaveAttribute(
+        'href',
+        expect.stringMatching(/^\/merchandise\?.*department=FOOD/),
+      )
+      expect(screen.getByRole('link', { name: 'Explore baskets for Net units' })).toHaveAttribute(
+        'href',
+        '/baskets?metric=units',
+      )
+      await user.click(merchandise)
+      expect(await screen.findByRole('heading', { name: 'Merchandise Intelligence' })).toBeVisible()
+    } finally {
+      dashboard.mockResolvedValue(emptyDashboard)
+    }
   })
 })
 

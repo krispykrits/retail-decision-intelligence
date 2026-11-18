@@ -34,6 +34,194 @@
         "title": "AccountRead",
         "type": "object"
       },
+      "Breakdown": {
+        "properties": {
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dimension": {
+            "enum": [
+              "department",
+              "commodity",
+              "region"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "prior_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Contribution"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dimension",
+          "current_period",
+          "prior_period",
+          "rows"
+        ],
+        "title": "Breakdown",
+        "type": "object"
+      },
+      "Bucket": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/Totals"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "index",
+          "totals"
+        ],
+        "title": "Bucket",
+        "type": "object"
+      },
+      "Change": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          }
+        },
+        "required": [
+          "amount",
+          "percent"
+        ],
+        "title": "Change",
+        "type": "object"
+      },
+      "Cohorts": {
+        "properties": {
+          "active_in_both": {
+            "title": "Active In Both",
+            "type": "integer"
+          },
+          "active_only_in_current": {
+            "title": "Active Only In Current",
+            "type": "integer"
+          },
+          "active_only_in_previous": {
+            "title": "Active Only In Previous",
+            "type": "integer"
+          },
+          "previous_active": {
+            "title": "Previous Active",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "previous_active",
+          "active_in_both",
+          "active_only_in_current",
+          "active_only_in_previous"
+        ],
+        "title": "Cohorts",
+        "type": "object"
+      },
+      "Contribution": {
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Change"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Totals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prior": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Totals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          }
+        },
+        "required": [
+          "name",
+          "current",
+          "prior",
+          "change",
+          "share"
+        ],
+        "title": "Contribution",
+        "type": "object"
+      },
       "Credentials": {
         "properties": {
           "email": {
@@ -68,6 +256,34 @@
           "token"
         ],
         "title": "CsrfToken",
+        "type": "object"
+      },
+      "Dashboard": {
+        "properties": {
+          "breakdown": {
+            "$ref": "#/components/schemas/Breakdown"
+          },
+          "options": {
+            "$ref": "#/components/schemas/FilterOptions"
+          },
+          "signals": {
+            "$ref": "#/components/schemas/Signals"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/Trend"
+          }
+        },
+        "required": [
+          "options",
+          "summary",
+          "trend",
+          "breakdown",
+          "signals"
+        ],
+        "title": "Dashboard",
         "type": "object"
       },
       "Dataset": {
@@ -150,6 +366,89 @@
           "detail"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "Evidence": {
+        "properties": {
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "current_lines": {
+            "title": "Current Lines",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prior": {
+            "title": "Prior",
+            "type": "string"
+          },
+          "prior_lines": {
+            "title": "Prior Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "current",
+          "prior",
+          "current_lines",
+          "prior_lines"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "FilterOptions": {
+        "properties": {
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "first_date",
+          "last_date",
+          "regions",
+          "departments"
+        ],
+        "title": "FilterOptions",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -372,6 +671,35 @@
         "title": "ImportUpload",
         "type": "object"
       },
+      "Inactivity": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "integer"
+          },
+          "inactive": {
+            "title": "Inactive",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "eligible",
+          "inactive",
+          "as_of"
+        ],
+        "title": "Inactivity",
+        "type": "object"
+      },
       "LinkToken": {
         "properties": {
           "token": {
@@ -386,6 +714,61 @@
           "token"
         ],
         "title": "LinkToken",
+        "type": "object"
+      },
+      "MetricPoint": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "index",
+          "value"
+        ],
+        "title": "MetricPoint",
+        "type": "object"
+      },
+      "Period": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "partial"
+        ],
+        "title": "Period",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -470,6 +853,97 @@
         "title": "Role",
         "type": "string"
       },
+      "Signal": {
+        "properties": {
+          "comparison": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/Change"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/Evidence"
+          },
+          "metric": {
+            "enum": [
+              "spend",
+              "households",
+              "baskets",
+              "units",
+              "avg_basket"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "route_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Route Filters",
+            "type": "object"
+          },
+          "severity": {
+            "enum": [
+              "watch",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_version": {
+            "title": "Source Version",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "decline",
+              "growth",
+              "volume",
+              "engagement"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "type",
+          "reason",
+          "metric",
+          "delta",
+          "comparison",
+          "route",
+          "route_filters",
+          "evidence",
+          "source_version"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "Signals": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Signal"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Signals",
+        "type": "object"
+      },
       "SourceWindow": {
         "properties": {
           "end": {
@@ -513,6 +987,216 @@
           "size_bytes"
         ],
         "title": "StartImportUpload",
+        "type": "object"
+      },
+      "Summary": {
+        "properties": {
+          "changes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "propertyNames": {
+              "enum": [
+                "spend",
+                "households",
+                "baskets",
+                "units",
+                "avg_basket"
+              ]
+            },
+            "title": "Changes",
+            "type": "object"
+          },
+          "cohorts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cohorts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Totals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inactivity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Inactivity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prior": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Totals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prior_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_version": {
+            "title": "Source Version",
+            "type": "integer"
+          },
+          "sparkline": {
+            "items": {
+              "$ref": "#/components/schemas/Bucket"
+            },
+            "title": "Sparkline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current_period",
+          "prior_period",
+          "current",
+          "prior",
+          "changes",
+          "cohorts",
+          "inactivity",
+          "sparkline",
+          "source_version"
+        ],
+        "title": "Summary",
+        "type": "object"
+      },
+      "Totals": {
+        "properties": {
+          "avg_basket": {
+            "title": "Avg Basket",
+            "type": "string"
+          },
+          "baskets": {
+            "title": "Baskets",
+            "type": "integer"
+          },
+          "households": {
+            "title": "Households",
+            "type": "integer"
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "integer"
+          },
+          "spend": {
+            "title": "Spend",
+            "type": "string"
+          },
+          "units": {
+            "title": "Units",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lines",
+          "spend",
+          "households",
+          "baskets",
+          "units",
+          "avg_basket"
+        ],
+        "title": "Totals",
+        "type": "object"
+      },
+      "Trend": {
+        "properties": {
+          "current": {
+            "items": {
+              "$ref": "#/components/schemas/MetricPoint"
+            },
+            "title": "Current",
+            "type": "array"
+          },
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "grain": {
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ],
+            "title": "Grain",
+            "type": "string"
+          },
+          "metric": {
+            "enum": [
+              "spend",
+              "households",
+              "baskets",
+              "units",
+              "avg_basket"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "prior": {
+            "items": {
+              "$ref": "#/components/schemas/MetricPoint"
+            },
+            "title": "Prior",
+            "type": "array"
+          },
+          "prior_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "metric",
+          "grain",
+          "current_period",
+          "prior_period",
+          "current",
+          "prior"
+        ],
+        "title": "Trend",
         "type": "object"
       },
       "ValidationError": {
@@ -1140,6 +1824,777 @@
         "summary": "Verify account email ownership",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "dashboard_api_v1_dashboard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "default": "spend",
+              "enum": [
+                "spend",
+                "households",
+                "baskets",
+                "units",
+                "avg_basket"
+              ],
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "grain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "day",
+                    "week",
+                    "month"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "Load the Command Center for a single filter selection",
+        "tags": [
+          "Command Center"
+        ]
+      }
+    },
+    "/api/v1/dashboard/breakdown": {
+      "get": {
+        "description": "Percentage shares are available when all groups are nonnegative and total spend is positive.",
+        "operationId": "breakdown_api_v1_dashboard_breakdown_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension",
+            "required": false,
+            "schema": {
+              "default": "department",
+              "enum": [
+                "department",
+                "commodity",
+                "region"
+              ],
+              "title": "Dimension",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Breakdown"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "Rank net spend by department, commodity or region",
+        "tags": [
+          "Command Center"
+        ]
+      }
+    },
+    "/api/v1/dashboard/filter-options": {
+      "get": {
+        "operationId": "filter_options_api_v1_dashboard_filter_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "List dashboard filters and available transaction dates",
+        "tags": [
+          "Command Center"
+        ]
+      }
+    },
+    "/api/v1/dashboard/signals": {
+      "get": {
+        "description": "Derived from comparable observed periods. No evaluated churn or forecast score is included.",
+        "operationId": "signals_api_v1_dashboard_signals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Signals"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "List observed changes with supporting counts and investigation links",
+        "tags": [
+          "Command Center"
+        ]
+      }
+    },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "description": "Includes the source revision, period coverage, observed cohorts and current trend buckets.",
+        "operationId": "summary_api_v1_dashboard_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "Read current and prior retail KPIs",
+        "tags": [
+          "Command Center"
+        ]
+      }
+    },
+    "/api/v1/dashboard/trends": {
+      "get": {
+        "description": "Buckets contain observed rows only. Weeks are seven-day windows from each period start.",
+        "operationId": "trends_api_v1_dashboard_trends_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "default": "spend",
+              "enum": [
+                "spend",
+                "households",
+                "baskets",
+                "units",
+                "avg_basket"
+              ],
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "grain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "day",
+                    "week",
+                    "month"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trend"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Dashboard temporarily unavailable"
+          }
+        },
+        "summary": "Read daily, weekly or monthly metric trends",
+        "tags": [
+          "Command Center"
         ]
       }
     },
