@@ -38,8 +38,8 @@ export function DashboardTakeaways({
   if (cohorts) {
     items.push({
       icon: '/customers',
-      title: 'Households across periods',
-      detail: `${cohorts.active_in_both} in both · ${cohorts.active_only_in_current} selected only · ${cohorts.active_only_in_previous} prior only.`,
+      title: 'Who shopped in each period',
+      detail: `${valueLabel('households', cohorts.active_in_both)} shopped in both periods. ${valueLabel('households', cohorts.active_only_in_current)} shopped only in the selected period and ${valueLabel('households', cohorts.active_only_in_previous)} only in the prior period.`,
       color: 'bg-violet-50 text-violet-800',
     })
   }
