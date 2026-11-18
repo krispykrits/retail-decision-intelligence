@@ -223,9 +223,17 @@ def import_csv(engine: sa.Engine, dataset: Dataset, filename: str, file: BinaryI
                 driver: Any = connection.connection.driver_connection
                 driver.timeout = 90
             state = dataset_state.c.dataset == dataset
-            # Hold the dataset's write lock through staging, classification and commit.
+            # Lock the row or its key range through commit. SQLite serializes writers.
+            existing = (
+                sa.select(dataset_state.c.dataset)
+                .where(state)
+                .with_hint(dataset_state, "WITH (UPDLOCK, HOLDLOCK)", dialect_name="mssql")
+            )
             connection.execute(
-                dataset_state.update().where(state).values(version=dataset_state.c.version)
+                dataset_state.insert().from_select(
+                    ["dataset", "version"],
+                    sa.select(sa.literal(dataset), sa.literal(0)).where(~existing.exists()),
+                )
             )
             previous_count = connection.scalar(
                 sa.select(import_runs.c.processed)
@@ -340,9 +348,9 @@ def inventory(connection: sa.Connection) -> list[DatasetSummary]:
             .subquery()
         )
         row = connection.execute(
-            sa.select(dataset_state, metrics)
-            .select_from(dataset_state.join(metrics, sa.true()))
-            .where(dataset_state.c.dataset == dataset)
+            sa.select(dataset_state, metrics).select_from(
+                metrics.outerjoin(dataset_state, dataset_state.c.dataset == dataset)
+            )
         ).one()
         result.append(
             DatasetSummary(
@@ -350,7 +358,7 @@ def inventory(connection: sa.Connection) -> list[DatasetSummary]:
                 records=row.records,
                 source_window=SourceWindow(start=row.start, end=row.end) if row.start else None,
                 last_success=row.last_success.replace(tzinfo=UTC) if row.last_success else None,
-                version=row.version,
+                version=row.version or 0,
             )
         )
     return result
