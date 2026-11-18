@@ -1,6 +1,7 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
 import { Panel } from '../../components/Panel'
 import { TrendChart } from '../../components/TrendChart'
+import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { dateLabel, metrics, periodLabel, valueLabel } from './format'
 
 export function DashboardTrend({
@@ -43,10 +44,11 @@ export function DashboardTrend({
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 id="trend-title" className="font-semibold">
+          <h2 id="trend-title" className="flex items-center gap-2 font-semibold">
+            <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
             Performance trend
           </h2>
-          <p className="text-sm text-muted">
+          <p className="mt-0.5 text-sm text-muted">
             {{ day: 'Daily', week: 'Seven-day', month: 'Monthly' }[trend.grain]} totals
           </p>
         </div>

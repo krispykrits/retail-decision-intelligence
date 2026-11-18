@@ -3,9 +3,9 @@ import { useState } from 'react'
 type ChartPoint = { index: number; value: number; label: string }
 type ChartSeries = { id: string; label: string; points: ChartPoint[]; dashed?: boolean }
 
-const width = 600
-const height = 252
-const left = 108
+const width = 540
+const height = 260
+const left = 90
 const right = width - 26
 const top = 16
 const bottom = height - 33
@@ -35,17 +35,6 @@ export function TrendChart({
 
   return (
     <figure>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-label="Chart legend">
-        {series.map((line) => (
-          <li key={line.id} className="flex items-center gap-2">
-            <span
-              className={`w-5 border-t-2 ${line.dashed ? 'border-dashed border-muted' : 'border-brand'}`}
-              aria-hidden="true"
-            />
-            {line.label}
-          </li>
-        ))}
-      </ul>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="group" aria-label={label}>
         {grid.map((value) => (
           <g key={value} aria-hidden="true">
@@ -130,8 +119,22 @@ export function TrendChart({
           )
         })}
       </svg>
+      <ul
+        className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted"
+        aria-label="Chart legend"
+      >
+        {series.map((line) => (
+          <li key={line.id} className="flex items-center gap-2">
+            <span
+              className={`w-5 border-t-2 ${line.dashed ? 'border-dashed border-muted' : 'border-brand'}`}
+              aria-hidden="true"
+            />
+            {line.label}
+          </li>
+        ))}
+      </ul>
       <figcaption
-        className="min-h-7 rounded-md bg-canvas px-2 py-1 text-xs text-muted"
+        className="mt-2 min-h-7 rounded-md bg-canvas px-2 py-1 text-xs text-muted"
         aria-live="polite"
       >
         {active

@@ -12,12 +12,18 @@ const iconPaths: Record<Workspace['path'], string> = {
   '/data': 'M20 6a8 3 0 1 1-16 0 8 3 0 0 1 16 0Z M4 6v12a8 3 0 0 0 16 0V6 M4 12a8 3 0 0 0 16 0',
 }
 
-export function WorkspaceIcon({ path }: { path: Workspace['path'] }) {
+export function WorkspaceIcon({
+  path,
+  className = 'size-4',
+}: {
+  path: Workspace['path']
+  className?: string
+}) {
   return (
     <svg
       aria-hidden="true"
       focusable="false"
-      className="size-4 shrink-0"
+      className={`shrink-0 ${className}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

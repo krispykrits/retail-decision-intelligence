@@ -205,6 +205,7 @@ describe('Command Center', () => {
       )
       expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
       expect(screen.getByText('Net spend rose in FOOD.')).toBeVisible()
+      await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Region'), 'EAST')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(dashboard).toHaveBeenLastCalledWith(
