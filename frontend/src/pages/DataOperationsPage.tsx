@@ -9,6 +9,7 @@ import {
 import { useSession } from '../auth/session'
 import { DataTable } from '../components/DataTable'
 import { ImportResults } from '../components/ImportResults'
+import { Spinner } from '../components/Spinner'
 
 const datasets = [
   ['households', 'Households'],
@@ -168,7 +169,11 @@ export function DataOperationsPage() {
                 Adds new records. Existing records are preserved.
               </p>
             </div>
-            <p className={progress ? 'mt-3 text-sm text-muted' : 'sr-only'} role="status">
+            <p
+              className={progress ? 'mt-3 flex items-center gap-2 text-sm text-muted' : 'sr-only'}
+              role="status"
+            >
+              {progress && <Spinner />}
               {progress ?? (results.length ? 'Import results are available below.' : '')}
             </p>
             {uploadError && (
@@ -225,7 +230,8 @@ export function DataOperationsPage() {
             })}
           </DataTable>
           {inventory.status === 'loading' && (
-            <p className="mt-2 text-sm text-muted" role="status">
+            <p className="mt-2 flex items-center gap-2 text-sm text-muted" role="status">
+              <Spinner />
               Loading stored datasets…
             </p>
           )}
@@ -249,7 +255,8 @@ export function DataOperationsPage() {
           >
             <summary className={`${heading} ${focus} cursor-pointer`}>Import history</summary>
             {history.status === 'loading' && (
-              <p className="mt-3 text-sm text-muted" role="status">
+              <p className="mt-3 flex items-center gap-2 text-sm text-muted" role="status">
+                <Spinner />
                 Loading import history…
               </p>
             )}
