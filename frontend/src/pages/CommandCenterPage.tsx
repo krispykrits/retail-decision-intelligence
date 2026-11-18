@@ -133,8 +133,8 @@ export function CommandCenterPage() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
-        <div className="flex items-center gap-3">
+      <header className="grid items-start gap-3 border-b border-line pb-3 md:grid-cols-[minmax(0,1fr)_auto] xl:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="flex min-w-0 items-center gap-3">
           <WorkspaceIcon path="/command-center" className="size-8 shrink-0 text-brand" />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Command Center</h1>
@@ -148,38 +148,41 @@ export function CommandCenterPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {data?.options.first_date && (
-            <details ref={periodPicker} className="group sm:relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-brand/40">
-                <Icon name="calendar" className="size-5 text-brand" />
-                <span className="grid">
-                  <span className="text-xs text-muted">Analysis period</span>
-                  <span className="font-semibold">
-                    {current ? periodLabel(current) : 'Choose dates'}
-                  </span>
-                </span>
-                <Icon name="chevron" className="ml-1 size-4 text-muted group-open:rotate-180" />
-              </summary>
-              <Panel className="absolute right-4 left-4 z-20 mt-2 sm:right-0 sm:left-auto sm:w-100">
-                <DashboardFilters
-                  key={`${query.start ?? current?.start}-${query.end ?? current?.end}-${query.region}-${query.department}`}
-                  query={query}
-                  data={data}
-                  apply={(filters) => {
-                    if (periodPicker.current) periodPicker.current.open = false
-                    apply({ ...filters, metric: query.metric })
-                  }}
-                  reset={() => {
-                    if (periodPicker.current) periodPicker.current.open = false
-                    apply({ metric: query.metric })
-                  }}
-                />
-              </Panel>
-            </details>
-          )}
+        <div className="contents md:col-start-2 md:row-start-1 md:block md:max-w-72 md:justify-self-end xl:col-start-3">
           <AccountMenu />
         </div>
+        {data?.options.first_date && (
+          <details
+            ref={periodPicker}
+            className="group justify-self-start sm:relative md:col-start-1 md:row-start-2 xl:col-start-2 xl:row-start-1"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-brand/40">
+              <Icon name="calendar" className="size-5 text-brand" />
+              <span className="grid">
+                <span className="text-xs text-muted">Analysis period</span>
+                <span className="font-semibold">
+                  {current ? periodLabel(current) : 'Choose dates'}
+                </span>
+              </span>
+              <Icon name="chevron" className="ml-1 size-4 text-muted group-open:rotate-180" />
+            </summary>
+            <Panel className="absolute right-4 left-4 z-20 mt-2 sm:right-auto sm:left-0 sm:w-100 xl:right-0 xl:left-auto">
+              <DashboardFilters
+                key={`${query.start ?? current?.start}-${query.end ?? current?.end}-${query.region}-${query.department}`}
+                query={query}
+                data={data}
+                apply={(filters) => {
+                  if (periodPicker.current) periodPicker.current.open = false
+                  apply({ ...filters, metric: query.metric })
+                }}
+                reset={() => {
+                  if (periodPicker.current) periodPicker.current.open = false
+                  apply({ metric: query.metric })
+                }}
+              />
+            </Panel>
+          </details>
+        )}
       </header>
 
       {!pending && current?.partial && data?.options.first_date && data.options.last_date && (
