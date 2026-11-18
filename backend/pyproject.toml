@@ -28,7 +28,8 @@ build-backend = "hatchling.build"
 packages = ["src/retail_api"]
 
 [tool.pytest.ini_options]
-testpaths = ["../tests/backend"]
+testpaths = ["../tests/backend", "../ml/tests"]
+pythonpath = [".."]
 addopts = "-q"
 
 [tool.ruff]

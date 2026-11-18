@@ -23,8 +23,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
+from ml.customer_models.features import History, Observation
 from retail_api.customers.definition import HISTORY_DAYS, HORIZONS
-from retail_api.customers.features import History, Observation
 from retail_api.customers.schemas import (
     RISK_THRESHOLD,
     CalibrationBin,

@@ -36,15 +36,15 @@ make contracts  # regenerate API types after API changes
 
 ## Customer model training and evaluation
 
-Configure a persistent database in `.env`, run `make migrate`, and import
+From the repo root, configure a persistent database in `.env`, run `make migrate`, and import
 Households, Products, and Transactions before training.
 
 ```bash
 # Evaluate both models and print held-out metrics.
-uv run --project backend --locked --group ml python -m retail_api.customers.train --dry-run
+uv run --project backend --locked --group ml python -m ml.customer_models.train --dry-run
 
 # Publish evaluations and validated scores.
-uv run --project backend --locked --group ml python -m retail_api.customers.train \
+uv run --project backend --locked --group ml python -m ml.customer_models.train \
   --artifact-dir ../rdi-model-artifacts
 ```
 

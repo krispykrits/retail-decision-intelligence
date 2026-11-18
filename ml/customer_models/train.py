@@ -14,13 +14,21 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import ContainerClient
 from sqlalchemy.engine import Engine
 
+from ml.customer_models.features import FEATURES, History, Observation, load_history
+from ml.customer_models.training import scores, train_model
 from retail_api.config import Settings
-from retail_api.customers.definition import CAVEATS, FEATURES, HORIZONS, POPULATION, TARGETS
-from retail_api.customers.features import History, Observation, Profile, load_history
+from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
 from retail_api.customers.queries import publish, source_versions
 from retail_api.customers.schemas import ModelEvidence, ModelType
-from retail_api.customers.training import scores, train_model
+from retail_api.customers.training_source import Profile
 from retail_api.database import create_database_engine
+
+CAVEATS = [
+    "Activity and outcomes cover purchases recorded in the imported data.",
+    "Validation measures predictive accuracy at historical cutoffs.",
+    "The confidence interval resamples households and describes improvement over the baseline.",
+    "Region uses the most positive units on the last purchase day, with alphabetical ties.",
+]
 
 
 def materialize(

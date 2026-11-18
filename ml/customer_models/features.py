@@ -2,13 +2,32 @@ from bisect import bisect_right
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from itertools import groupby
 
-import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from retail_api.customers.definition import HISTORY_DAYS, HORIZONS
 from retail_api.customers.schemas import ModelType
-from retail_api.imports.schema_v1 import households, transactions
+from retail_api.customers.training_source import (
+    Profile,
+    household_profiles,
+    purchase_days,
+    transaction_bounds,
+)
+
+FEATURE_WINDOWS = (30, 90, HISTORY_DAYS)
+FEATURES = {
+    "recency": "Days since the last positive-unit purchase at the cutoff",
+    **{
+        f"{field}_{days}d": f"{description} in the {days} days ending at the cutoff"
+        for days in FEATURE_WINDOWS
+        for field, description in (
+            ("net_spend", "Net spend including returns"),
+            ("purchase_days", "Distinct days with a positive-unit purchase"),
+            ("purchase_units", "Positive units purchased"),
+        )
+    },
+}
 
 
 @dataclass
@@ -44,7 +63,7 @@ class Ledger:
         if last < 0:
             return None
         recency = end - self.purchase_dates[last]
-        short, medium, long = (self.window(end, days) for days in (30, 90, HISTORY_DAYS))
+        short, medium, long = (self.window(end, days) for days in FEATURE_WINDOWS)
         return Observation(
             last_purchase=date.fromordinal(self.purchase_dates[last]),
             region=self.regions[last],
@@ -76,13 +95,6 @@ class Observation:
 
 
 @dataclass(frozen=True)
-class Profile:
-    loyalty_flag: str | None
-    age_range: str | None
-    household_size: str | None
-
-
-@dataclass(frozen=True)
 class History:
     ledgers: dict[str, Ledger]
     profiles: dict[str, Profile]
@@ -91,42 +103,13 @@ class History:
 
 
 def load_history(db: Connection, as_of: date | None) -> History:
-    c = transactions.c
-    first, last = db.execute(
-        sa.select(sa.func.min(c.purchase_date), sa.func.max(c.purchase_date))
-    ).one()
+    first, last = transaction_bounds(db)
     if not first or not last:
         return History({}, {}, first, last)
-    # The lookup records an observed cohort and never enters the estimator.
-    profiles = {
-        row.household_id: Profile(row.loyalty_flag, row.age_range, row.household_size)
-        for row in db.execute(
-            sa.select(
-                households.c.household_id,
-                households.c.loyalty_flag,
-                households.c.age_range,
-                households.c.household_size,
-            )
-        )
-    }
-    positive_units = sa.func.sum(sa.cast(sa.case((c.units > 0, c.units), else_=0), sa.BigInteger))
-    query = (
-        sa.select(
-            c.household_id,
-            c.purchase_date,
-            c.store_region,
-            sa.func.sum(c.spend).label("spend"),
-            positive_units.label("units"),
-        )
-        .where(c.purchase_date <= (as_of or last))
-        .group_by(c.household_id, c.purchase_date, c.store_region)
-        .order_by(c.household_id, c.purchase_date, c.store_region)
-    )
+    profiles = household_profiles(db)
     ledgers: dict[str, Ledger] = {}
-    from itertools import groupby
-
     for (household_id, day), rows in groupby(
-        db.execute(query), key=lambda row: (row.household_id, row.purchase_date)
+        purchase_days(db, as_of or last), key=lambda row: (row.household_id, row.purchase_date)
     ):
         by_region = list(rows)
         region = max(by_region, key=lambda row: row.units).store_region

@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from ml.customer_models.features import History, Ledger
+from ml.customer_models.training import backtests, examples, train_model, training_examples
 from retail_api.customers.definition import HORIZONS
-from retail_api.customers.features import History, Ledger
 from retail_api.customers.schemas import ModelType
-from retail_api.customers.training import backtests, examples, train_model, training_examples
 
 FIRST = date(2018, 1, 1)
 
