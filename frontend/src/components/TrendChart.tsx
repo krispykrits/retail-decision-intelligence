@@ -10,6 +10,16 @@ const right = width - 26
 const top = 16
 const bottom = height - 33
 
+function yAxis(low: number, high: number) {
+  const upper = low === high ? low + 1 : high
+  const roughStep = (upper - low) / 5
+  const scale = 10 ** Math.floor(Math.log10(roughStep))
+  const step = scale * ([5, 2.5, 2, 1].find((size) => size <= roughStep / scale) ?? 1)
+  const first = Math.floor(low / step)
+  const last = Math.ceil(upper / step)
+  return Array.from({ length: last - first + 1 }, (_, index) => (first + index) * step)
+}
+
 export function TrendChart({
   label,
   series,
@@ -21,16 +31,21 @@ export function TrendChart({
   ticks: { index: number; label: string }[]
   format: (value: number) => string
 }) {
-  const [active, setActive] = useState<{ point: ChartPoint; series: string }>()
+  const [selected, setSelected] = useState<number>()
+  const [preview, setPreview] = useState<number>()
+  const activeIndex = selected ?? preview
   const points = series.flatMap((line) => line.points)
   if (points.length === 0) return null
+  const active = points.some((point) => point.index === activeIndex) ? activeIndex : undefined
 
   const low = points.reduce((value, point) => Math.min(value, point.value), 0)
   const high = points.reduce((value, point) => Math.max(value, point.value), 0)
-  const span = high - low || 1
+  const grid = yAxis(low, high)
+  const floor = grid[0]
+  const span = grid[grid.length - 1] - floor
   const end = points.reduce((index, point) => Math.max(index, point.index), 0)
   const x = (index: number) => (end ? left + (index / end) * (right - left) : (left + right) / 2)
-  const y = (value: number) => bottom - ((value - low) / span) * (bottom - top)
+  const y = (value: number) => bottom - ((value - floor) / span) * (bottom - top)
   const firstTick = ticks[0]
   const lastTick = ticks.at(-1)
   const spacing = end * 0.24
@@ -41,11 +56,32 @@ export function TrendChart({
       visibleTicks.push(middleTick)
     visibleTicks.push(lastTick)
   }
-  const grid = [...new Set([low, low + span / 2, low + span, 0])]
+  const activePoints = series
+    .map((line) => ({
+      id: line.id,
+      label: line.label,
+      point: line.points.find((point) => point.index === active),
+    }))
+    .sort((left, right) => Number(left.id === 'prior') - Number(right.id === 'prior'))
+  const current = activePoints.find((line) => line.id === 'current')?.point
+  const prior = activePoints.find((line) => line.id === 'prior')?.point
+  const difference = current && prior ? current.value - prior.value : undefined
 
   return (
     <figure>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="group" aria-label={label}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        role="group"
+        aria-label={label}
+        onPointerLeave={() => setPreview(undefined)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            setSelected(undefined)
+            setPreview(undefined)
+          }
+        }}
+      >
         {grid.map((value) => (
           <g key={value} aria-hidden="true">
             <line
@@ -84,6 +120,17 @@ export function TrendChart({
             {tick.label}
           </text>
         ))}
+        {active !== undefined && (
+          <line
+            x1={x(active)}
+            x2={x(active)}
+            y1={top}
+            y2={bottom}
+            strokeDasharray="4 4"
+            className="pointer-events-none stroke-field-line"
+            aria-hidden="true"
+          />
+        )}
         {series.map((line) => {
           // Start a new segment after an unobserved bucket.
           const path = line.points
@@ -104,24 +151,30 @@ export function TrendChart({
                 strokeDasharray={line.dashed ? '5 4' : undefined}
               />
               {line.points.map((point) => {
-                const show = () => setActive({ point, series: line.label })
                 return (
                   <circle
                     key={point.index}
                     cx={x(point.index)}
                     cy={y(point.value)}
-                    r="3.5"
-                    fill="white"
+                    r={active === point.index ? 6 : 3.5}
+                    fill={active === point.index ? 'currentColor' : 'white'}
                     stroke="currentColor"
                     strokeWidth="2"
+                    role="button"
                     tabIndex={0}
+                    aria-pressed={selected === point.index}
                     aria-label={`${line.label}, ${point.label}, ${format(point.value)}`}
-                    className="hover:r-5 focus:r-5 focus:outline-focus"
-                    onFocus={show}
-                    onMouseEnter={show}
-                    onClick={show}
-                    onBlur={() => setActive(undefined)}
-                    onMouseLeave={() => setActive(undefined)}
+                    className="cursor-pointer focus-visible:outline-focus"
+                    onFocus={() => setPreview(point.index)}
+                    onPointerEnter={() => setPreview(point.index)}
+                    onClick={() => setSelected(point.index)}
+                    onBlur={() => setPreview(undefined)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelected(point.index)
+                      }
+                    }}
                   />
                 )
               })}
@@ -147,9 +200,31 @@ export function TrendChart({
         className="mt-2 min-h-7 rounded-md bg-canvas px-2 py-1 text-xs text-muted"
         aria-live="polite"
       >
-        {active
-          ? `${active.series} · ${active.point.label} · ${format(active.point.value)}`
-          : 'Hover over or focus a point for its value.'}
+        {active === undefined ? (
+          'Select a point to compare periods.'
+        ) : (
+          <dl className="space-y-1">
+            {activePoints.map(({ id, label, point }) => (
+              <div key={id} className="flex flex-wrap justify-between gap-x-3">
+                <dt>
+                  {label}
+                  {point && ` · ${point.label}`}
+                </dt>
+                <dd className="font-medium text-ink">
+                  {point ? format(point.value) : 'Unavailable'}
+                </dd>
+              </div>
+            ))}
+            <div className="flex justify-between gap-x-3 border-t border-line pt-1 font-semibold text-ink">
+              <dt>Difference</dt>
+              <dd>
+                {difference === undefined
+                  ? 'Unavailable'
+                  : `${difference > 0 ? '+' : ''}${format(difference)}`}
+              </dd>
+            </div>
+          </dl>
+        )}
       </figcaption>
     </figure>
   )

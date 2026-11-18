@@ -61,8 +61,8 @@ export function DashboardFilters({
       <div id="dashboard-date-coverage" className="w-full space-y-1 text-xs text-muted">
         {first && last && <p>Imported dates {periodLabel({ start: first, end: last })}</p>}
         <p>
-          The default range covers up to 90 days ending on the latest imported transaction date.
-          The prior period is the same number of days immediately before your selection.
+          The default range covers up to 90 days ending on the latest imported transaction date. The
+          prior period is the same number of days immediately before your selection.
         </p>
       </div>
       <label className="grid gap-1 text-xs font-semibold text-nav">

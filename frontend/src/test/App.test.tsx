@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
+import { TrendChart } from '../components/TrendChart'
 import { SessionContext } from '../auth/session'
 import { getDashboard, getDashboardTrend, type Dashboard } from '../api/dashboard'
 import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
@@ -119,6 +120,48 @@ describe('workspace shell', () => {
 })
 
 describe('Command Center', () => {
+  it('highlights the matching trend buckets and keeps their difference after clicking', async () => {
+    const user = userEvent.setup()
+    render(
+      <TrendChart
+        label="Spend comparison"
+        series={[
+          {
+            id: 'prior',
+            label: 'Prior period',
+            points: [{ index: 2, value: 40, label: 'Jul 13–19' }],
+          },
+          {
+            id: 'current',
+            label: 'Selected period',
+            points: [
+              { index: 2, value: 45, label: 'Aug 3–9' },
+              { index: 3, value: 20, label: 'Aug 10–16' },
+            ],
+          },
+        ]}
+        ticks={[]}
+        format={(value) => `$${value.toFixed(2)}`}
+      />,
+    )
+
+    expect(screen.getByText('$10.00')).toBeInTheDocument()
+    expect(screen.getByText('$30.00')).toBeInTheDocument()
+
+    const prior = screen.getByRole('button', { name: /Prior period, Jul 13–19/ })
+    const current = screen.getByRole('button', { name: /Selected period, Aug 3–9/ })
+    await user.click(current)
+    await user.unhover(current)
+    expect(prior).toHaveAttribute('aria-pressed', 'true')
+    expect(current).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('+$5.00')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Selected period, Aug 10–16/ }))
+    expect(prior).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText('+$5.00')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Unavailable')).toHaveLength(2)
+  })
+
   it('explains out-of-range selections and suppresses their prior comparison', async () => {
     const user = userEvent.setup()
     const current = { start: '2020-06-22', end: '2020-11-25', partial: true }
