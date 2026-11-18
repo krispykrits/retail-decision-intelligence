@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   getDatasets,
   getImportHistory,
   uploadCsv,
   type Dataset,
-  type DatasetSummary,
   type ImportResult,
 } from '../api/imports'
 import { useSession } from '../auth/session'
@@ -17,69 +16,92 @@ const datasets = [
 ] as const satisfies readonly (readonly [Dataset, string])[]
 
 const panel = 'rounded-xl border border-line bg-white p-5 md:p-6'
-const button =
-  'rounded-lg border border-brand px-3 py-2 text-sm font-semibold text-brand hover:bg-canvas focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50'
-const headerCell = 'px-3 py-2 text-left font-semibold'
+const heading = 'text-xl font-semibold'
+const control =
+  'rounded-lg border border-brand px-3 py-2 text-sm font-semibold text-brand hover:bg-canvas'
+const focus = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus'
+const button = `${control} ${focus} disabled:cursor-not-allowed disabled:opacity-50`
+
+function useRows<T>(load: (signal: AbortSignal) => Promise<T[]>, enabled = true) {
+  const [rows, setRows] = useState<T[]>([])
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [refreshCount, setRefreshCount] = useState(0)
+
+  useEffect(() => {
+    if (!enabled) return
+    const controller = new AbortController()
+    void load(controller.signal).then(
+      (data) => {
+        if (controller.signal.aborted) return
+        setRows(data)
+        setStatus('ready')
+      },
+      () => {
+        if (!controller.signal.aborted) setStatus('error')
+      },
+    )
+    return () => controller.abort()
+  }, [enabled, load, refreshCount])
+
+  function refresh() {
+    setStatus('loading')
+    setRefreshCount((count) => count + 1)
+  }
+
+  return { rows, status, refresh }
+}
+
+function DatasetTable({
+  columns,
+  children,
+  busy,
+}: {
+  columns: ReactNode[]
+  children: ReactNode
+  busy?: boolean
+}) {
+  return (
+    <div className="overflow-x-auto" aria-busy={busy}>
+      <table className="w-full min-w-120 text-left text-sm [&_:is(th,td)]:px-3 [&_:is(th,td)]:py-2">
+        <thead className="bg-canvas">
+          <tr>
+            {columns.map((column, index) => (
+              <th key={index} scope="col">
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line border-b border-line">{children}</tbody>
+      </table>
+    </div>
+  )
+}
 
 export function DataOperationsPage() {
   const { account } = useSession()
   const administrator = account?.roles.includes('Administrator') ?? false
   const [files, setFiles] = useState<Partial<Record<Dataset, File>>>({})
-  const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState('')
+  const [progress, setProgress] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [results, setResults] = useState<ImportResult[]>([])
-  const [inventory, setInventory] = useState<DatasetSummary[]>([])
-  const [loading, setLoading] = useState(true)
-  const [inventoryError, setInventoryError] = useState('')
-  const [inventoryVersion, setInventoryVersion] = useState(0)
-  const [history, setHistory] = useState<ImportResult[] | null>(null)
-  const [historyError, setHistoryError] = useState('')
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const historyPanel = useRef<HTMLDetailsElement>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const inventory = useRows(getDatasets)
+  const history = useRows(getImportHistory, administrator && historyOpen)
+  const queued = datasets.flatMap(([dataset, label]) => {
+    const file = files[dataset]
+    return file ? [{ dataset, label, file }] : []
+  })
+  const uploading = progress !== null
 
-  function refreshInventory() {
-    setLoading(true)
-    setInventoryError('')
-    setInventoryVersion((current) => current + 1)
-  }
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void getDatasets(controller.signal)
-      .then((rows) => {
-        if (!controller.signal.aborted) setInventory(rows)
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setInventoryError('Stored datasets could not be loaded.')
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
-    return () => controller.abort()
-  }, [inventoryVersion])
-
-  async function refreshHistory() {
-    setHistoryLoading(true)
-    setHistoryError('')
-    try {
-      setHistory(await getImportHistory())
-    } catch {
-      setHistoryError('Import history could not be loaded.')
-    } finally {
-      setHistoryLoading(false)
-    }
+  function selectFile(dataset: Dataset, file?: File) {
+    setFiles((current) => ({ ...current, [dataset]: file }))
   }
 
   async function importFiles() {
-    if (uploading || !administrator) return
-    setUploading(true)
+    if (uploading || !queued.length || !administrator) return
     setUploadError('')
     setResults([])
-    const queued = datasets.flatMap(([dataset, label]) => {
-      const file = files[dataset]
-      return file ? [{ dataset, label, file }] : []
-    })
 
     try {
       for (const [index, { dataset, label, file }] of queued.entries()) {
@@ -87,9 +109,7 @@ export function DataOperationsPage() {
         const result = await uploadCsv(dataset, file)
         setResults((current) => [...current, result])
         if (result.status === 'failed') break
-        if (result.status === 'completed') {
-          setFiles((current) => ({ ...current, [dataset]: undefined }))
-        }
+        if (result.status === 'completed') selectFile(dataset)
       }
     } catch (error) {
       setUploadError(
@@ -98,11 +118,9 @@ export function DataOperationsPage() {
           : 'The import result could not be confirmed. Refresh or retry the same file.',
       )
     } finally {
-      setProgress('')
-      setUploading(false)
-      refreshInventory()
-      if (historyPanel.current?.open) void refreshHistory()
-      else setHistory(null)
+      setProgress(null)
+      inventory.refresh()
+      history.refresh()
     }
   }
 
@@ -113,76 +131,57 @@ export function DataOperationsPage() {
       <div className="grid gap-5">
         {administrator && (
           <section className={panel} aria-labelledby="upload-heading">
-            <h2 className="mb-4 text-xl font-semibold" id="upload-heading">
+            <h2 className={`mb-4 ${heading}`} id="upload-heading">
               Upload CSV files
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-120 text-sm">
-                <thead className="bg-canvas">
-                  <tr>
-                    <th className={headerCell} scope="col">
-                      Dataset
-                    </th>
-                    <th className={headerCell} scope="col">
-                      Selected file
-                    </th>
-                    <th className={headerCell} scope="col">
-                      <span className="sr-only">File actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datasets.map(([dataset, label]) => (
-                    <tr className="border-b border-line" key={dataset}>
-                      <th className={headerCell} scope="row">
-                        {label}
-                      </th>
-                      <td className="px-3 py-2 break-all">{files[dataset]?.name ?? '—'}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                          <label className="inline-flex">
-                            <input
-                              className="peer sr-only"
-                              type="file"
-                              accept=".csv,text/csv"
-                              aria-label={`Choose ${label} CSV`}
-                              disabled={uploading}
-                              onChange={(event) => {
-                                const file = event.currentTarget.files?.[0]
-                                if (file) setFiles((current) => ({ ...current, [dataset]: file }))
-                                event.currentTarget.value = ''
-                              }}
-                            />
-                            <span
-                              className={`${button} cursor-pointer peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus peer-disabled:cursor-not-allowed peer-disabled:opacity-50`}
-                            >
-                              Choose file
-                            </span>
-                          </label>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${label} file`}
-                            className="rounded px-2 py-1 text-lg hover:bg-canvas focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-30"
-                            disabled={uploading || !files[dataset]}
-                            onClick={() =>
-                              setFiles((current) => ({ ...current, [dataset]: undefined }))
-                            }
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DatasetTable
+              columns={['Dataset', 'Selected file', <span className="sr-only">File actions</span>]}
+            >
+              {datasets.map(([dataset, label]) => (
+                <tr key={dataset}>
+                  <th scope="row">{label}</th>
+                  <td className="break-all">{files[dataset]?.name ?? '—'}</td>
+                  <td>
+                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                      <label>
+                        <input
+                          className="peer sr-only"
+                          type="file"
+                          accept=".csv,text/csv"
+                          aria-label={`Choose ${label} CSV`}
+                          disabled={uploading}
+                          onChange={({ currentTarget }) => {
+                            const file = currentTarget.files?.[0]
+                            if (file) selectFile(dataset, file)
+                            currentTarget.value = ''
+                          }}
+                        />
+                        <span
+                          className={`${control} inline-block cursor-pointer peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus peer-disabled:cursor-not-allowed peer-disabled:opacity-50`}
+                        >
+                          Choose file
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${label} file`}
+                        className={`${focus} rounded px-2 py-1 text-lg hover:bg-canvas disabled:opacity-30`}
+                        disabled={uploading || !files[dataset]}
+                        onClick={() => selectFile(dataset)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DatasetTable>
             <div className="mt-4 flex flex-wrap items-center gap-4">
               <button
-                className="rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:brightness-90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50"
+                className={`${focus} rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50`}
                 type="button"
-                disabled={uploading || !Object.values(files).some(Boolean)}
-                onClick={() => void importFiles()}
+                disabled={uploading || !queued.length}
+                onClick={importFiles}
               >
                 {uploading ? 'Importing…' : 'Import files'}
               </button>
@@ -191,7 +190,7 @@ export function DataOperationsPage() {
               </p>
             </div>
             <p className={progress ? 'mt-3 text-sm text-muted' : 'sr-only'} role="status">
-              {progress || (results.length ? 'Import results are available below.' : '')}
+              {progress ?? (results.length ? 'Import results are available below.' : '')}
             </p>
             {uploadError && (
               <p className="mt-3 text-sm text-red-700" role="alert">
@@ -204,78 +203,53 @@ export function DataOperationsPage() {
 
         <section className={panel} aria-labelledby="inventory-heading">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold" id="inventory-heading">
+            <h2 className={heading} id="inventory-heading">
               Stored datasets
             </h2>
             <button
               className={button}
               type="button"
-              disabled={loading}
-              onClick={() => refreshInventory()}
+              disabled={inventory.status === 'loading'}
+              onClick={inventory.refresh}
             >
               Refresh
             </button>
           </div>
-          <div className="overflow-x-auto" aria-busy={loading}>
-            <table className="w-full min-w-120 text-sm">
-              <thead className="bg-canvas">
-                <tr>
-                  <th className={headerCell} scope="col">
-                    Dataset
-                  </th>
-                  <th className={headerCell} scope="col">
-                    Records
-                  </th>
-                  <th className={headerCell} scope="col">
-                    Last import
-                  </th>
-                  <th className={headerCell} scope="col">
-                    Data range
-                  </th>
+          <DatasetTable
+            columns={['Dataset', 'Records', 'Last import', 'Data range']}
+            busy={inventory.status === 'loading'}
+          >
+            {datasets.map(([dataset, label]) => {
+              const row = inventory.rows.find((item) => item.dataset === dataset)
+              const lastImport = row?.last_success
+              const range = row?.source_window
+              return (
+                <tr key={dataset}>
+                  <th scope="row">{label}</th>
+                  <td className="tabular-nums">{row?.records.toLocaleString() ?? '—'}</td>
+                  <td>
+                    {lastImport ? (
+                      <time dateTime={lastImport}>{new Date(lastImport).toLocaleString()}</time>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>{range ? `${range.start} to ${range.end}` : '—'}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {datasets.map(([dataset, label]) => {
-                  const row = inventory.find((item) => item.dataset === dataset)
-                  return (
-                    <tr className="border-b border-line" key={dataset}>
-                      <th className={headerCell} scope="row">
-                        {label}
-                      </th>
-                      <td className="px-3 py-2 tabular-nums">
-                        {row?.records.toLocaleString() ?? '—'}
-                      </td>
-                      <td className="px-3 py-2">
-                        {row?.last_success ? (
-                          <time dateTime={row.last_success}>
-                            {new Date(row.last_success).toLocaleString()}
-                          </time>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {row?.source_window
-                          ? `${row.source_window.start} to ${row.source_window.end}`
-                          : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          {loading && (
+              )
+            })}
+          </DatasetTable>
+          {inventory.status === 'loading' && (
             <p className="mt-2 text-sm text-muted" role="status">
               Loading stored datasets…
             </p>
           )}
-          {inventoryError && (
+          {inventory.status === 'error' && (
             <p className="mt-2 text-sm text-red-700" role="alert">
-              {inventoryError}
+              Stored datasets could not be loaded.
             </p>
           )}
-          {!loading && !inventoryError && inventory.every((row) => row.records === 0) && (
+          {inventory.status === 'ready' && inventory.rows.every((row) => row.records === 0) && (
             <p className="mt-2 text-sm text-muted">No records have been imported yet.</p>
           )}
         </section>
@@ -283,31 +257,29 @@ export function DataOperationsPage() {
         {administrator && (
           <details
             className={panel}
-            ref={historyPanel}
-            onToggle={(event) => {
-              if (event.currentTarget.open) void refreshHistory()
+            onToggle={({ currentTarget }) => {
+              setHistoryOpen(currentTarget.open)
+              if (currentTarget.open) history.refresh()
             }}
           >
-            <summary className="cursor-pointer text-xl font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus">
-              Import history
-            </summary>
-            {historyLoading && (
+            <summary className={`${heading} ${focus} cursor-pointer`}>Import history</summary>
+            {history.status === 'loading' && (
               <p className="mt-3 text-sm text-muted" role="status">
                 Loading import history…
               </p>
             )}
-            {historyError && (
+            {history.status === 'error' && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <p className="text-sm text-red-700" role="alert">
-                  {historyError}
+                  Import history could not be loaded.
                 </p>
-                <button type="button" className={button} onClick={() => void refreshHistory()}>
+                <button type="button" className={button} onClick={history.refresh}>
                   Retry
                 </button>
               </div>
             )}
-            {history?.length ? <ImportResults results={history} /> : null}
-            {!historyLoading && history?.length === 0 && (
+            {history.rows.length ? <ImportResults results={history.rows} /> : null}
+            {history.status === 'ready' && !history.rows.length && (
               <p className="mt-3 text-sm text-muted">No imports yet.</p>
             )}
           </details>

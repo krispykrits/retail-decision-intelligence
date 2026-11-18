@@ -12,8 +12,8 @@ export async function getDatasets(signal?: AbortSignal): Promise<DatasetSummary[
   return data
 }
 
-export async function getImportHistory(): Promise<ImportResult[]> {
-  const { data } = await client.GET('/api/v1/imports', { cache: 'no-store' })
+export async function getImportHistory(signal?: AbortSignal): Promise<ImportResult[]> {
+  const { data } = await client.GET('/api/v1/imports', { signal, cache: 'no-store' })
   if (!data) throw new Error('Import history could not be loaded.')
   return data
 }

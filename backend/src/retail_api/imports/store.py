@@ -302,34 +302,28 @@ def import_query() -> sa.Select[tuple[object, ...]]:
     ).select_from(import_runs.join(import_files))
 
 
-def read_import(connection: sa.Connection, import_id: UUID) -> ImportResult | None:
-    row = connection.execute(import_query().where(import_runs.c.id == import_id)).mappings().first()
-    if not row:
-        return None
+def import_result(connection: sa.Connection, row: sa.RowMapping) -> ImportResult:
     return ImportResult.model_validate(
         {
             **row,
             "finished_at": row["finished_at"].replace(tzinfo=UTC),
-            "errors": error_preview(connection, import_id),
+            "errors": error_preview(connection, row["import_id"]),
         }
     )
 
 
+def read_import(connection: sa.Connection, import_id: UUID) -> ImportResult | None:
+    row = connection.execute(import_query().where(import_runs.c.id == import_id)).mappings().first()
+    return import_result(connection, row) if row else None
+
+
 def import_history(connection: sa.Connection) -> list[ImportResult]:
-    return [
-        ImportResult.model_validate(
-            {
-                **row,
-                "finished_at": row["finished_at"].replace(tzinfo=UTC),
-                "errors": error_preview(connection, row["import_id"]),
-            }
-        )
-        for row in connection.execute(
-            import_query()
-            .order_by(import_runs.c.finished_at.desc(), import_runs.c.id)
-            .limit(HISTORY_LIMIT)
-        ).mappings()
-    ]
+    rows = connection.execute(
+        import_query()
+        .order_by(import_runs.c.finished_at.desc(), import_runs.c.id)
+        .limit(HISTORY_LIMIT)
+    ).mappings()
+    return [import_result(connection, row) for row in rows]
 
 
 def inventory(connection: sa.Connection) -> list[DatasetSummary]:

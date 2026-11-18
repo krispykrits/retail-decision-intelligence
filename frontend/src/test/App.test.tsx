@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
 import { SessionContext } from '../auth/session'
-import { getDatasets, uploadCsv, type ImportResult } from '../api/imports'
+import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
 
 vi.mock('../api/imports', () => ({
   getDatasets: vi.fn().mockResolvedValue([]),
@@ -153,5 +153,8 @@ describe('data operations', () => {
     expect(screen.getByRole('button', { name: 'Import files' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Remove Transactions file' }))
     expect(screen.getByRole('button', { name: 'Import files' })).toBeDisabled()
+    expect(getImportHistory).not.toHaveBeenCalled()
+    await user.click(screen.getByText('Import history'))
+    expect(await screen.findByText('No imports yet.')).toBeVisible()
   })
 })
