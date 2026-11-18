@@ -14,7 +14,6 @@ import { ImportResults } from '../components/ImportResults'
 import { Panel, PanelHeading } from '../components/Panel'
 import { Skeleton } from '../components/Skeleton'
 import { Spinner } from '../components/Spinner'
-import { Icon } from '../components/WorkspaceIcon'
 import { WorkspaceHeader } from '../components/layout/WorkspaceHeader'
 
 const datasets = [
@@ -68,9 +67,8 @@ export function DataOperationsPage() {
   const activeRequest = useRef<AbortController | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [results, setResults] = useState<ImportResult[]>([])
-  const [historyOpen, setHistoryOpen] = useState(false)
   const inventory = useRows(getDatasets)
-  const history = useRows(getImportHistory, administrator && historyOpen)
+  const history = useRows(getImportHistory, administrator)
   const queued = datasets.flatMap(([dataset, label]) => {
     const file = files[dataset]
     return file ? [{ dataset, label, file }] : []
@@ -157,7 +155,9 @@ export function DataOperationsPage() {
   return (
     <div className="space-y-3 md:space-y-4">
       <WorkspaceHeader path="/data" />
-      <div className={`grid items-start gap-3 md:gap-4 ${administrator ? 'xl:grid-cols-2' : ''}`}>
+      <div
+        className={`grid items-start gap-3 md:gap-4 ${administrator ? 'xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
+      >
         {administrator && (
           <Panel aria-labelledby="upload-heading">
             <PanelHeading
@@ -319,44 +319,38 @@ export function DataOperationsPage() {
 
         {administrator && (
           <Panel className="xl:col-span-2" aria-labelledby="history-heading">
-            <details
-              className="group"
-              onToggle={({ currentTarget }) => {
-                setHistoryOpen(currentTarget.open)
-                if (currentTarget.open) history.refresh()
-              }}
-            >
-              <summary
-                className={`${focus} flex cursor-pointer list-none items-center gap-2 rounded-md font-semibold`}
+            <PanelHeading id="history-heading" title="Import history" icon="clock" />
+            {history.status === 'loading' && !history.rows.length && (
+              <div className="mt-4 grid gap-3" role="status">
+                <span className="sr-only">Loading import history…</span>
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-72 max-w-full" />
+              </div>
+            )}
+            {history.status === 'error' && (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="text-sm text-error" role="alert">
+                  Import history could not be loaded.
+                </p>
+                <button type="button" className={button} onClick={history.refresh}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {history.rows.length > 0 && (
+              <div
+                className={`mt-1 h-64 overflow-y-auto pr-2 ${focus}`}
+                role="region"
+                aria-label="Past imports"
+                aria-busy={history.status === 'loading'}
+                tabIndex={0}
               >
-                <Icon name="clock" className="size-5 text-brand" />
-                <span id="history-heading">Import history</span>
-                <Icon name="chevron" className="ml-auto size-4 text-muted group-open:rotate-180" />
-              </summary>
-              {historyOpen && history.status === 'loading' && (
-                <div className="mt-4 grid gap-3" role="status">
-                  <span className="sr-only">Loading import history…</span>
-                  <Skeleton className="h-4 w-40 max-w-full" />
-                  <Skeleton className="h-3 w-72 max-w-full" />
-                </div>
-              )}
-              {history.status === 'error' && (
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-error" role="alert">
-                    Import history could not be loaded.
-                  </p>
-                  <button type="button" className={button} onClick={history.refresh}>
-                    Retry
-                  </button>
-                </div>
-              )}
-              {history.rows.length > 0 && history.status !== 'loading' && (
                 <ImportResults results={history.rows} />
-              )}
-              {history.status === 'ready' && !history.rows.length && (
-                <p className="mt-3 text-sm text-muted">No imports yet.</p>
-              )}
-            </details>
+              </div>
+            )}
+            {history.status === 'ready' && !history.rows.length && (
+              <p className="mt-3 text-sm text-muted">No imports yet.</p>
+            )}
           </Panel>
         )}
       </div>
