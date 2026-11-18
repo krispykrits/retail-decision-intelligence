@@ -150,11 +150,16 @@ describe('Command Center', () => {
 
     const prior = screen.getByRole('button', { name: /Prior period, Jul 13–19/ })
     const current = screen.getByRole('button', { name: /Selected period, Aug 3–9/ })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    await user.hover(current)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
+    await user.unhover(current)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     await user.click(current)
     await user.unhover(current)
     expect(prior).toHaveAttribute('aria-pressed', 'true')
     expect(current).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('+$5.00')).toBeInTheDocument()
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
 
     await user.click(screen.getByRole('button', { name: /Selected period, Aug 10–16/ }))
     expect(prior).toHaveAttribute('aria-pressed', 'false')

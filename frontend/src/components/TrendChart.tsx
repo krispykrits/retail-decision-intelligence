@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 type ChartPoint = { index: number; value: number; label: string }
 type ChartSeries = { id: string; label: string; points: ChartPoint[]; dashed?: boolean }
+
+type PointTarget = { index: number; seriesId: string }
 
 const width = 540
 const height = 260
@@ -31,9 +33,11 @@ export function TrendChart({
   ticks: { index: number; label: string }[]
   format: (value: number) => string
 }) {
-  const [selected, setSelected] = useState<number>()
-  const [preview, setPreview] = useState<number>()
-  const activeIndex = selected ?? preview
+  const tooltipId = useId()
+  const [selected, setSelected] = useState<PointTarget>()
+  const [preview, setPreview] = useState<PointTarget>()
+  const target = selected ?? preview
+  const activeIndex = target?.index
   const points = series.flatMap((line) => line.points)
   if (points.length === 0) return null
   const active = points.some((point) => point.index === activeIndex) ? activeIndex : undefined
@@ -66,122 +70,162 @@ export function TrendChart({
   const current = activePoints.find((line) => line.id === 'current')?.point
   const prior = activePoints.find((line) => line.id === 'prior')?.point
   const difference = current && prior ? current.value - prior.value : undefined
+  const anchor = activePoints.find(({ id }) => id === target?.seriesId)?.point ?? current ?? prior
 
   return (
     <figure>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
-        role="group"
-        aria-label={label}
-        onPointerLeave={() => setPreview(undefined)}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            setSelected(undefined)
-            setPreview(undefined)
-          }
-        }}
-      >
-        {grid.map((value) => (
-          <g key={value} aria-hidden="true">
-            <line
-              x1={left}
-              x2={right}
-              y1={y(value)}
-              y2={y(value)}
-              className={value === 0 ? 'stroke-field-line' : 'stroke-line'}
-            />
+      <div className="relative">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full"
+          role="group"
+          aria-label={label}
+          onPointerLeave={() => setPreview(undefined)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setSelected(undefined)
+              setPreview(undefined)
+            }
+          }}
+        >
+          {grid.map((value) => (
+            <g key={value} aria-hidden="true">
+              <line
+                x1={left}
+                x2={right}
+                y1={y(value)}
+                y2={y(value)}
+                className={value === 0 ? 'stroke-field-line' : 'stroke-line'}
+              />
+              <text
+                x={left - 7}
+                y={y(value)}
+                textAnchor="end"
+                dominantBaseline="middle"
+                className="fill-muted text-[12px]"
+              >
+                {format(value)}
+              </text>
+            </g>
+          ))}
+          {visibleTicks.map((tick) => (
             <text
-              x={left - 7}
-              y={y(value)}
-              textAnchor="end"
-              dominantBaseline="middle"
+              aria-hidden="true"
+              key={tick.index}
+              x={x(tick.index)}
+              y={bottom + 20}
+              textAnchor={
+                tick.index === end && end > 0
+                  ? 'end'
+                  : tick.index === 0 && end > 0
+                    ? 'start'
+                    : 'middle'
+              }
               className="fill-muted text-[12px]"
             >
-              {format(value)}
+              {tick.label}
             </text>
-          </g>
-        ))}
-        {visibleTicks.map((tick) => (
-          <text
-            aria-hidden="true"
-            key={tick.index}
-            x={x(tick.index)}
-            y={bottom + 20}
-            textAnchor={
-              tick.index === end && end > 0
-                ? 'end'
-                : tick.index === 0 && end > 0
-                  ? 'start'
-                  : 'middle'
-            }
-            className="fill-muted text-[12px]"
+          ))}
+          {active !== undefined && (
+            <line
+              x1={x(active)}
+              x2={x(active)}
+              y1={top}
+              y2={bottom}
+              strokeDasharray="4 4"
+              className="pointer-events-none stroke-field-line"
+              aria-hidden="true"
+            />
+          )}
+          {series.map((line) => {
+            // Start a new segment after an unobserved bucket.
+            const path = line.points
+              .map((point, index) => {
+                const connected = point.index === line.points[index - 1]?.index + 1
+                return `${connected ? 'L' : 'M'}${x(point.index)},${y(point.value)}`
+              })
+              .join(' ')
+            const color = line.dashed ? 'text-muted' : 'text-brand'
+            return (
+              <g key={line.id} className={color}>
+                <path
+                  aria-hidden="true"
+                  d={path}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray={line.dashed ? '5 4' : undefined}
+                />
+                {line.points.map((point) => {
+                  const target = { index: point.index, seriesId: line.id }
+                  return (
+                    <circle
+                      key={point.index}
+                      cx={x(point.index)}
+                      cy={y(point.value)}
+                      r={active === point.index ? 6 : 3.5}
+                      fill={active === point.index ? 'currentColor' : 'white'}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected?.index === point.index}
+                      aria-describedby={active === point.index && anchor ? tooltipId : undefined}
+                      aria-label={`${line.label}, ${point.label}, ${format(point.value)}`}
+                      className="cursor-pointer focus-visible:outline-focus"
+                      onFocus={() => setPreview(target)}
+                      onPointerEnter={() => setPreview(target)}
+                      onPointerLeave={() => setPreview(undefined)}
+                      onClick={() => setSelected(target)}
+                      onBlur={() => setPreview(undefined)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setSelected(target)
+                        }
+                      }}
+                    />
+                  )
+                })}
+              </g>
+            )
+          })}
+        </svg>
+        {anchor && (
+          <div
+            id={tooltipId}
+            role="tooltip"
+            className={`pointer-events-none absolute z-10 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-muted shadow-panel [--tooltip-width:min(17rem,calc(100%_-_1rem))] ${y(anchor.value) > height / 2 ? '-translate-y-full' : ''}`}
+            style={{
+              width: 'var(--tooltip-width)',
+              left: `clamp(0.5rem, calc(${(x(anchor.index) / width) * 100}% - var(--tooltip-width) / 2), calc(100% - var(--tooltip-width) - 0.5rem))`,
+              top: `calc(${(y(anchor.value) / height) * 100}% ${y(anchor.value) > height / 2 ? '-' : '+'} 0.5rem)`,
+            }}
           >
-            {tick.label}
-          </text>
-        ))}
-        {active !== undefined && (
-          <line
-            x1={x(active)}
-            x2={x(active)}
-            y1={top}
-            y2={bottom}
-            strokeDasharray="4 4"
-            className="pointer-events-none stroke-field-line"
-            aria-hidden="true"
-          />
+            <dl className="space-y-1.5">
+              {activePoints.map(({ id, label, point }) => (
+                <div key={id} className="flex items-start justify-between gap-2">
+                  <dt>
+                    <span className="font-semibold text-ink">{label}</span>
+                    {point && <span className="block">{point.label}</span>}
+                  </dt>
+                  <dd className="shrink-0 font-medium text-ink">
+                    {point ? format(point.value) : 'Unavailable'}
+                  </dd>
+                </div>
+              ))}
+              <div className="flex justify-between gap-2 border-t border-line pt-1.5 font-semibold text-ink">
+                <dt>Difference</dt>
+                <dd>
+                  {difference === undefined
+                    ? 'Unavailable'
+                    : `${difference > 0 ? '+' : ''}${format(difference)}`}
+                </dd>
+              </div>
+            </dl>
+          </div>
         )}
-        {series.map((line) => {
-          // Start a new segment after an unobserved bucket.
-          const path = line.points
-            .map((point, index) => {
-              const connected = point.index === line.points[index - 1]?.index + 1
-              return `${connected ? 'L' : 'M'}${x(point.index)},${y(point.value)}`
-            })
-            .join(' ')
-          const color = line.dashed ? 'text-muted' : 'text-brand'
-          return (
-            <g key={line.id} className={color}>
-              <path
-                aria-hidden="true"
-                d={path}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeDasharray={line.dashed ? '5 4' : undefined}
-              />
-              {line.points.map((point) => {
-                return (
-                  <circle
-                    key={point.index}
-                    cx={x(point.index)}
-                    cy={y(point.value)}
-                    r={active === point.index ? 6 : 3.5}
-                    fill={active === point.index ? 'currentColor' : 'white'}
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={selected === point.index}
-                    aria-label={`${line.label}, ${point.label}, ${format(point.value)}`}
-                    className="cursor-pointer focus-visible:outline-focus"
-                    onFocus={() => setPreview(point.index)}
-                    onPointerEnter={() => setPreview(point.index)}
-                    onClick={() => setSelected(point.index)}
-                    onBlur={() => setPreview(undefined)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setSelected(point.index)
-                      }
-                    }}
-                  />
-                )
-              })}
-            </g>
-          )
-        })}
-      </svg>
+      </div>
       <ul
         className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted"
         aria-label="Chart legend"
@@ -196,33 +240,6 @@ export function TrendChart({
           </li>
         ))}
       </ul>
-      <figcaption className="mt-2 text-xs text-muted" aria-live="polite">
-        {active === undefined ? (
-          'Select a point to compare periods.'
-        ) : (
-          <dl className="space-y-1 rounded-lg bg-canvas px-2.5 py-2">
-            {activePoints.map(({ id, label, point }) => (
-              <div key={id} className="flex flex-wrap justify-between gap-x-3">
-                <dt>
-                  {label}
-                  {point && ` · ${point.label}`}
-                </dt>
-                <dd className="font-medium text-ink">
-                  {point ? format(point.value) : 'Unavailable'}
-                </dd>
-              </div>
-            ))}
-            <div className="flex justify-between gap-x-3 border-t border-line pt-1 font-semibold text-ink">
-              <dt>Difference</dt>
-              <dd>
-                {difference === undefined
-                  ? 'Unavailable'
-                  : `${difference > 0 ? '+' : ''}${format(difference)}`}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </figcaption>
     </figure>
   )
 }
