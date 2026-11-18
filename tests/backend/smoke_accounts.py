@@ -101,8 +101,11 @@ def main() -> None:
         assert invalid["status"] == "completed_with_errors" and invalid["rejected"] == 1
         stored = request("GET", f"/imports/{invalid['import_id']}", 200)
         assert stored == invalid, (stored, invalid)
+        history = request("GET", "/imports", 200)
+        assert len(history) == 5 and history[0] == invalid, history
+        assert history[1] == duplicate, history
         assert [item["records"] for item in request("GET", "/datasets", 200)] == [1, 1, 2]
-        print("SQL Server smoke passed for account sessions, roles and CSV imports.")
+        print("SQL Server smoke passed for account sessions, roles, CSV imports and history.")
     finally:
         with Session(engine) as db, db.begin():
             db.execute(delete(AccountSession).where(AccountSession.account_id == account_id))

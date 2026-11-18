@@ -326,11 +326,16 @@ def read_import(connection: sa.Connection, import_id: UUID) -> ImportResult | No
 
 
 def import_history(connection: sa.Connection) -> list[ImportResult]:
-    rows = connection.execute(
-        import_query()
-        .order_by(import_runs.c.finished_at.desc(), import_runs.c.id)
-        .limit(HISTORY_LIMIT)
-    ).mappings()
+    # SQL Server requires this result to finish before fetching each run's error preview.
+    rows = (
+        connection.execute(
+            import_query()
+            .order_by(import_runs.c.finished_at.desc(), import_runs.c.id)
+            .limit(HISTORY_LIMIT)
+        )
+        .mappings()
+        .all()
+    )
     return [import_result(connection, row) for row in rows]
 
 
