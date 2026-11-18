@@ -98,9 +98,9 @@ resource "azurerm_container_app" "app" {
     }
   }
 
-  # Scale idle development workloads to zero and cap capacity at one replica.
+  # Keep one development replica available throughout long CSV imports.
   template {
-    min_replicas = 0
+    min_replicas = 1
     max_replicas = 1
     http_scale_rule {
       name                = "http"

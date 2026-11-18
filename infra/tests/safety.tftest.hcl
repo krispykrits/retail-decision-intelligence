@@ -52,12 +52,12 @@ run "single_group_and_cost_controls" {
   }
   assert {
     condition = (
-      azurerm_container_app.app.template[0].min_replicas == 0 &&
+      azurerm_container_app.app.template[0].min_replicas == 1 &&
       azurerm_container_app.app.template[0].max_replicas == 1 &&
       azapi_resource.database.body.properties.useFreeLimit &&
       azapi_resource.database.body.properties.freeLimitExhaustionBehavior == "AutoPause"
     )
-    error_message = "Scale-to-zero and SQL free-limit auto-pause must remain enabled."
+    error_message = "Development must use exactly one replica and SQL free-limit auto-pause."
   }
   assert {
     condition = (
