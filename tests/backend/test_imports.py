@@ -240,3 +240,107 @@ def test_direct_upload_survives_redelivery(
     state = client.get(path).json()
     assert state["status"] == "finished" and state["result"]["inserted"] == 1
     assert deleted == [import_id, import_id]
+
+
+def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -> None:
+    client = signed_in
+    with Session(client.app.state.database) as db, db.begin():
+        db.scalars(select(Account)).one().is_superuser = True
+    assert (
+        upload(
+            client,
+            "households",
+            HOUSEHOLDS
+            + b"".join(
+                HOUSEHOLD.replace(b"0010", household)
+                for household in (b"0010", b"0020", b"0030", b"0040")
+            ),
+        ).json()["inserted"]
+        == 4
+    )
+    assert (
+        upload(
+            client, "products", PRODUCTS + PRODUCT + b"00000002,HOME,CLEANING,PRIVATE,N\n"
+        ).json()["inserted"]
+        == 2
+    )
+    assert (
+        upload(
+            client,
+            "transactions",
+            TRANSACTIONS
+            + b"00000001,0040,2020-01-01,00000001,6.00,1,EAST,1,2020\n"
+            + b"00000002,0010,2020-06-24,00000001,4.00,2,EAST,26,2020\n"
+            + b"00000003,0020,2020-06-27,00000001,6.00,1,EAST,26,2020\n"
+            + b"00000004,0010,2020-06-27,00000002,-2.00,-1,EAST,26,2020\n"
+            + b"00000005,0010,2020-07-01,00000001,22.00,3,EAST,27,2020\n"
+            + b"00000005,0010,2020-07-01,00000001,-2.00,-1,EAST,27,2020\n"
+            + b"00000006,0030,2020-07-02,00000002,1.00,1,CENTRAL,27,2020\n"
+            + b"00000007,0030,2020-07-07,00000001,-1.00,-1,EAST,28,2020\n",
+        ).json()["inserted"]
+        == 8
+    )
+    with Session(client.app.state.database) as db, db.begin():
+        db.scalars(select(Account)).one().is_superuser = False
+
+    base = "/api/v1/dashboard"
+    filters = {"start": "2020-07-01", "end": "2020-07-07"}
+    response = client.get(base, params=filters)
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    dashboard = response.json()
+    summary = dashboard["summary"]
+    assert summary["current"] == dict(
+        lines=4,
+        spend="20.0000",
+        households=2,
+        baskets=3,
+        units=2,
+        avg_basket="6.666666666666666666666666667",
+    )
+    assert summary["prior"]["spend"] == "8.0000"
+    assert summary["changes"]["spend"]["percent"] == "150.0"
+    assert summary["cohorts"] == dict(
+        previous_active=2,
+        active_in_both=1,
+        active_only_in_current=1,
+        active_only_in_previous=1,
+    )
+    assert summary["inactivity"] == dict(days=180, eligible=4, inactive=1, as_of="2020-07-07")
+    assert summary["source_version"] == 1
+    assert [point["index"] for point in dashboard["trend"]["current"]] == [0, 1, 6]
+    assert dashboard["options"]["regions"] == ["CENTRAL", "EAST"]
+    assert dashboard["breakdown"]["rows"][1]["change"]["percent"] is None
+
+    signals = client.get(f"{base}/signals", params=filters).json()
+    growth = next(signal for signal in signals["items"] if signal["type"] == "growth")
+    assert growth["evidence"]["current_lines"] > 0
+    assert growth["route"] == "/command-center"
+    assert (
+        client.get(base, params=growth["route_filters"]).json()["breakdown"]["dimension"]
+        == "commodity"
+    )
+    narrowed = client.get(base, params={**filters, "region": "EAST", "department": "FOOD"}).json()
+    assert narrowed["summary"]["current"]["spend"] == "19.0000"
+    assert narrowed["summary"]["current"]["households"] == 1
+    assert narrowed["trend"]["current"][0]["value"] == "20.0000"
+    assert narrowed["breakdown"]["rows"][0]["name"] == "PRODUCE"
+
+    trend = client.get(f"{base}/trends", params={**filters, "metric": "units", "grain": "week"})
+    assert [point["value"] for point in trend.json()["current"]] == ["2"]
+    monthly = client.get(f"{base}/trends", params={**filters, "grain": "month"}).json()
+    assert monthly["current"][0]["end"] == "2020-07-07"
+    by_region = client.get(f"{base}/breakdown", params={**filters, "dimension": "region"}).json()
+    assert by_region["rows"][0]["name"] == "EAST"
+    assert client.get(f"{base}/summary", params=filters).json() == summary
+    assert client.get(f"{base}/filter-options").json() == dashboard["options"]
+
+    partial = client.get(base, params={**filters, "end": "2020-07-08"}).json()
+    assert partial["summary"]["current_period"]["partial"]
+    assert not partial["summary"]["changes"]
+    assert not partial["signals"]["items"]
+    assert client.get(base, params={"start": "2020-07-08", "end": "2020-07-01"}).status_code == 422
+    assert (
+        client.get(base, params={**filters, "region": "WEST"}).json()["summary"]["current"] is None
+    )
+    assert TestClient(client.app).get(base).status_code == 401

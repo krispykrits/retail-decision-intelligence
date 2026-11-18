@@ -51,11 +51,13 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
         "/assets/missing.js": 404,
         f"{API_PREFIX}/admin": 401,
         f"{API_PREFIX}/me": 401,
+        f"{API_PREFIX}/dashboard": 401,
     }
     with urlopen(
         f"{base_url}{API_PREFIX}/openapi.json", timeout=REQUEST_TIMEOUT_SECONDS
     ) as response:
-        assert f"{API_PREFIX}/health" in json.load(response)["paths"]
+        paths = json.load(response)["paths"]
+        assert {f"{API_PREFIX}/health", f"{API_PREFIX}/dashboard"} <= paths.keys()
     with urlopen(f"{base_url}{API_PREFIX}/docs", timeout=REQUEST_TIMEOUT_SECONDS) as response:
         assert "SwaggerUIBundle" in response.read().decode()
         if security:

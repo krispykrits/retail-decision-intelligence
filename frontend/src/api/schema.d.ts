@@ -171,6 +171,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load the Command Center for a single filter selection */
+        get: operations["dashboard_api_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rank net spend by department, commodity or region
+         * @description Percentage shares are available when all groups are nonnegative and total spend is positive.
+         */
+        get: operations["breakdown_api_v1_dashboard_breakdown_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List dashboard filters and available transaction dates */
+        get: operations["filter_options_api_v1_dashboard_filter_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List observed changes with supporting counts and investigation links
+         * @description Derived from comparable observed periods. No evaluated churn or forecast score is included.
+         */
+        get: operations["signals_api_v1_dashboard_signals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read current and prior retail KPIs
+         * @description Includes the source revision, period coverage, observed cohorts and current trend buckets.
+         */
+        get: operations["summary_api_v1_dashboard_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read daily, weekly or monthly metric trends
+         * @description Buckets contain observed rows only. Weeks are seven-day windows from each period start.
+         */
+        get: operations["trends_api_v1_dashboard_trends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/datasets": {
         parameters: {
             query?: never;
@@ -390,6 +504,62 @@ export interface components {
             /** Roles */
             roles: components["schemas"]["Role"][];
         };
+        /** Breakdown */
+        Breakdown: {
+            current_period: components["schemas"]["Period"] | null;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "department" | "commodity" | "region";
+            prior_period: components["schemas"]["Period"] | null;
+            /** Rows */
+            rows: components["schemas"]["Contribution"][];
+        };
+        /** Bucket */
+        Bucket: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Index */
+            index: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            totals: components["schemas"]["Totals"];
+        };
+        /** Change */
+        Change: {
+            /** Amount */
+            amount: string;
+            /** Percent */
+            percent: string | null;
+        };
+        /** Cohorts */
+        Cohorts: {
+            /** Active In Both */
+            active_in_both: number;
+            /** Active Only In Current */
+            active_only_in_current: number;
+            /** Active Only In Previous */
+            active_only_in_previous: number;
+            /** Previous Active */
+            previous_active: number;
+        };
+        /** Contribution */
+        Contribution: {
+            change: components["schemas"]["Change"] | null;
+            current: components["schemas"]["Totals"] | null;
+            /** Name */
+            name: string;
+            prior: components["schemas"]["Totals"] | null;
+            /** Share */
+            share: string | null;
+        };
         /** Credentials */
         Credentials: {
             /**
@@ -407,6 +577,14 @@ export interface components {
         CsrfToken: {
             /** Token */
             token: string;
+        };
+        /** Dashboard */
+        Dashboard: {
+            breakdown: components["schemas"]["Breakdown"];
+            options: components["schemas"]["FilterOptions"];
+            signals: components["schemas"]["Signals"];
+            summary: components["schemas"]["Summary"];
+            trend: components["schemas"]["Trend"];
         };
         /**
          * Dataset
@@ -436,6 +614,30 @@ export interface components {
         ErrorResponse: {
             /** Detail */
             detail: string;
+        };
+        /** Evidence */
+        Evidence: {
+            /** Current */
+            current: string;
+            /** Current Lines */
+            current_lines: number;
+            /** Name */
+            name: string;
+            /** Prior */
+            prior: string;
+            /** Prior Lines */
+            prior_lines: number;
+        };
+        /** FilterOptions */
+        FilterOptions: {
+            /** Departments */
+            departments: string[];
+            /** First Date */
+            first_date: string | null;
+            /** Last Date */
+            last_date: string | null;
+            /** Regions */
+            regions: string[];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -539,10 +741,56 @@ export interface components {
             /** Upload Url */
             upload_url: string;
         };
+        /** Inactivity */
+        Inactivity: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Days */
+            days: number;
+            /** Eligible */
+            eligible: number;
+            /** Inactive */
+            inactive: number;
+        };
         /** LinkToken */
         LinkToken: {
             /** Token */
             token: string;
+        };
+        /** MetricPoint */
+        MetricPoint: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Index */
+            index: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Value */
+            value: string;
+        };
+        /** Period */
+        Period: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Partial */
+            partial: boolean;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -582,6 +830,42 @@ export interface components {
          * @enum {string}
          */
         Role: "Analyst" | "Administrator";
+        /** Signal */
+        Signal: {
+            comparison: components["schemas"]["Period"];
+            delta: components["schemas"]["Change"];
+            evidence: components["schemas"]["Evidence"];
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "spend" | "households" | "baskets" | "units" | "avg_basket";
+            /** Reason */
+            reason: string;
+            /** Route */
+            route: string;
+            /** Route Filters */
+            route_filters: {
+                [key: string]: string;
+            };
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "watch" | "info";
+            /** Source Version */
+            source_version: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "decline" | "growth" | "volume" | "engagement";
+        };
+        /** Signals */
+        Signals: {
+            /** Items */
+            items: components["schemas"]["Signal"][];
+        };
         /** SourceWindow */
         SourceWindow: {
             /**
@@ -602,6 +886,57 @@ export interface components {
             filename: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** Summary */
+        Summary: {
+            /** Changes */
+            changes: {
+                [key: string]: components["schemas"]["Change"];
+            };
+            cohorts: components["schemas"]["Cohorts"] | null;
+            current: components["schemas"]["Totals"] | null;
+            current_period: components["schemas"]["Period"] | null;
+            inactivity: components["schemas"]["Inactivity"] | null;
+            prior: components["schemas"]["Totals"] | null;
+            prior_period: components["schemas"]["Period"] | null;
+            /** Source Version */
+            source_version: number;
+            /** Sparkline */
+            sparkline: components["schemas"]["Bucket"][];
+        };
+        /** Totals */
+        Totals: {
+            /** Avg Basket */
+            avg_basket: string;
+            /** Baskets */
+            baskets: number;
+            /** Households */
+            households: number;
+            /** Lines */
+            lines: number;
+            /** Spend */
+            spend: string;
+            /** Units */
+            units: number;
+        };
+        /** Trend */
+        Trend: {
+            /** Current */
+            current: components["schemas"]["MetricPoint"][];
+            current_period: components["schemas"]["Period"] | null;
+            /**
+             * Grain
+             * @enum {string}
+             */
+            grain: "day" | "week" | "month";
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "spend" | "households" | "baskets" | "units" | "avg_basket";
+            /** Prior */
+            prior: components["schemas"]["MetricPoint"][];
+            prior_period: components["schemas"]["Period"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1074,6 +1409,309 @@ export interface operations {
                 };
             };
             /** @description Account configuration, SQL or email delivery unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dashboard_api_v1_dashboard_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                department?: string | null;
+                metric?: "spend" | "households" | "baskets" | "units" | "avg_basket";
+                grain?: ("day" | "week" | "month") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    breakdown_api_v1_dashboard_breakdown_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                department?: string | null;
+                dimension?: "department" | "commodity" | "region";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Breakdown"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    filter_options_api_v1_dashboard_filter_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilterOptions"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    signals_api_v1_dashboard_signals_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                department?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signals"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    summary_api_v1_dashboard_summary_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                department?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summary"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    trends_api_v1_dashboard_trends_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                department?: string | null;
+                metric?: "spend" | "households" | "baskets" | "units" | "avg_basket";
+                grain?: ("day" | "week" | "month") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trend"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Dashboard temporarily unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
