@@ -99,7 +99,8 @@ def main() -> None:
         assert duplicate["inserted"] == 0 and duplicate["duplicates_skipped"] == 2
         invalid = upload("transactions", transactions + line.replace(",0010,", ",9999,"))
         assert invalid["status"] == "completed_with_errors" and invalid["rejected"] == 1
-        assert request("GET", f"/imports/{invalid['import_id']}", 200) == invalid
+        stored = request("GET", f"/imports/{invalid['import_id']}", 200)
+        assert stored == invalid, (stored, invalid)
         assert [item["records"] for item in request("GET", "/datasets", 200)] == [1, 1, 2]
         print("SQL Server smoke passed for account sessions, roles and CSV imports.")
     finally:

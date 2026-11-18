@@ -4,11 +4,16 @@ from collections.abc import Callable
 from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.mssql import DATETIME2
 
 from retail_api.imports.schemas import Dataset
 
 metadata = sa.MetaData()
 identifier = sa.String(32)
+precise_timestamp = sa.DateTime().with_variant(
+    DATETIME2(precision=6),  # type: ignore[no-untyped-call]
+    "mssql",
+)
 household_fields: dict[str, sa.types.TypeEngine[str]] = {
     "loyalty_flag": sa.String(1),
     "age_range": sa.Unicode(80),
@@ -94,14 +99,14 @@ dataset_state = sa.Table(
     metadata,
     sa.Column("dataset", sa.String(16), primary_key=True),
     sa.Column("version", sa.Integer(), nullable=False),
-    sa.Column("last_success", sa.DateTime(), nullable=True),
+    sa.Column("last_success", precise_timestamp, nullable=True),
 )
 import_runs = sa.Table(
     "import_runs",
     metadata,
     sa.Column("id", sa.Uuid(), primary_key=True),
     sa.Column("status", sa.String(24), nullable=False),
-    sa.Column("finished_at", sa.DateTime(), nullable=False),
+    sa.Column("finished_at", precise_timestamp, nullable=False),
     sa.Column("processed", sa.Integer(), nullable=False),
     sa.Column("inserted", sa.Integer(), nullable=False),
     sa.Column("duplicates_skipped", sa.Integer(), nullable=False),
