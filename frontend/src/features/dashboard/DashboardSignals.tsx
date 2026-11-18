@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
@@ -10,10 +11,17 @@ export function DashboardSignals({ signals }: { signals: Dashboard['signals'] })
 
   return (
     <Panel aria-labelledby="signals-title">
-      <h2 id="signals-title" className="flex items-center gap-2 text-base font-semibold">
-        <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
-        Notable changes &amp; investigation signals
-      </h2>
+      <div className="relative mb-2 flex items-center gap-2">
+        <h2 id="signals-title" className="flex items-center gap-2 text-base font-semibold">
+          <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
+          Notable changes &amp; investigation signals
+        </h2>
+        <InfoTooltip label="Investigation signals">
+          Compares the same filters across equal-length periods. Highlights the biggest dollar
+          increase and decrease among departments or commodities with transactions in both periods,
+          plus any change in net units.
+        </InfoTooltip>
+      </div>
       {items.length ? (
         <DataTable
           columns={{

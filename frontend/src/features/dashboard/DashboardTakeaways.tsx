@@ -1,5 +1,6 @@
 import type { Dashboard } from '../../api/dashboard'
 import type { Workspace } from '../../app/workspaces'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { dateLabel, percentLabel, valueLabel } from './format'
@@ -67,10 +68,17 @@ export function DashboardTakeaways({
 
   return (
     <Panel aria-labelledby="takeaways-title" className="@container">
-      <h2 id="takeaways-title" className="mb-2 flex items-center gap-2 text-base font-semibold">
-        <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
-        Key takeaways
-      </h2>
+      <div className="relative mb-2 flex items-center gap-2">
+        <h2 id="takeaways-title" className="flex items-center gap-2 text-base font-semibold">
+          <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
+          Key takeaways
+        </h2>
+        <InfoTooltip label="Key Takeaways">
+          Uses matching transactions to compare net spend and household activity and identify the
+          leading category. Inactivity compares each household’s last matching purchase with the
+          cutoff shown in the card.
+        </InfoTooltip>
+      </div>
       {scope && <p className="text-xs text-muted">{scope}</p>}
       {items.length ? (
         <ul className="divide-y divide-line @[26rem]:grid @[26rem]:grid-cols-2 @[26rem]:gap-x-4 @[26rem]:divide-none">

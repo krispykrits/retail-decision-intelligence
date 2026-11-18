@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
@@ -120,10 +121,19 @@ export function DashboardBreakdown({
   }
   return (
     <Panel aria-labelledby="breakdown-title" className="flex flex-col">
-      <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-        <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
-        {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-      </h2>
+      <div className="relative flex items-center gap-2">
+        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
+          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
+        </h2>
+        <InfoTooltip label={isDepartment ? 'Department contribution' : 'Commodity contribution'}>
+          {isDepartment
+            ? 'Adds net spend by department for the selected dates and filters.'
+            : 'Adds net spend by commodity within the selected department and filters.'}{' '}
+          Each donut share divides that total by all net spend in the selection. Change compares the
+          same area with the prior period.
+        </InfoTooltip>
+      </div>
       <p className="mt-1 mb-3 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'

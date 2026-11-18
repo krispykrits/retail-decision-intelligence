@@ -1,21 +1,32 @@
 import type { Dashboard, Metric } from '../../api/dashboard'
 import type { Workspace } from '../../app/workspaces'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { metrics, percentLabel, periodLabel, valueLabel } from './format'
 
 const cards: { metric: Metric; icon: Workspace['path']; definition: string }[] = [
-  { metric: 'spend', icon: '/merchandise', definition: 'Sales less returns and adjustments.' },
-  { metric: 'baskets', icon: '/baskets', definition: 'Distinct baskets with transaction records.' },
+  {
+    metric: 'spend',
+    icon: '/merchandise',
+    definition: 'Adds signed spend for matching transactions, including returns and adjustments.',
+  },
+  {
+    metric: 'baskets',
+    icon: '/baskets',
+    definition:
+      'Counts distinct basket IDs on matching transaction lines. Multiple lines in a basket count once.',
+  },
   {
     metric: 'households',
     icon: '/customers',
-    definition: 'Households with a positive-unit purchase.',
+    definition:
+      'Counts each household once if it has at least one matching transaction with a positive unit count.',
   },
   {
     metric: 'avg_basket',
     icon: '/command-center',
-    definition: 'Net spend divided by distinct baskets.',
+    definition: 'Divides net spend by the number of distinct baskets in the selection.',
   },
 ]
 
@@ -32,19 +43,12 @@ export function DashboardSummary({ summary }: { summary: Dashboard['summary'] })
               <WorkspaceIcon path={icon} className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                {metrics[metric]}
-                <span
-                  tabIndex={0}
-                  className="group relative shrink-0 rounded-full border border-field-line px-1 text-[0.6rem] leading-3 text-muted"
-                  aria-label={definition}
-                >
-                  i
-                  <span className="pointer-events-none absolute z-10 mt-2 hidden w-40 rounded-lg bg-ink p-2 text-xs font-normal text-white shadow-panel group-hover:block group-focus-visible:block">
-                    {definition}
-                  </span>
-                </span>
-              </h2>
+              <div className="relative flex items-center gap-1.5">
+                <h2 className="text-sm font-semibold text-ink">{metrics[metric]}</h2>
+                <InfoTooltip label={metrics[metric]}>
+                  {`${definition} The prior period covers the same number of days immediately before the selected dates.`}
+                </InfoTooltip>
+              </div>
               <p className="mt-1 text-2xl leading-tight font-semibold tracking-tight tabular-nums 2xl:text-3xl">
                 {summary.current ? valueLabel(metric, summary.current[metric]) : '—'}
               </p>

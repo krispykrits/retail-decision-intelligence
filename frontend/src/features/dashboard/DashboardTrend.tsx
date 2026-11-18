@@ -1,4 +1,5 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel } from '../../components/Panel'
 import { Spinner } from '../../components/Spinner'
 import { TrendChart } from '../../components/TrendChart'
@@ -72,12 +73,19 @@ export function DashboardTrend({
       className="scroll-mt-4"
       tabIndex={-1}
     >
-      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+      <div className="relative mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 id="trend-title" className="flex items-center gap-2 font-semibold">
-            <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
-            Performance trend
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 id="trend-title" className="flex items-center gap-2 font-semibold">
+              <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
+              Performance trend
+            </h2>
+            <InfoTooltip label="Performance trend">
+              Groups matching transactions into days, seven-day windows, or months. The prior series
+              uses the same filters over the equal-length period immediately before the selected
+              dates.
+            </InfoTooltip>
+          </div>
           <p className="mt-0.5 text-sm text-muted">
             {{ day: 'Daily', week: 'Seven-day', month: 'Monthly' }[trend.grain]} totals
           </p>
