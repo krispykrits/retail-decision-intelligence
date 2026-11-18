@@ -366,7 +366,7 @@ class DashboardStore:
             dimension=dimension, current_period=self.current, prior_period=self.prior, rows=rows
         )
 
-    def signals(self, summary: Summary, departments: Breakdown) -> Signals:
+    def signals(self, summary: Summary, breakdown: Breakdown) -> Signals:
         current, prior = summary.current, summary.prior
         if not current or not prior or not self.prior or not self.current or not self.comparable():
             return Signals(items=[])
@@ -380,8 +380,12 @@ class DashboardStore:
             route_filters["department"] = self.filters.department
 
         items = []
+        area_filter = "commodity" if breakdown.dimension == "commodity" else "department"
+        # A single area repeats the selection-wide change already shown in Key Takeaways.
         movers = sorted(
-            (row for row in departments.rows if row.change is not None),
+            (row for row in breakdown.rows if row.change is not None)
+            if len(breakdown.rows) > 1
+            else (),
             key=lambda row: (row.change.amount if row.change else Decimal(0), row.name),
         )
         for kind, ordered in (("decline", movers), ("growth", list(reversed(movers)))):
@@ -402,7 +406,7 @@ class DashboardStore:
                     delta=row.change,
                     comparison=self.prior,
                     route="/merchandise",
-                    route_filters={**route_filters, "department": row.name, "metric": "spend"},
+                    route_filters={**route_filters, area_filter: row.name, "metric": "spend"},
                     evidence=Evidence(
                         name=row.name,
                         current=row.current.spend,

@@ -50,7 +50,11 @@ export function CommandCenterPage() {
   const filterSearch = queryString({ ...query, metric: undefined })
   const [retry, setRetry] = useState(0)
   const requestKey = `${filterSearch}:${retry}`
-  const [result, setResult] = useState<{ key: string; data: Dashboard | null }>()
+  const [result, setResult] = useState<{
+    key: string
+    data: Dashboard | null
+    filters: DashboardQuery
+  }>()
   const pending = result?.key !== requestKey
   const data = result?.data
   const current = data?.summary.current_period
@@ -67,12 +71,13 @@ export function CommandCenterPage() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void getDashboard(readQuery(filterSearch), controller.signal).then(
+    const filters = readQuery(filterSearch)
+    void getDashboard(filters, controller.signal).then(
       (data) => {
-        if (!controller.signal.aborted) setResult({ key: requestKey, data })
+        if (!controller.signal.aborted) setResult({ key: requestKey, data, filters })
       },
       () => {
-        if (!controller.signal.aborted) setResult({ key: requestKey, data: null })
+        if (!controller.signal.aborted) setResult({ key: requestKey, data: null, filters })
       },
     )
     return () => controller.abort()
@@ -237,11 +242,13 @@ export function CommandCenterPage() {
           </div>
 
           <div className="grid gap-3 md:gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
-            <DashboardSignals
-              signals={data.signals}
-              departmentSelected={data.breakdown.dimension === 'commodity'}
+            <DashboardTakeaways
+              summary={data.summary}
+              breakdown={data.breakdown}
+              region={result?.filters.region}
+              department={result?.filters.department}
             />
+            <DashboardSignals signals={data.signals} />
           </div>
         </>
       )}

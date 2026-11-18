@@ -129,7 +129,8 @@ def signals(filters: DashboardFilters, request: Request, response: Response) -> 
         response,
         filters,
         lambda store, version: store.signals(
-            store.summary([], version), store.breakdown("department")
+            store.summary([], version),
+            store.breakdown("commodity" if filters.department else "department"),
         ),
     )
 
@@ -144,14 +145,13 @@ def dashboard(
         grain = filters.grain or grain_for(store.current)
         current = store.buckets(store.current, grain)
         stats = store.summary(current, version)
-        departments = store.breakdown("department")
-        breakdown = store.breakdown("commodity") if filters.department else departments
+        breakdown = store.breakdown("commodity" if filters.department else "department")
         return Dashboard(
             options=store.options(),
             summary=stats,
             trend=store.trend(filters.metric, grain, current),
             breakdown=breakdown,
-            signals=store.signals(stats, departments),
+            signals=store.signals(stats, breakdown),
         )
 
     return read_dashboard(request, response, filters, read)

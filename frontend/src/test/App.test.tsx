@@ -1,4 +1,4 @@
-import { render as renderView, screen } from '@testing-library/react'
+import { render as renderView, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -285,7 +285,7 @@ describe('Command Center', () => {
               name: department ? 'PRODUCE' : 'FOOD',
               current: { ...totals, spend: department ? '17.00' : '19.56' },
               prior: null,
-              change: null,
+              change: department ? { amount: '-3', percent: '-15' } : null,
               share: department ? '85' : '97.8',
             },
             ...(department
@@ -294,7 +294,7 @@ describe('Command Center', () => {
                     name,
                     current: { ...totals, spend: '0.50' },
                     prior: null,
-                    change: null,
+                    change: name === 'BAKERY' ? { amount: '0.25', percent: '100' } : null,
                     share: '2.5',
                   }),
                 )
@@ -317,7 +317,7 @@ describe('Command Center', () => {
             {
               severity: 'info',
               type: 'growth',
-              reason: 'Net spend rose in FOOD.',
+              reason: department ? 'Net spend rose in BAKERY.' : 'Net spend rose in FOOD.',
               metric: 'spend',
               delta,
               comparison: prior,
@@ -327,10 +327,11 @@ describe('Command Center', () => {
                 end: current.end,
                 region: 'EAST',
                 department: 'FOOD',
+                ...(department ? { commodity: 'BAKERY' } : {}),
                 metric: 'spend',
               },
               evidence: {
-                name: 'FOOD',
+                name: department ? 'BAKERY' : 'FOOD',
                 current: '20.00',
                 prior: '8.00',
                 current_lines: 4,
@@ -437,6 +438,22 @@ describe('Command Center', () => {
       finishDepartment()
       expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()
       expect(screen.getByText('PRODUCE')).toBeVisible()
+      expect(screen.getByText('EAST · FOOD')).toBeVisible()
+      expect(screen.getByRole('heading', { name: 'Which commodity led net spend' })).toBeVisible()
+      const order = screen.getByLabelText('Sort commodities')
+      const commodityTable = within(
+        screen.getByRole('region', { name: 'Commodity contribution rows' }),
+      )
+      const firstCommodity = () => commodityTable.getAllByRole('rowheader')[0]
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
+      await user.selectOptions(order, 'spend-asc')
+      expect(firstCommodity()).toHaveTextContent('BAKERY')
+      await user.selectOptions(order, 'change-asc')
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
+      await user.selectOptions(order, 'change-desc')
+      expect(firstCommodity()).toHaveTextContent('BAKERY')
+      await user.selectOptions(order, 'spend-desc')
+      expect(firstCommodity()).toHaveTextContent('PRODUCE')
       const commodity = screen.getByRole('button', { name: 'DRY GOODS' })
       await user.click(commodity)
       expect(commodity).toHaveAttribute('aria-pressed', 'true')
@@ -454,6 +471,10 @@ describe('Command Center', () => {
         screen.queryByRole('link', { name: 'Explore merchandise for FOOD' }),
       ).not.toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Explore baskets for Net units' })).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Explore merchandise for BAKERY' })).toHaveAttribute(
+        'href',
+        expect.stringContaining('department=FOOD&commodity=BAKERY'),
+      )
 
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Department'), '')

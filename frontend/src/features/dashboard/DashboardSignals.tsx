@@ -5,17 +5,8 @@ import { Panel } from '../../components/Panel'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { percentLabel, valueLabel } from './format'
 
-export function DashboardSignals({
-  signals,
-  departmentSelected,
-}: {
-  signals: Dashboard['signals']
-  departmentSelected: boolean
-}) {
-  const items = signals.items.filter(
-    ({ type }) =>
-      type === 'volume' || (!departmentSelected && (type === 'growth' || type === 'decline')),
-  )
+export function DashboardSignals({ signals }: { signals: Dashboard['signals'] }) {
+  const items = signals.items.filter(({ type }) => type !== 'engagement')
 
   return (
     <Panel aria-labelledby="signals-title">

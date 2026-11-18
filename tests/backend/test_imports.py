@@ -260,9 +260,14 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
     )
     assert (
         upload(
-            client, "products", PRODUCTS + PRODUCT + b"00000002,HOME,CLEANING,PRIVATE,N\n"
+            client,
+            "products",
+            PRODUCTS
+            + PRODUCT
+            + b"00000002,HOME,CLEANING,PRIVATE,N\n"
+            + b"00000003,FOOD,BAKERY,PRIVATE,N\n",
         ).json()["inserted"]
-        == 2
+        == 3
     )
     assert (
         upload(
@@ -270,13 +275,13 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
             "transactions",
             TRANSACTIONS
             + b"00000001,0040,2020-01-01,00000001,6.00,1,EAST,1,2020\n"
-            + b"00000002,0010,2020-06-24,00000001,4.00,2,EAST,26,2020\n"
+            + b"00000002,0010,2020-06-24,00000003,4.00,2,EAST,26,2020\n"
             + b"00000003,0020,2020-06-27,00000001,6.00,1,EAST,26,2020\n"
             + b"00000004,0010,2020-06-27,00000002,-2.00,-1,EAST,26,2020\n"
             + b"00000005,0010,2020-07-01,00000001,22.00,3,EAST,27,2020\n"
             + b"00000005,0010,2020-07-01,00000001,-2.00,-1,EAST,27,2020\n"
             + b"00000006,0030,2020-07-02,00000002,1.00,1,CENTRAL,27,2020\n"
-            + b"00000007,0030,2020-07-07,00000001,-1.00,-1,EAST,28,2020\n",
+            + b"00000007,0030,2020-07-07,00000003,-1.00,-1,EAST,28,2020\n",
         ).json()["inserted"]
         == 8
     )
@@ -325,6 +330,24 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
     assert narrowed["summary"]["current"]["households"] == 1
     assert narrowed["trend"]["current"][0]["value"] == "20.0000"
     assert narrowed["breakdown"]["rows"][0]["name"] == "PRODUCE"
+    commodity_decline = next(
+        signal for signal in narrowed["signals"]["items"] if signal["type"] == "decline"
+    )
+    assert commodity_decline["evidence"]["name"] == "BAKERY"
+    assert commodity_decline["route"] == "/merchandise"
+    assert commodity_decline["route_filters"] == {
+        **filters,
+        "department": "FOOD",
+        "commodity": "BAKERY",
+        "region": "EAST",
+        "metric": "spend",
+    }
+    assert (
+        client.get(
+            f"{base}/signals", params={**filters, "region": "EAST", "department": "FOOD"}
+        ).json()
+        == narrowed["signals"]
+    )
     volume = next(signal for signal in narrowed["signals"]["items"] if signal["type"] == "volume")
     assert volume["route"] == "/baskets"
     assert volume["route_filters"] == {

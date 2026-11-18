@@ -7,7 +7,13 @@ import { dateLabel, percentLabel, valueLabel } from './format'
 export function DashboardTakeaways({
   summary,
   breakdown,
-}: Pick<Dashboard, 'summary' | 'breakdown'>) {
+  region,
+  department,
+}: Pick<Dashboard, 'summary' | 'breakdown'> & {
+  region?: string | null
+  department?: string | null
+}) {
+  const scope = [region, department].filter(Boolean).join(' · ')
   const spend = summary.changes.spend
   const leader = breakdown.rows.find((row) => row.current && Number(row.current.spend) > 0)
   const inactive = summary.inactivity
@@ -37,7 +43,7 @@ export function DashboardTakeaways({
         : `, or ${Number(leader.share).toFixed(1)}% of net spend in the selected period`
     items.push({
       icon: '/merchandise',
-      title: 'Where shoppers spent the most',
+      title: department ? 'Which commodity led net spend' : 'Which department led net spend',
       detail: `${leader.name} had the highest net spend at ${valueLabel('spend', leader.current.spend)}${share}.`,
       color: 'bg-sky-50 text-sky-800',
     })
@@ -65,6 +71,7 @@ export function DashboardTakeaways({
         <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
         Key takeaways
       </h2>
+      {scope && <p className="text-xs text-muted">{scope}</p>}
       {items.length ? (
         <ul className="divide-y divide-line @[26rem]:grid @[26rem]:grid-cols-2 @[26rem]:gap-x-4 @[26rem]:divide-none">
           {items.map(({ icon, title, detail, color }) => (

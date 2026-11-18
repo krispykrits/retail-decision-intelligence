@@ -13,6 +13,13 @@ const centerY = donutHeight / 2
 const radius = 77
 const labelGap = 15
 const minimumInlineShare = 7
+const orderOptions = {
+  'spend-desc': 'Net spend ↓',
+  'spend-asc': 'Net spend ↑',
+  'change-desc': 'Change (%) ↓',
+  'change-asc': 'Change (%) ↑',
+}
+type Order = keyof typeof orderOptions
 
 const sliceColor = (index: number) =>
   colors[index === 0 ? 0 : 1 + ((index - 1) % (colors.length - 1))]
@@ -25,6 +32,7 @@ export function DashboardBreakdown({
   netSpend: string
 }) {
   const [selectedName, setSelectedName] = useState<string>()
+  const [order, setOrder] = useState<Order>('spend-desc')
   const isDepartment = breakdown.dimension === 'department'
   const rows = breakdown.rows
   const magnitudes = rows.map((row) => Number(row.current?.spend ?? 0))
@@ -70,6 +78,17 @@ export function DashboardBreakdown({
     }
   }
   const showDonut = slices.length > 0 && !signed
+  const tableRows = rows.map((row, index) => ({ row, index }))
+  if (!isDepartment && order !== 'spend-desc') {
+    const byChange = order.startsWith('change')
+    const direction = order.endsWith('asc') ? 1 : -1
+    tableRows.sort((a, b) => {
+      const left = byChange ? a.row.change?.percent : a.row.current?.spend
+      const right = byChange ? b.row.change?.percent : b.row.current?.spend
+      if (left == null || right == null) return Number(left == null) - Number(right == null)
+      return direction * (Number(left) - Number(right))
+    })
+  }
   const columns = {
     name: isDepartment ? 'Department' : 'Commodity',
     spend: 'Net spend',
@@ -77,10 +96,29 @@ export function DashboardBreakdown({
   }
   return (
     <Panel aria-labelledby="breakdown-title" className="flex flex-col">
-      <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-        <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
-        {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
+          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
+        </h2>
+        {!isDepartment && (
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Order
+            <select
+              aria-label="Sort commodities"
+              className="rounded-md border border-line bg-surface px-2 py-1 text-ink"
+              value={order}
+              onChange={(event) => setOrder(event.target.value as Order)}
+            >
+              {Object.entries(orderOptions).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       <p className="mt-1 mb-3 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
@@ -184,7 +222,7 @@ export function DashboardBreakdown({
               isDepartment ? 'Department contribution rows' : 'Commodity contribution rows'
             }
           >
-            {rows.map((row, index) => {
+            {tableRows.map(({ row, index }) => {
               const amount = Number(row.current?.spend ?? 0)
               const width = maximum > 0 ? (Math.abs(amount) / maximum) * (signed ? 50 : 100) : 0
               const canFocusSlice = showDonut && Number(row.share) > 0
