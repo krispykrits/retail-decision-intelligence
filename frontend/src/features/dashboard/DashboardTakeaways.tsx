@@ -16,10 +16,17 @@ export function DashboardTakeaways({
 
   if (spend) {
     const amount = Number(spend.amount)
+    const change =
+      spend.percent == null
+        ? valueLabel('spend', Math.abs(amount))
+        : percentLabel(spend.percent).replace(/^[+-]/, '')
     items.push({
       icon: '/forecast',
-      title: amount === 0 ? 'Net spend held steady' : `Net spend ${amount > 0 ? 'rose' : 'fell'}`,
-      detail: `${spend.percent == null ? valueLabel('spend', spend.amount) : percentLabel(spend.percent)} vs. the prior period.`,
+      title: 'How net spend changed',
+      detail:
+        amount === 0
+          ? 'Net spend was the same in both periods.'
+          : `Net spend ${amount > 0 ? 'rose' : 'fell'} by ${change} compared with the prior period.`,
       color: amount < 0 ? 'bg-red-50 text-error' : 'bg-emerald-50 text-success',
     })
   }
@@ -27,11 +34,11 @@ export function DashboardTakeaways({
     const share =
       leader.share === null || leader.share === undefined
         ? ''
-        : ` · ${Number(leader.share).toFixed(1)}% of net spend`
+        : `, or ${Number(leader.share).toFixed(1)}% of net spend in the selected period`
     items.push({
       icon: '/merchandise',
-      title: `${leader.name} led net spend`,
-      detail: `${valueLabel('spend', leader.current.spend)}${share}.`,
+      title: 'Where shoppers spent the most',
+      detail: `${leader.name} had the highest net spend at ${valueLabel('spend', leader.current.spend)}${share}.`,
       color: 'bg-sky-50 text-sky-800',
     })
   }
@@ -46,8 +53,8 @@ export function DashboardTakeaways({
   if (inactive) {
     items.push({
       icon: '/households',
-      title: `${valueLabel('households', inactive.inactive)} households inactive`,
-      detail: `${valueLabel('households', inactive.eligible)} households assessed. Inactive for ${inactive.days}+ days as of ${dateLabel(inactive.as_of)}.`,
+      title: 'How many households haven’t shopped recently',
+      detail: `As of ${dateLabel(inactive.as_of)}, ${valueLabel('households', inactive.inactive)} of ${valueLabel('households', inactive.eligible)} households had gone at least ${inactive.days} days without a purchase.`,
       color: 'bg-violet-50 text-violet-800',
     })
   }
