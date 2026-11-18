@@ -7,10 +7,10 @@ type WorkspacePageProps = {
 export function WorkspacePage({ workspace }: WorkspacePageProps) {
   return (
     <>
-      <h1 className="mb-2 text-3xl font-bold md:text-4xl">{workspace.title}</h1>
+      <h1 className="mb-2 text-3xl font-semibold tracking-tight md:text-4xl">{workspace.title}</h1>
       <p className="mb-8 text-muted">{workspace.description}</p>
       <section
-        className="rounded-xl border border-line bg-white p-8"
+        className="rounded-2xl border border-line bg-surface p-8 shadow-panel"
         aria-label="Workspace availability"
       >
         <h2 className="mb-4 text-lg font-semibold">Not available yet</h2>

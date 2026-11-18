@@ -23,7 +23,7 @@ async function checkResponse(response: Response): Promise<void> {
   )
 }
 
-async function csrfHeaders(): Promise<Record<string, string>> {
+export async function csrfHeaders(): Promise<Record<string, string>> {
   const { data, response } = await client.GET('/api/v1/auth/csrf', { cache: 'no-store' })
   await checkResponse(response)
   if (!data) throw new Error('Account access is unavailable')

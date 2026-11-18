@@ -815,6 +815,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyodbc" },
+    { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "uvicorn" },
 ]
@@ -838,6 +839,7 @@ requires-dist = [
     { name = "pydantic", specifier = "==2.14.3" },
     { name = "pydantic-settings", specifier = "==2.16.3" },
     { name = "pyodbc", specifier = "==5.5.0" },
+    { name = "python-multipart", specifier = ">=0.0.34,<1" },
     { name = "sqlalchemy", specifier = "==2.1.8" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]

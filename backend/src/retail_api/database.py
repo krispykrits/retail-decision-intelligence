@@ -26,14 +26,24 @@ def create_database_engine(settings: Settings, *, connect_timeout: int = 5) -> E
             },
         )
     if str(url).startswith("sqlite"):
-        return create_engine(url, hide_parameters=True)
+        engine = create_engine(url, hide_parameters=True)
+
+        @event.listens_for(engine, "connect")
+        def enable_foreign_keys(connection: Any, record: Any) -> None:
+            connection.execute("PRAGMA foreign_keys=ON")
+
+        return engine
 
     import pyodbc
 
     # Disable the driver's second pool as well as SQLAlchemy's pool.
     pyodbc.pooling = False
     engine = create_engine(
-        url, poolclass=NullPool, hide_parameters=True, connect_args={"timeout": connect_timeout}
+        url,
+        poolclass=NullPool,
+        hide_parameters=True,
+        fast_executemany=True,
+        connect_args={"timeout": connect_timeout},
     )
 
     @event.listens_for(engine, "connect")

@@ -17,6 +17,7 @@ from retail_api.accounts.policy import CSRF_HEADER, authorize_request
 from retail_api.api import API_PREFIX
 from retail_api.api.account import router as account_router
 from retail_api.api.health import router as health_router
+from retail_api.api.imports import router as imports_router
 from retail_api.config import Settings
 from retail_api.database import create_database_engine
 from retail_api.security import security_headers
@@ -88,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.include_router(health_router, prefix=API_PREFIX)
     application.include_router(account_router, prefix=API_PREFIX)
+    application.include_router(imports_router, prefix=API_PREFIX)
     if configuration.static_directory is not None:
         # Unknown API requests must never fall through to the React HTML page.
         application.add_api_route(

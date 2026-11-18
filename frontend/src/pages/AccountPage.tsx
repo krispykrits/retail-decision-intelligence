@@ -109,11 +109,11 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-canvas p-6 font-sans text-ink">
-      <section className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-sm">
+      <section className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 shadow-panel">
         <p className="mb-2 text-sm font-semibold text-brand">Retail Decision Intelligence</p>
-        <h1 className="mb-6 text-2xl font-bold">{titles[currentMode]}</h1>
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight">{titles[currentMode]}</h1>
         {error && (
-          <p role="alert" className="mb-4 text-red-700">
+          <p role="alert" className="mb-4 text-error">
             {error}
           </p>
         )}
@@ -131,7 +131,7 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
                   autoComplete="name"
                   required
                   maxLength={100}
-                  className="rounded-lg border border-line px-3 py-2"
+                  className="rounded-lg border border-field-line bg-surface px-3 py-2"
                 />
               </label>
             )}
@@ -143,7 +143,7 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
                   type="email"
                   autoComplete="email"
                   required
-                  className="rounded-lg border border-line px-3 py-2"
+                  className="rounded-lg border border-field-line bg-surface px-3 py-2"
                 />
               </label>
             )}
@@ -158,7 +158,7 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
                   maxLength={128}
                   required
                   aria-describedby={currentMode === 'login' ? undefined : 'password-help'}
-                  className="rounded-lg border border-line px-3 py-2"
+                  className="rounded-lg border border-field-line bg-surface px-3 py-2"
                 />
                 {currentMode !== 'login' && (
                   <span id="password-help" className="text-sm text-muted">

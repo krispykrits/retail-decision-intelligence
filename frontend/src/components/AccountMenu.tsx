@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSession } from './session'
+import { useSession } from '../auth/session'
 
 export function AccountMenu() {
   const { account, logout } = useSession()
@@ -20,7 +20,7 @@ export function AccountMenu() {
 
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
-      <span>
+      <span className="text-muted">
         {account?.display_name} · {account?.roles.join(', ')}
       </span>
       <button
@@ -34,7 +34,11 @@ export function AccountMenu() {
       <span className="sr-only" aria-live="polite">
         {busy ? 'Signing out…' : ''}
       </span>
-      {error && <span role="alert">{error}</span>}
+      {error && (
+        <span className="text-error" role="alert">
+          {error}
+        </span>
+      )}
     </div>
   )
 }
