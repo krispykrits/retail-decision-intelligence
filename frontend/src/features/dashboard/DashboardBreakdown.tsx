@@ -187,7 +187,7 @@ export function DashboardBreakdown({
             {rows.map((row, index) => {
               const amount = Number(row.current?.spend ?? 0)
               const width = maximum > 0 ? (Math.abs(amount) / maximum) * (signed ? 50 : 100) : 0
-              const canFocusSlice = !isDepartment && showDonut && Number(row.share) > 0
+              const canFocusSlice = showDonut && Number(row.share) > 0
               const focused = selected?.name === row.name
               return (
                 <tr key={row.name} className={focused ? 'bg-nav-selected' : undefined}>

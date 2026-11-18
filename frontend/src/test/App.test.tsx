@@ -380,6 +380,14 @@ describe('Command Center', () => {
       expect(screen.queryByRole('link', { name: /^FOOD$/ })).not.toBeInTheDocument()
       expect(screen.getByLabelText('FOOD 97.8%')).toBeVisible()
       expect(screen.getByLabelText('PHARMA 2.2%')).toBeVisible()
+      const department = screen.getByRole('button', { name: 'PHARMA' })
+      await user.click(department)
+      expect(department).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('figure', { name: 'Share of net spend' })).toHaveTextContent(
+        '2.2%PHARMA',
+      )
+      expect(contribution).toBeVisible()
+      expect(dashboard).toHaveBeenCalledTimes(dashboardRequests)
       await user.click(screen.getByText('Analysis period'))
       await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
