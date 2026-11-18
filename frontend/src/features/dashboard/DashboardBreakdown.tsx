@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import type { Dashboard } from '../../api/dashboard'
 import { DataTable } from '../../components/DataTable'
 import { Panel } from '../../components/Panel'
@@ -11,26 +10,44 @@ const sliceColor = (index: number) => colors[Math.min(index, colors.length - 1)]
 export function DashboardBreakdown({
   breakdown,
   netSpend,
-  departmentLink,
-  departmentsLink,
 }: {
   breakdown: Dashboard['breakdown']
   netSpend: string
-  departmentLink: (name: string) => string
-  departmentsLink: string
 }) {
   const isDepartment = breakdown.dimension === 'department'
   const rows = breakdown.rows
   const magnitudes = rows.map((row) => Number(row.current?.spend ?? 0))
   const maximum = magnitudes.reduce((highest, value) => Math.max(highest, Math.abs(value)), 0)
   const signed = magnitudes.some((value) => value < 0)
-  const slices: string[] = []
+  const leadingCount = colors.length - 1
+  const chartShares = rows.slice(0, leadingCount).map((row) => ({
+    name: row.name,
+    share: Number(row.share ?? 0),
+  }))
+  if (rows.length > leadingCount) {
+    const others = rows.slice(leadingCount)
+    chartShares.push({
+      name: others.length === 1 ? others[0].name : 'Other categories',
+      share: others.reduce((sum, row) => sum + Number(row.share ?? 0), 0),
+    })
+  }
+
+  const slices = []
   let end = 0
-  for (const [index, row] of rows.entries()) {
-    if (row.share == null) continue
+  for (const [index, { name, share }] of chartShares.entries()) {
+    if (share <= 0) continue
     const start = end
-    end += Number(row.share)
-    slices.push(`${sliceColor(index)} ${start}% ${end}%`)
+    end += share
+    const angle = ((start + share / 2) / 100) * 2 * Math.PI
+    const color = sliceColor(index)
+    slices.push({
+      name,
+      share,
+      color,
+      stop: `${color} ${start}% ${end}%`,
+      x: 50 + 41 * Math.sin(angle),
+      y: 50 - 41 * Math.cos(angle),
+    })
   }
   const showDonut = slices.length > 0 && !signed
   const columns = {
@@ -39,21 +56,11 @@ export function DashboardBreakdown({
     comparison: 'Change',
   }
   return (
-    <Panel aria-labelledby="breakdown-title" className="@container">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
-          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-        </h2>
-        {!isDepartment && (
-          <Link
-            to={departmentsLink}
-            className="text-xs font-semibold underline-offset-2 hover:underline"
-          >
-            <span aria-hidden="true">← </span>Back to departments
-          </Link>
-        )}
-      </div>
+    <Panel aria-labelledby="breakdown-title" className="@container self-start">
+      <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
+        <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+        {isDepartment ? 'Department contribution' : 'Commodity contribution'}
+      </h2>
       <p className="mt-1 mb-4 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
@@ -63,18 +70,54 @@ export function DashboardBreakdown({
         className={`grid items-start gap-3 ${showDonut ? '@[26rem]:grid-cols-[minmax(7.5rem,1fr)_minmax(0,2fr)]' : ''}`}
       >
         {showDonut && (
-          <div
-            className="relative mx-auto grid aspect-square w-36 max-w-full place-items-center rounded-full @[26rem]:mt-3 @[26rem]:w-full @[26rem]:max-w-44"
-            style={{ background: `conic-gradient(${slices.join(', ')})` }}
-            aria-hidden="true"
-          >
-            <div className="grid size-[65%] place-content-center rounded-full bg-surface text-center">
-              <span className="text-sm font-semibold tabular-nums">
-                {valueLabel('spend', netSpend)}
-              </span>
-              <span className="text-[0.65rem] text-muted">Net spend</span>
+          <figure aria-label="Share of net spend" className="mx-auto w-full max-w-44">
+            <div
+              className="relative mx-auto grid aspect-square w-36 max-w-full place-items-center rounded-full @[26rem]:w-full"
+              style={{
+                background: `conic-gradient(${slices.map((slice) => slice.stop).join(', ')})`,
+              }}
+            >
+              <div className="grid size-[65%] place-content-center rounded-full bg-surface text-center">
+                <span className="text-sm font-semibold tabular-nums">
+                  {valueLabel('spend', netSpend)}
+                </span>
+                <span className="text-[0.65rem] text-muted">Net spend</span>
+              </div>
+              {slices
+                .filter(({ share }) => share >= 12)
+                .map((slice) => (
+                  <span
+                    key={slice.name}
+                    aria-label={`${slice.name} ${slice.share.toFixed(1)}%`}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded bg-surface px-1 text-[0.65rem] font-semibold text-ink tabular-nums"
+                    style={{ left: `${slice.x}%`, top: `${slice.y}%` }}
+                  >
+                    {slice.share.toFixed(1)}%
+                  </span>
+                ))}
             </div>
-          </div>
+            {slices.some(({ share }) => share < 12) && (
+              <figcaption className="mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[0.65rem] text-muted">
+                {slices
+                  .filter(({ share }) => share < 12)
+                  .map(({ name, color, share }) => (
+                    <span key={name} className="inline-flex items-baseline gap-1">
+                      <span
+                        aria-hidden="true"
+                        className="size-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>
+                        {name}{' '}
+                        <strong className="font-semibold text-ink tabular-nums">
+                          {share.toFixed(1)}%
+                        </strong>
+                      </span>
+                    </span>
+                  ))}
+              </figcaption>
+            )}
+          </figure>
         )}
         <div className="min-w-0">
           <DataTable
@@ -99,16 +142,7 @@ export function DashboardBreakdown({
                           aria-hidden="true"
                         />
                       )}
-                      {isDepartment ? (
-                        <Link
-                          to={departmentLink(row.name)}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {row.name}
-                        </Link>
-                      ) : (
-                        row.name
-                      )}
+                      {row.name}
                     </span>
                   </th>
                   <td className="min-w-24">

@@ -341,7 +341,11 @@ describe('Command Center', () => {
       finishTrend()
       expect(await screen.findByRole('group', { name: 'Net units by day' })).toBeVisible()
 
-      await user.click(screen.getByRole('link', { name: /^FOOD$/ }))
+      expect(screen.queryByRole('link', { name: /^FOOD$/ })).not.toBeInTheDocument()
+      expect(screen.getByLabelText('FOOD 100.0%')).toBeVisible()
+      await user.click(screen.getByText('Analysis period'))
+      await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(screen.getByText('Updating retail performance…')).toBeVisible()
       expect(contribution).toBeVisible()
       finishDepartment()
@@ -357,7 +361,9 @@ describe('Command Center', () => {
         expect.stringContaining('department=FOOD'),
       )
 
-      await user.click(screen.getByRole('link', { name: 'Back to departments' }))
+      await user.click(screen.getByText('Analysis period'))
+      await user.selectOptions(screen.getByLabelText('Department'), '')
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
       expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
       expect(dashboard).toHaveBeenLastCalledWith(

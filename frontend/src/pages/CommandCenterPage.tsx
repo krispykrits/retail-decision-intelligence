@@ -254,14 +254,7 @@ export function CommandCenterPage() {
               retry={() => setTrendRetry((attempt) => attempt + 1)}
               onMetricChange={(metric) => apply({ ...query, metric })}
             />
-            <DashboardBreakdown
-              breakdown={data.breakdown}
-              netSpend={data.summary.current.spend}
-              departmentsLink={`${dashboardPath}?${queryString({ ...query, department: undefined })}`}
-              departmentLink={(name) =>
-                `${dashboardPath}?${queryString({ ...query, department: name })}`
-              }
-            />
+            <DashboardBreakdown breakdown={data.breakdown} netSpend={data.summary.current.spend} />
             <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
           </div>
 
