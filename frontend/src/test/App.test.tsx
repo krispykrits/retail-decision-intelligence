@@ -442,6 +442,7 @@ describe('Command Center', () => {
       await user.selectOptions(screen.getByLabelText('Department'), 'FOOD')
       await user.click(screen.getByRole('button', { name: 'Apply filters' }))
       expect(screen.getByText('Updating retail performance…')).toBeVisible()
+      expect(screen.getByText('Applying filters…')).toBeVisible()
       expect(contribution).toBeVisible()
       finishDepartment()
       expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()
@@ -522,7 +523,11 @@ describe('data operations', () => {
         <App />
       </MemoryRouter>,
     )
+    const inventory = screen.getByRole('region', { name: 'Stored dataset records' })
+    expect(inventory).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Loading stored datasets…')
     expect(await screen.findByText('No records have been imported yet.')).toBeVisible()
+    expect(inventory).toHaveAttribute('aria-busy', 'false')
     expect(screen.queryByRole('button', { name: 'Import files' })).not.toBeInTheDocument()
     expect(screen.queryByText('Import history')).not.toBeInTheDocument()
   })
@@ -531,7 +536,9 @@ describe('data operations', () => {
     const user = userEvent.setup()
     const upload = vi.mocked(uploadCsv)
     const inventory = vi.mocked(getDatasets)
+    const history = vi.mocked(getImportHistory)
     inventory.mockClear()
+    history.mockClear()
     upload.mockImplementation(
       async (dataset, file) =>
         ({
@@ -557,6 +564,9 @@ describe('data operations', () => {
       </MemoryRouter>,
       true,
     )
+    expect(screen.getByRole('heading', { name: 'Import history' })).toBeVisible()
+    expect(await screen.findByText('No imports yet.')).toBeVisible()
+    expect(history).toHaveBeenCalledTimes(1)
     await user.upload(
       screen.getByLabelText('Choose Transactions CSV'),
       new File(['line'], 'lines.csv'),
@@ -583,8 +593,6 @@ describe('data operations', () => {
     expect(screen.getByRole('button', { name: 'Import files' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Remove Transactions file' }))
     expect(screen.getByRole('button', { name: 'Import files' })).toBeDisabled()
-    expect(getImportHistory).not.toHaveBeenCalled()
-    await user.click(screen.getByText('Import history'))
-    expect(await screen.findByText('No imports yet.')).toBeVisible()
+    expect(history).toHaveBeenCalledTimes(2)
   })
 })

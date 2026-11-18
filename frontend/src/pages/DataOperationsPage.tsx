@@ -11,7 +11,10 @@ import {
 import { useSession } from '../auth/session'
 import { DataTable } from '../components/DataTable'
 import { ImportResults } from '../components/ImportResults'
+import { Panel, PanelHeading } from '../components/Panel'
+import { Skeleton } from '../components/Skeleton'
 import { Spinner } from '../components/Spinner'
+import { WorkspaceHeader } from '../components/layout/WorkspaceHeader'
 
 const datasets = [
   ['households', 'Households'],
@@ -19,10 +22,9 @@ const datasets = [
   ['transactions', 'Transactions'],
 ] as const satisfies readonly (readonly [Dataset, string])[]
 
-const panel = 'rounded-2xl border border-line bg-surface shadow-panel p-5 md:p-6'
-const heading = 'text-xl font-semibold'
 const control =
-  'rounded-lg border border-brand px-3 py-2 text-sm font-semibold text-brand hover:bg-canvas'
+  'rounded-lg border border-field-line px-3 py-1.5 text-sm font-medium text-link hover:border-brand/40 hover:bg-canvas'
+const tableStyle = 'text-xs [&_:is(th,td)]:px-2.5 [&_:is(th,td)]:py-2'
 const focus = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus'
 const button = `${control} ${focus} disabled:cursor-not-allowed disabled:opacity-50`
 
@@ -65,9 +67,8 @@ export function DataOperationsPage() {
   const activeRequest = useRef<AbortController | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [results, setResults] = useState<ImportResult[]>([])
-  const [historyOpen, setHistoryOpen] = useState(false)
   const inventory = useRows(getDatasets)
-  const history = useRows(getImportHistory, administrator && historyOpen)
+  const history = useRows(getImportHistory, administrator)
   const queued = datasets.flatMap(([dataset, label]) => {
     const file = files[dataset]
     return file ? [{ dataset, label, file }] : []
@@ -152,17 +153,22 @@ export function DataOperationsPage() {
   }
 
   return (
-    <>
-      <h1 className="mb-2 text-3xl font-semibold tracking-tight md:text-4xl">Data Operations</h1>
-      <p className="mb-8 text-muted">Upload and review retail datasets.</p>
-      <div className="grid gap-5">
+    <div className="space-y-3 md:space-y-4">
+      <WorkspaceHeader path="/data" />
+      <div
+        className={`grid gap-3 md:gap-4 ${administrator ? 'xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
+      >
         {administrator && (
-          <section className={panel} aria-labelledby="upload-heading">
-            <h2 className={`mb-4 ${heading}`} id="upload-heading">
-              Upload CSV files
-            </h2>
+          <Panel aria-labelledby="upload-heading">
+            <PanelHeading
+              id="upload-heading"
+              title="Upload CSV files"
+              icon="upload"
+              className="mb-3 xl:min-h-9"
+            />
             <DataTable
-              className="min-w-120"
+              className={`${tableStyle} min-w-78`}
+              viewportLabel="CSV file selection"
               columns={{
                 dataset: 'Dataset',
                 file: 'Selected file',
@@ -172,9 +178,9 @@ export function DataOperationsPage() {
               {datasets.map(([dataset, label]) => (
                 <tr key={dataset}>
                   <th scope="row">{label}</th>
-                  <td className="break-all">{files[dataset]?.name ?? '—'}</td>
+                  <td className="w-full break-all">{files[dataset]?.name ?? '—'}</td>
                   <td>
-                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                       <label>
                         <input
                           className="peer sr-only"
@@ -197,7 +203,7 @@ export function DataOperationsPage() {
                       <button
                         type="button"
                         aria-label={`Remove ${label} file`}
-                        className={`${focus} rounded px-2 py-1 text-lg hover:bg-canvas disabled:opacity-30`}
+                        className={`${focus} rounded px-2 py-1 text-base hover:bg-canvas disabled:opacity-30`}
                         disabled={uploading || !files[dataset]}
                         onClick={() => selectFile(dataset)}
                       >
@@ -208,16 +214,16 @@ export function DataOperationsPage() {
                 </tr>
               ))}
             </DataTable>
-            <div className="mt-4 flex flex-wrap items-center gap-4">
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
               <button
-                className={`${focus} rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${focus} rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50`}
                 type="button"
                 disabled={uploading || (!queued.length && !pendingImportId())}
                 onClick={importFiles}
               >
                 {uploading ? 'Importing…' : pendingImportId() ? 'Resume import' : 'Import files'}
               </button>
-              <p className="text-sm text-muted">
+              <p className="text-xs text-muted">
                 Adds new records. Existing records are preserved.
               </p>
             </div>
@@ -234,14 +240,15 @@ export function DataOperationsPage() {
               </p>
             )}
             {!!results.length && <ImportResults results={results} />}
-          </section>
+          </Panel>
         )}
 
-        <section className={panel} aria-labelledby="inventory-heading">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className={heading} id="inventory-heading">
-              Stored datasets
-            </h2>
+        <Panel
+          aria-labelledby="inventory-heading"
+          className={administrator ? 'xl:grid xl:grid-rows-[auto_1fr]' : undefined}
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 xl:min-h-9">
+            <PanelHeading id="inventory-heading" title="Stored datasets" icon="/data" />
             <button
               className={button}
               type="button"
@@ -252,7 +259,8 @@ export function DataOperationsPage() {
             </button>
           </div>
           <DataTable
-            className="min-w-120"
+            className={`${tableStyle} min-w-85 ${administrator ? 'xl:h-full xl:[&_thead]:h-8' : ''}`}
+            viewportLabel="Stored dataset records"
             columns={{
               dataset: 'Dataset',
               records: 'Records',
@@ -268,22 +276,37 @@ export function DataOperationsPage() {
               return (
                 <tr key={dataset}>
                   <th scope="row">{label}</th>
-                  <td className="tabular-nums">{row?.records.toLocaleString() ?? '—'}</td>
-                  <td>
-                    {lastImport ? (
-                      <time dateTime={lastImport}>{new Date(lastImport).toLocaleString()}</time>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td>{range ? `${range.start} to ${range.end}` : '—'}</td>
+                  {inventory.status === 'loading' ? (
+                    <>
+                      <td>
+                        <Skeleton className="h-3 w-10" />
+                      </td>
+                      <td>
+                        <Skeleton className="h-3 w-16" />
+                      </td>
+                      <td>
+                        <Skeleton className="h-3 w-20" />
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="tabular-nums">{row?.records.toLocaleString() ?? '—'}</td>
+                      <td>
+                        {lastImport ? (
+                          <time dateTime={lastImport}>{new Date(lastImport).toLocaleString()}</time>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td>{range ? `${range.start} to ${range.end}` : '—'}</td>
+                    </>
+                  )}
                 </tr>
               )
             })}
           </DataTable>
           {inventory.status === 'loading' && (
-            <p className="mt-2 flex items-center gap-2 text-sm text-muted" role="status">
-              <Spinner />
+            <p className="sr-only" role="status">
               Loading stored datasets…
             </p>
           )}
@@ -295,22 +318,17 @@ export function DataOperationsPage() {
           {inventory.status === 'ready' && inventory.rows.every((row) => row.records === 0) && (
             <p className="mt-2 text-sm text-muted">No records have been imported yet.</p>
           )}
-        </section>
+        </Panel>
 
         {administrator && (
-          <details
-            className={panel}
-            onToggle={({ currentTarget }) => {
-              setHistoryOpen(currentTarget.open)
-              if (currentTarget.open) history.refresh()
-            }}
-          >
-            <summary className={`${heading} ${focus} cursor-pointer`}>Import history</summary>
-            {history.status === 'loading' && (
-              <p className="mt-3 flex items-center gap-2 text-sm text-muted" role="status">
-                <Spinner />
-                Loading import history…
-              </p>
+          <Panel className="xl:col-span-2" aria-labelledby="history-heading">
+            <PanelHeading id="history-heading" title="Import history" icon="clock" />
+            {history.status === 'loading' && !history.rows.length && (
+              <div className="mt-4 grid gap-3" role="status">
+                <span className="sr-only">Loading import history…</span>
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-72 max-w-full" />
+              </div>
             )}
             {history.status === 'error' && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -322,13 +340,23 @@ export function DataOperationsPage() {
                 </button>
               </div>
             )}
-            {history.rows.length ? <ImportResults results={history.rows} /> : null}
+            {history.rows.length > 0 && (
+              <div
+                className={`mt-1 h-64 overflow-y-auto pr-2 ${focus}`}
+                role="region"
+                aria-label="Past imports"
+                aria-busy={history.status === 'loading'}
+                tabIndex={0}
+              >
+                <ImportResults results={history.rows} />
+              </div>
+            )}
             {history.status === 'ready' && !history.rows.length && (
               <p className="mt-3 text-sm text-muted">No imports yet.</p>
             )}
-          </details>
+          </Panel>
         )}
       </div>
-    </>
+    </div>
   )
 }

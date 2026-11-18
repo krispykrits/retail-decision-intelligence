@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { Spinner } from '../components/Spinner'
+import { Skeleton } from '../components/Skeleton'
 import { useSession } from './session'
 
 export function RequireAccount() {
@@ -7,10 +7,12 @@ export function RequireAccount() {
   const location = useLocation()
   if (status === 'loading')
     return (
-      <p role="status" className="flex items-center gap-2 p-8">
-        <Spinner />
-        Checking your session…
-      </p>
+      <div role="status" className="min-h-screen space-y-4 bg-canvas p-4 md:p-8">
+        <span className="sr-only">Checking your session…</span>
+        <Skeleton className="h-8 w-56 max-w-full" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
     )
   if (status === 'error')
     return (
