@@ -2,7 +2,8 @@ export const workspaces = [
   {
     path: '/command-center',
     title: 'Command Center',
-    description: 'Retail performance and investigation signals.',
+    description:
+      'Compare retail performance across periods and investigate changes in spend, sales volume, and household shopping activity.',
   },
   {
     path: '/customers',

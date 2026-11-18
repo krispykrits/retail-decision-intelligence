@@ -20,29 +20,6 @@ import { DashboardTrend } from '../features/dashboard/DashboardTrend'
 import { isMetric, periodLabel } from '../features/dashboard/format'
 
 const dashboardPath = workspaces[0].path
-const investigationWorkspaces = [
-  {
-    ...workspaces[1],
-    detail: 'Segments, value, and retention',
-    style: 'bg-sky-50 hover:bg-sky-100',
-  },
-  {
-    ...workspaces[2],
-    detail: 'Category, product, and assortment',
-    style: 'bg-emerald-50 hover:bg-emerald-100',
-  },
-  {
-    ...workspaces[3],
-    detail: 'Affinity, rules, and basket behavior',
-    style: 'bg-violet-50 hover:bg-violet-100',
-  },
-  {
-    ...workspaces[4],
-    detail: 'Demand outlook and scenarios',
-    style: 'bg-amber-50 hover:bg-amber-100',
-  },
-]
-
 function readQuery(search: string): DashboardQuery {
   const params = new URLSearchParams(search)
   const metric = params.get('metric')
@@ -150,9 +127,7 @@ export function CommandCenterPage() {
                 Updating retail performance…
               </p>
             ) : (
-              <p className="mt-0.5 text-sm text-muted">
-                Retail performance and investigation signals.
-              </p>
+              <p className="mt-0.5 text-sm text-muted">{workspaces[0].description}</p>
             )}
           </div>
         </div>
@@ -244,7 +219,7 @@ export function CommandCenterPage() {
         <>
           <DashboardSummary summary={data.summary} />
 
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1.1fr_1.18fr_.87fr]">
+          <div className="grid gap-4 lg:grid-cols-2">
             <DashboardTrend
               trend={trend ?? data.trend}
               coverage={data.options}
@@ -259,42 +234,14 @@ export function CommandCenterPage() {
               breakdown={data.breakdown}
               netSpend={data.summary.current.spend}
             />
-            <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
             <DashboardSignals
               signals={data.signals}
               departmentSelected={data.breakdown.dimension === 'commodity'}
             />
-            <Panel aria-labelledby="explore-title">
-              <h2
-                id="explore-title"
-                className="mb-3 flex items-center gap-2 text-base font-semibold"
-              >
-                <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
-                Where to explore next
-              </h2>
-              <ul className="grid gap-2.5 sm:grid-cols-2">
-                {investigationWorkspaces.map(({ path, title, detail, style }) => (
-                  <li key={path}>
-                    <Link
-                      className={`flex h-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-ink no-underline transition-colors ${style}`}
-                      to={path}
-                    >
-                      <WorkspaceIcon path={path} className="size-5 shrink-0 text-brand" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">{title}</span>
-                        <span className="mt-0.5 block text-xs text-muted">{detail}</span>
-                      </span>
-                      <span aria-hidden="true" className="text-brand">
-                        ›
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
           </div>
         </>
       )}

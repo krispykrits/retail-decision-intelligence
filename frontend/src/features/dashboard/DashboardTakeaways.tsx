@@ -60,7 +60,7 @@ export function DashboardTakeaways({
   }
 
   return (
-    <Panel aria-labelledby="takeaways-title" className="lg:col-span-2 2xl:col-span-1">
+    <Panel aria-labelledby="takeaways-title">
       <h2 id="takeaways-title" className="mb-2 flex items-center gap-2 text-base font-semibold">
         <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
         Key takeaways
