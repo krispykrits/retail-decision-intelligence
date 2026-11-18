@@ -24,6 +24,7 @@ from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
 from ml.customer_models.features import History, Observation
+from ml.customer_models.parameters import ClvParameters, ModelParameters, defaults
 from retail_api.customers.definition import HISTORY_DAYS, HORIZONS
 from retail_api.customers.schemas import (
     RISK_THRESHOLD,
@@ -96,19 +97,11 @@ def enough(rows: list[Example], model: ModelType) -> bool:
     return True
 
 
-def fit(rows: list[Example], model: ModelType) -> Any:
+def fit(rows: list[Example], parameters: ModelParameters) -> Any:
     estimator = (
-        HistGradientBoostingRegressor(
-            loss="absolute_error",
-            max_iter=80,
-            max_leaf_nodes=12,
-            min_samples_leaf=25,
-            l2_regularization=4,
-            early_stopping=False,
-            random_state=RANDOM_SEED,
-        )
-        if model is ModelType.CLV
-        else make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+        HistGradientBoostingRegressor(**parameters.model_dump(), early_stopping=False)
+        if isinstance(parameters, ClvParameters)
+        else make_pipeline(StandardScaler(), LogisticRegression(**parameters.model_dump()))
     )
     with threadpool_limits(limits=1):
         estimator.fit([row.observation.features for row in rows], [row.target for row in rows])
@@ -200,7 +193,9 @@ def confidence_interval(
     return float(low), float(high)
 
 
-def backtests(history: History, model: ModelType, as_of: date) -> list[HeldOut]:
+def backtests(
+    history: History, model: ModelType, as_of: date, parameters: ModelParameters
+) -> list[HeldOut]:
     if history.first_date is None:
         return []
     horizon = HORIZONS[model]
@@ -215,7 +210,7 @@ def backtests(history: History, model: ModelType, as_of: date) -> list[HeldOut]:
         validation = examples(history, model, cutoff)
         if not enough(train, model) or not enough(validation, model):
             continue
-        predicted = scores(fit(train, model), [row.observation for row in validation], model)
+        predicted = scores(fit(train, parameters), [row.observation for row in validation], model)
         actual = np.asarray([row.target for row in validation], dtype=np.float64)
         baseline = np.asarray(
             [row.observation.baseline_spend for row in validation]
@@ -245,9 +240,14 @@ def backtests(history: History, model: ModelType, as_of: date) -> list[HeldOut]:
     return records
 
 
-def train_model(history: History, model: ModelType, cutoff: date) -> tuple[Evaluation, Any]:
+def train_model(
+    history: History, model: ModelType, cutoff: date, parameters: ModelParameters | None = None
+) -> tuple[Evaluation, Any]:
+    parameters = parameters or defaults(model)
+    if isinstance(parameters, ClvParameters) != (model is ModelType.CLV):
+        raise ValueError(f"Hyperparameters do not match the {model.value} estimator.")
     train = training_examples(history, model, cutoff)
-    held_out = backtests(history, model, cutoff)
+    held_out = backtests(history, model, cutoff, parameters)
     ids = [household_id for record in held_out for household_id in record.ids]
     candidate = baseline = interval = None
     positive_rows = None
@@ -283,6 +283,7 @@ def train_model(history: History, model: ModelType, cutoff: date) -> tuple[Evalu
         reason=reason,
         baseline_name=BASELINE[model],
         algorithm=ALGORITHM[model],
+        hyperparameters=parameters.model_dump(),
         threshold=RISK_THRESHOLD if model is ModelType.CHURN else None,
         training_first_cutoff=train[0].cutoff if train else None,
         training_last_cutoff=train[-1].cutoff if train else None,
@@ -298,4 +299,4 @@ def train_model(history: History, model: ModelType, cutoff: date) -> tuple[Evalu
         baseline=baseline,
         folds=[record.fold for record in held_out],
     )
-    return report, fit(train, model) if eligible else None
+    return report, fit(train, parameters) if eligible else None

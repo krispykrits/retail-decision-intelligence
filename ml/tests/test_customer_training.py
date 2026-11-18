@@ -1,7 +1,11 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
 from ml.customer_models.features import History, Ledger
+from ml.customer_models.parameters import ChurnParameters, ClvParameters, parameters_from_args
+from ml.customer_models.train import command_parser
 from ml.customer_models.training import backtests, examples, train_model, training_examples
 from retail_api.customers.definition import HORIZONS
 from retail_api.customers.schemas import ModelType
@@ -49,7 +53,7 @@ def test_repeatable_out_of_time_training_with_nonoverlapping_labels() -> None:
             add(ledger, FIRST + timedelta(days=day), str(index * 3 + day % 40), 1)
         ledgers[str(index)] = ledger
     history = History(ledgers, {}, FIRST, cutoff)
-    clv = backtests(history, ModelType.CLV, cutoff)
+    clv = backtests(history, ModelType.CLV, cutoff, ClvParameters())
     assert len(clv) == 3
     assert all(fold.fold.validation_households == 60 for fold in clv)
     assert all(
@@ -67,3 +71,22 @@ def test_repeatable_out_of_time_training_with_nonoverlapping_labels() -> None:
     assert not unsupported.eligible
     assert not unsupported.folds
     assert estimator is None
+
+
+def test_cli_accepts_validated_hyperparameters() -> None:
+    parser = command_parser()
+    args = parser.parse_args(
+        ["--clv-max-iter", "45", "--clv-loss", "squared_error", "--churn-c", "0.5"]
+    )
+    clv = parameters_from_args(args, ModelType.CLV)
+    churn = parameters_from_args(args, ModelType.CHURN)
+    assert isinstance(clv, ClvParameters) and clv.max_iter == 45 and clv.loss == "squared_error"
+    assert isinstance(churn, ChurnParameters) and churn.C == 0.5
+    assert churn.max_iter == 1000
+
+    invalid = parser.parse_args(["--clv-learning-rate", "nan"])
+    with pytest.raises(ValueError, match="Invalid clv hyperparameters"):
+        parameters_from_args(invalid, ModelType.CLV)
+    wrong_model = parser.parse_args(["--model", "churn", "--clv-max-iter", "45"])
+    with pytest.raises(ValueError, match="CLV settings require the clv model"):
+        parameters_from_args(wrong_model, ModelType.CLV)

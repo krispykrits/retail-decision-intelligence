@@ -52,6 +52,7 @@ class Evaluation(BaseModel):
     reason: str
     baseline_name: str
     algorithm: str
+    hyperparameters: dict[str, str | int | float | None] = Field(default_factory=dict)
     threshold: float | None
     training_first_cutoff: date | None
     training_last_cutoff: date | None

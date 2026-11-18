@@ -486,6 +486,26 @@
             "title": "Folds",
             "type": "array"
           },
+          "hyperparameters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Hyperparameters",
+            "type": "object"
+          },
           "primary_improvement_95_ci": {
             "anyOf": [
               {

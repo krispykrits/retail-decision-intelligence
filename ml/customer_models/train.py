@@ -15,6 +15,7 @@ from azure.storage.blob import ContainerClient
 from sqlalchemy.engine import Engine
 
 from ml.customer_models.features import FEATURES, History, Observation, load_history
+from ml.customer_models.parameters import ModelParameters, add_arguments, parameters_from_args
 from ml.customer_models.training import scores, train_model
 from retail_api.config import Settings
 from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
@@ -32,9 +33,13 @@ CAVEATS = [
 
 
 def materialize(
-    history: History, cutoff: date, model: ModelType, versions: tuple[int, int]
+    history: History,
+    cutoff: date,
+    model: ModelType,
+    versions: tuple[int, int],
+    parameters: ModelParameters,
 ) -> tuple[ModelEvidence, list[dict[str, Any]], Any]:
-    evaluation, estimator = train_model(history, model, cutoff)
+    evaluation, estimator = train_model(history, model, cutoff, parameters)
     version = uuid4()
     observed: list[tuple[str, Observation]] = [
         (household_id, row)
@@ -147,6 +152,7 @@ def save_artifact(
 
 
 def run(engine: Engine, arguments: argparse.Namespace) -> list[ModelEvidence]:
+    parameters = {model: parameters_from_args(arguments, model) for model in ModelType}
     with engine.connect() as connection:
         versions = source_versions(connection)
         history = load_history(connection, arguments.as_of)
@@ -158,7 +164,7 @@ def run(engine: Engine, arguments: argparse.Namespace) -> list[ModelEvidence]:
             "The model cutoff must be on or before the last imported transaction date."
         )
     models = [ModelType(arguments.model)] if arguments.model else list(ModelType)
-    results = [materialize(history, as_of, model, versions) for model in models]
+    results = [materialize(history, as_of, model, versions, parameters[model]) for model in models]
     if not arguments.dry_run:
         artifacts = [
             save_artifact(
@@ -178,7 +184,7 @@ def run(engine: Engine, arguments: argparse.Namespace) -> list[ModelEvidence]:
     return [evidence for evidence, _, _ in results]
 
 
-def main() -> None:
+def command_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=list(ModelType), help="Train one model. Default: both.")
     parser.add_argument(
@@ -196,6 +202,12 @@ def main() -> None:
         type=validate_container_url,
         help="Private Azure Blob container URL.",
     )
+    add_arguments(parser)
+    return parser
+
+
+def main() -> None:
+    parser = command_parser()
     arguments = parser.parse_args()
     settings = Settings()
     if (

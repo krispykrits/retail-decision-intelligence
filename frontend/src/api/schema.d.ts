@@ -762,6 +762,10 @@ export interface components {
             eligible: boolean;
             /** Folds */
             folds: components["schemas"]["FoldEvidence"][];
+            /** Hyperparameters */
+            hyperparameters?: {
+                [key: string]: string | number | null;
+            };
             /** Primary Improvement 95 Ci */
             primary_improvement_95_ci: [
                 number,
