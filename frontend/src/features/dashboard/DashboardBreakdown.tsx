@@ -87,7 +87,7 @@ export function DashboardBreakdown({
           : 'Net spend and share of the selected period.'}
       </p>
       <div
-        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,1fr)_minmax(11rem,1fr)] lg:items-start' : ''}`}
+        className={`grid flex-1 content-start gap-3 ${showDonut ? 'lg:grid-cols-[minmax(7rem,1fr)_minmax(11rem,1fr)] lg:content-center lg:items-center' : ''}`}
       >
         {showDonut && (
           <figure

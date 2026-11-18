@@ -60,13 +60,13 @@ export function DashboardTakeaways({
   }
 
   return (
-    <Panel aria-labelledby="takeaways-title">
+    <Panel aria-labelledby="takeaways-title" className="@container">
       <h2 id="takeaways-title" className="mb-2 flex items-center gap-2 text-base font-semibold">
         <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
         Key takeaways
       </h2>
       {items.length ? (
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-line @[26rem]:grid @[26rem]:grid-cols-2 @[26rem]:gap-x-4 @[26rem]:divide-none">
           {items.map(({ icon, title, detail, color }) => (
             <li key={icon} className="flex items-start gap-2.5 py-2.5 last:pb-0">
               <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${color}`}>

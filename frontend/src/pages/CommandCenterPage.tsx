@@ -115,8 +115,8 @@ export function CommandCenterPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
+    <div className="space-y-3 md:space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
         <div className="flex items-center gap-3">
           <WorkspaceIcon path="/command-center" className="size-8 shrink-0 text-brand" />
           <div>
@@ -219,7 +219,7 @@ export function CommandCenterPage() {
         <>
           <DashboardSummary summary={data.summary} />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
             <DashboardTrend
               trend={trend ?? data.trend}
               coverage={data.options}
@@ -236,7 +236,7 @@ export function CommandCenterPage() {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <div className="grid gap-3 md:gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />
             <DashboardSignals
               signals={data.signals}

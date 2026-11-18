@@ -92,7 +92,7 @@ export function TrendChart({
 
   return (
     <figure>
-      <div className="relative">
+      <div className="relative mx-auto w-full max-w-lg">
         <svg
           ref={plot}
           viewBox={`0 0 ${width} ${height}`}
