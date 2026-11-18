@@ -7,6 +7,7 @@ type DataTableProps = {
   className?: string
   viewportClassName?: string
   viewportLabel?: string
+  sort?: { column: string; direction: 'ascending' | 'descending' }
 }
 
 export function DataTable({
@@ -16,6 +17,7 @@ export function DataTable({
   className = '',
   viewportClassName = '',
   viewportLabel,
+  sort,
 }: DataTableProps) {
   return (
     <div
@@ -31,7 +33,11 @@ export function DataTable({
         <thead className="border-b border-line bg-canvas text-nav">
           <tr>
             {Object.entries(columns).map(([key, label]) => (
-              <th key={key} scope="col">
+              <th
+                key={key}
+                scope="col"
+                aria-sort={sort?.column === key ? sort.direction : undefined}
+              >
                 {label}
               </th>
             ))}

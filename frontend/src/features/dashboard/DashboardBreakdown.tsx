@@ -13,13 +13,8 @@ const centerY = donutHeight / 2
 const radius = 77
 const labelGap = 15
 const minimumInlineShare = 7
-const orderOptions = {
-  'spend-desc': 'Net spend ↓',
-  'spend-asc': 'Net spend ↑',
-  'change-desc': 'Change (%) ↓',
-  'change-asc': 'Change (%) ↑',
-}
-type Order = keyof typeof orderOptions
+type SortColumn = 'spend' | 'comparison'
+type SortDirection = 'ascending' | 'descending'
 
 const sliceColor = (index: number) =>
   colors[index === 0 ? 0 : 1 + ((index - 1) % (colors.length - 1))]
@@ -32,7 +27,10 @@ export function DashboardBreakdown({
   netSpend: string
 }) {
   const [selectedName, setSelectedName] = useState<string>()
-  const [order, setOrder] = useState<Order>('spend-desc')
+  const [sort, setSort] = useState<{ column: SortColumn; direction: SortDirection }>({
+    column: 'spend',
+    direction: 'descending',
+  })
   const isDepartment = breakdown.dimension === 'department'
   const rows = breakdown.rows
   const magnitudes = rows.map((row) => Number(row.current?.spend ?? 0))
@@ -79,9 +77,9 @@ export function DashboardBreakdown({
   }
   const showDonut = slices.length > 0 && !signed
   const tableRows = rows.map((row, index) => ({ row, index }))
-  if (!isDepartment && order !== 'spend-desc') {
-    const byChange = order.startsWith('change')
-    const direction = order.endsWith('asc') ? 1 : -1
+  if (!isDepartment) {
+    const byChange = sort.column === 'comparison'
+    const direction = sort.direction === 'ascending' ? 1 : -1
     tableRows.sort((a, b) => {
       const left = byChange ? a.row.change?.percent : a.row.current?.spend
       const right = byChange ? b.row.change?.percent : b.row.current?.spend
@@ -89,36 +87,43 @@ export function DashboardBreakdown({
       return direction * (Number(left) - Number(right))
     })
   }
+  function sortHeader(column: SortColumn, label: string) {
+    if (isDepartment) return label
+    const active = sort.column === column
+    return (
+      <button
+        type="button"
+        className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap hover:text-brand"
+        aria-label={`Sort by ${label}`}
+        onClick={() =>
+          setSort((previous) => ({
+            column,
+            direction:
+              previous.column === column && previous.direction === 'descending'
+                ? 'ascending'
+                : 'descending',
+          }))
+        }
+      >
+        {label}
+        <span aria-hidden="true" className={active ? 'text-brand' : 'text-muted'}>
+          {active ? (sort.direction === 'ascending' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    )
+  }
+
   const columns = {
     name: isDepartment ? 'Department' : 'Commodity',
-    spend: 'Net spend',
-    comparison: 'Change',
+    spend: sortHeader('spend', 'Net spend'),
+    comparison: sortHeader('comparison', 'Change'),
   }
   return (
     <Panel aria-labelledby="breakdown-title" className="flex flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
-          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-        </h2>
-        {!isDepartment && (
-          <label className="flex items-center gap-2 text-xs text-muted">
-            Order
-            <select
-              aria-label="Sort commodities"
-              className="rounded-md border border-line bg-surface px-2 py-1 text-ink"
-              value={order}
-              onChange={(event) => setOrder(event.target.value as Order)}
-            >
-              {Object.entries(orderOptions).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
+      <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
+        <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+        {isDepartment ? 'Department contribution' : 'Commodity contribution'}
+      </h2>
       <p className="mt-1 mb-3 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
@@ -216,6 +221,7 @@ export function DashboardBreakdown({
         <div className="min-w-0">
           <DataTable
             columns={columns}
+            sort={isDepartment ? undefined : sort}
             className="text-xs [&_:is(th,td)]:px-1.5! [&_:is(th,td)]:py-1.5! [&_:is(th,td):not(:first-child)]:text-right [&_thead]:sticky [&_thead]:top-0 [&_thead]:bg-surface"
             viewportClassName="max-h-52 rounded-none! border-0! focus-visible:outline-2 focus-visible:outline-focus"
             viewportLabel={
