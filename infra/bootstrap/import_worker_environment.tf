@@ -6,6 +6,8 @@ resource "azapi_resource" "import_worker_environment" {
   parent_id = azurerm_resource_group.project.id
   location  = azurerm_resource_group.project.location
   tags      = azurerm_resource_group.project.tags
+  # Azure accepts this API version, which is newer than AzAPI's bundled schema.
+  schema_validation_enabled = false
   body = {
     properties = {
       environmentMode = "WorkloadProfiles"
