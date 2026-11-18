@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 type ChartPoint = { index: number; value: number; label: string }
 type ChartSeries = { id: string; label: string; points: ChartPoint[]; dashed?: boolean }
@@ -34,8 +34,26 @@ export function TrendChart({
   format: (value: number) => string
 }) {
   const tooltipId = useId()
+  const plot = useRef<SVGSVGElement>(null)
   const [selected, setSelected] = useState<PointTarget>()
   const [preview, setPreview] = useState<PointTarget>()
+  const pinned = selected !== undefined
+
+  useEffect(() => {
+    if (!pinned) return
+
+    function dismiss(event: PointerEvent) {
+      if (event.target instanceof Element && plot.current?.contains(event.target)) {
+        if (event.target.closest('[data-trend-point]')) return
+      }
+      setSelected(undefined)
+      setPreview(undefined)
+    }
+
+    document.addEventListener('pointerdown', dismiss, true)
+    return () => document.removeEventListener('pointerdown', dismiss, true)
+  }, [pinned])
+
   const target = selected ?? preview
   const activeIndex = target?.index
   const points = series.flatMap((line) => line.points)
@@ -76,6 +94,7 @@ export function TrendChart({
     <figure>
       <div className="relative">
         <svg
+          ref={plot}
           viewBox={`0 0 ${width} ${height}`}
           className="w-full"
           role="group"
@@ -167,6 +186,7 @@ export function TrendChart({
                       fill={active === point.index ? 'currentColor' : 'white'}
                       stroke="currentColor"
                       strokeWidth="2"
+                      data-trend-point=""
                       role="button"
                       tabIndex={0}
                       aria-pressed={selected?.index === point.index}

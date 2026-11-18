@@ -165,6 +165,15 @@ describe('Command Center', () => {
     expect(prior).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByText('+$5.00')).not.toBeInTheDocument()
     expect(screen.getAllByText('Unavailable')).toHaveLength(2)
+
+    await user.click(screen.getByRole('group', { name: 'Spend comparison' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+    await user.click(current)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('+$5.00')
+    await user.click(document.body)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(current).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('explains out-of-range selections and suppresses their prior comparison', async () => {
