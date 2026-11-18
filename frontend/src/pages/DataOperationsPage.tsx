@@ -164,7 +164,7 @@ export function DataOperationsPage() {
               id="upload-heading"
               title="Upload CSV files"
               icon="upload"
-              className="mb-3"
+              className="mb-3 xl:min-h-9"
             />
             <DataTable
               className={`${tableStyle} min-w-78`}
@@ -243,8 +243,11 @@ export function DataOperationsPage() {
           </Panel>
         )}
 
-        <Panel aria-labelledby="inventory-heading">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <Panel
+          aria-labelledby="inventory-heading"
+          className={administrator ? 'xl:grid xl:grid-rows-[auto_1fr]' : undefined}
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 xl:min-h-9">
             <PanelHeading id="inventory-heading" title="Stored datasets" icon="/data" />
             <button
               className={button}
@@ -256,7 +259,7 @@ export function DataOperationsPage() {
             </button>
           </div>
           <DataTable
-            className={`${tableStyle} min-w-85`}
+            className={`${tableStyle} min-w-85 ${administrator ? "xl:h-full xl:[&_thead]:h-8" : ""}`}
             viewportLabel="Stored dataset records"
             columns={{
               dataset: 'Dataset',
