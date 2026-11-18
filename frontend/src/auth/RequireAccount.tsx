@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Spinner } from '../components/Spinner'
 import { useSession } from './session'
 
 export function RequireAccount() {
@@ -6,7 +7,8 @@ export function RequireAccount() {
   const location = useLocation()
   if (status === 'loading')
     return (
-      <p role="status" className="p-8">
+      <p role="status" className="flex items-center gap-2 p-8">
+        <Spinner />
         Checking your session…
       </p>
     )

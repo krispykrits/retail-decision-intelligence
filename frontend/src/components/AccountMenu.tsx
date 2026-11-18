@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSession } from '../auth/session'
+import { Spinner } from './Spinner'
 
 export function AccountMenu() {
   const { account, logout } = useSession()
@@ -25,10 +26,11 @@ export function AccountMenu() {
       </span>
       <button
         type="button"
-        className="min-w-28 cursor-pointer rounded-lg border border-line px-3 py-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand enabled:hover:border-brand enabled:hover:bg-canvas enabled:hover:text-brand enabled:active:bg-line disabled:cursor-wait disabled:bg-canvas disabled:text-muted"
+        className="inline-flex min-w-28 cursor-pointer items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand enabled:hover:border-brand enabled:hover:bg-canvas enabled:hover:text-brand enabled:active:bg-line disabled:cursor-wait disabled:bg-canvas disabled:text-muted"
         disabled={busy}
         onClick={() => void handleLogout()}
       >
+        {busy && <Spinner />}
         {busy ? 'Signing out…' : 'Sign out'}
       </button>
       <span className="sr-only" aria-live="polite">

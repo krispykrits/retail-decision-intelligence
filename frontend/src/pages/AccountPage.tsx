@@ -10,6 +10,7 @@ import {
   verifyEmail,
 } from '../api/accounts'
 import { useSession } from '../auth/session'
+import { Spinner } from '../components/Spinner'
 
 const titles = {
   login: 'Sign in',
@@ -171,9 +172,10 @@ function AccountForm({ currentMode }: { currentMode: Mode }) {
               <p>Open the link from your email to continue.</p>
             )}
             <button
-              className="rounded-lg bg-brand px-4 py-3 font-semibold text-white disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-3 font-semibold text-white disabled:opacity-50"
               disabled={busy || (['verify', 'reset'].includes(currentMode) && !token)}
             >
+              {busy && <Spinner />}
               {busy ? 'Please wait…' : titles[currentMode]}
             </button>
           </form>
