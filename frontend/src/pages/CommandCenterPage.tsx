@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { getDashboard, type Dashboard, type DashboardQuery } from '../api/dashboard'
+import {
+  getDashboard,
+  getDashboardTrend,
+  type Dashboard,
+  type DashboardQuery,
+} from '../api/dashboard'
 import { workspaces } from '../app/workspaces'
 import { AccountMenu } from '../components/AccountMenu'
 import { Panel } from '../components/Panel'
@@ -64,17 +69,29 @@ export function CommandCenterPage() {
   const navigate = useNavigate()
   const periodPicker = useRef<HTMLDetailsElement>(null)
   const query = readQuery(search)
+  const metric = query.metric ?? 'spend'
+  const filterSearch = queryString({ ...query, metric: undefined })
   const [retry, setRetry] = useState(0)
-  const requestKey = `${search}:${retry}`
+  const requestKey = `${filterSearch}:${retry}`
   const [result, setResult] = useState<{ key: string; data: Dashboard | null }>()
   const pending = result?.key !== requestKey
   const data = result?.data
   const current = data?.summary.current_period
   const prior = data?.summary.prior_period
+  const [trendRetry, setTrendRetry] = useState(0)
+  const trendKey = `${result?.key}:${metric}:${trendRetry}`
+  const [trendResult, setTrendResult] = useState<{ key: string; data: Dashboard['trend'] | null }>()
+  const defaultTrend = data?.trend.metric === metric ? data.trend : null
+  const trendReady = Boolean(defaultTrend || trendResult?.key === trendKey)
+  const trendError = !defaultTrend && trendResult?.key === trendKey && trendResult.data === null
+  const trend =
+    defaultTrend ??
+    (trendResult?.key.startsWith(`${result?.key}:`) ? trendResult.data : null) ??
+    data?.trend
 
   useEffect(() => {
     const controller = new AbortController()
-    void getDashboard(readQuery(search), controller.signal).then(
+    void getDashboard(readQuery(filterSearch), controller.signal).then(
       (data) => {
         if (!controller.signal.aborted) setResult({ key: requestKey, data })
       },
@@ -83,7 +100,31 @@ export function CommandCenterPage() {
       },
     )
     return () => controller.abort()
-  }, [search, requestKey])
+  }, [filterSearch, requestKey])
+
+  useEffect(() => {
+    if (pending || !data?.summary.current || trendReady) return
+    const controller = new AbortController()
+    const period = data.summary.current_period
+    const filters = readQuery(filterSearch)
+    void getDashboardTrend(
+      {
+        ...filters,
+        start: period?.start ?? filters.start,
+        end: period?.end ?? filters.end,
+        metric,
+      },
+      controller.signal,
+    ).then(
+      (data) => {
+        if (!controller.signal.aborted) setTrendResult({ key: trendKey, data })
+      },
+      () => {
+        if (!controller.signal.aborted) setTrendResult({ key: trendKey, data: null })
+      },
+    )
+    return () => controller.abort()
+  }, [data, filterSearch, metric, pending, trendKey, trendReady])
 
   useEffect(() => {
     if (!pending && hash === '#performance-trend') {
@@ -104,9 +145,16 @@ export function CommandCenterPage() {
           <WorkspaceIcon path="/command-center" className="size-9 text-brand" />
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Command Center</h1>
-            <p className="mt-0.5 text-sm text-muted">
-              Retail performance and changes worth investigating.
-            </p>
+            {pending && data ? (
+              <p role="status" className="mt-0.5 flex items-center gap-2 text-sm text-muted">
+                <Spinner />
+                Updating retail performance…
+              </p>
+            ) : (
+              <p className="mt-0.5 text-sm text-muted">
+                Retail performance and changes worth investigating.
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -147,7 +195,7 @@ export function CommandCenterPage() {
         </div>
       </header>
 
-      {pending ? (
+      {pending && !data ? (
         <Panel role="status" className="flex items-center gap-2 text-sm text-muted">
           <Spinner />
           Loading retail performance…
@@ -188,14 +236,19 @@ export function CommandCenterPage() {
 
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1.15fr_1.25fr_.85fr]">
             <DashboardTrend
-              trend={data.trend}
+              trend={trend ?? data.trend}
+              metric={metric}
+              loading={!trendReady}
+              error={trendError}
+              retry={() => setTrendRetry((attempt) => attempt + 1)}
               onMetricChange={(metric) => apply({ ...query, metric })}
             />
             <DashboardBreakdown
               breakdown={data.breakdown}
               netSpend={data.summary.current.spend}
+              departmentsLink={`${dashboardPath}?${queryString({ ...query, department: undefined })}`}
               departmentLink={(name) =>
-                `${dashboardPath}?${queryString({ ...query, department: name })}#performance-trend`
+                `${dashboardPath}?${queryString({ ...query, department: name })}`
               }
             />
             <DashboardTakeaways summary={data.summary} breakdown={data.breakdown} />

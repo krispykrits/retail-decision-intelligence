@@ -12,3 +12,9 @@ export async function getDashboard(query: DashboardQuery, signal: AbortSignal) {
   if (!data) throw new Error('Dashboard data is unavailable.')
   return data
 }
+
+export async function getDashboardTrend(query: DashboardQuery, signal: AbortSignal) {
+  const { data } = await client.GET('/api/v1/dashboard/trends', { params: { query }, signal })
+  if (!data) throw new Error('The performance trend is unavailable.')
+  return data
+}

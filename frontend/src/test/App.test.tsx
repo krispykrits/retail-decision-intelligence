@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
 import { SessionContext } from '../auth/session'
-import { getDashboard, type Dashboard } from '../api/dashboard'
+import { getDashboard, getDashboardTrend, type Dashboard } from '../api/dashboard'
 import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
 
 const emptyDashboard: Dashboard = {
@@ -33,7 +33,7 @@ const emptyDashboard: Dashboard = {
   signals: { items: [] },
 }
 
-vi.mock('../api/dashboard', () => ({ getDashboard: vi.fn() }))
+vi.mock('../api/dashboard', () => ({ getDashboard: vi.fn(), getDashboardTrend: vi.fn() }))
 vi.mocked(getDashboard).mockResolvedValue(emptyDashboard)
 
 vi.mock('../api/imports', () => ({
@@ -134,69 +134,86 @@ describe('Command Center', () => {
     const delta = { amount: '12.00', percent: '150.0' }
     const dashboard = vi.mocked(getDashboard)
     dashboard.mockClear()
-    dashboard.mockImplementation(async ({ metric = 'spend', department }) => ({
-      ...emptyDashboard,
-      options: {
-        first_date: prior.start,
-        last_date: current.end,
-        regions: ['EAST', 'CENTRAL'],
-        departments: ['FOOD'],
-      },
-      summary: {
-        ...emptyDashboard.summary,
-        current: totals,
-        current_period: current,
-        prior_period: prior,
-        changes: { spend: delta },
-        source_version: 1,
-      },
-      trend: {
-        ...emptyDashboard.trend,
-        metric,
-        current: [{ index: 0, start: current.start, end: current.start, value: '2' }],
-      },
-      breakdown: {
-        ...emptyDashboard.breakdown,
-        dimension: department ? 'commodity' : 'department',
-        rows: [
-          {
-            name: department ? 'PRODUCE' : 'FOOD',
-            current: totals,
-            prior: null,
-            change: null,
-            share: '100',
-          },
-        ],
-      },
-      signals: {
-        items: [
-          {
-            severity: 'info',
-            type: 'growth',
-            reason: 'Net spend rose in FOOD.',
-            metric: 'spend',
-            delta,
-            comparison: prior,
-            route: '/command-center',
-            route_filters: {
-              start: current.start,
-              end: current.end,
-              region: 'EAST',
-              department: 'FOOD',
+    let finishDepartment = () => {}
+    let finishTrend = () => {}
+    const departmentLoaded = new Promise<void>((resolve) => {
+      finishDepartment = resolve
+    })
+    const trendLoaded = new Promise<void>((resolve) => {
+      finishTrend = resolve
+    })
+    const point = { index: 0, start: current.start, end: current.start, value: '2' }
+    const getTrend = vi.mocked(getDashboardTrend)
+    getTrend.mockImplementation(async ({ metric = 'spend' }) => {
+      await trendLoaded
+      return { ...emptyDashboard.trend, metric, current: [point] }
+    })
+    dashboard.mockImplementation(async ({ metric = 'spend', department }) => {
+      if (department) await departmentLoaded
+      return {
+        ...emptyDashboard,
+        options: {
+          first_date: prior.start,
+          last_date: current.end,
+          regions: ['EAST', 'CENTRAL'],
+          departments: ['FOOD'],
+        },
+        summary: {
+          ...emptyDashboard.summary,
+          current: totals,
+          current_period: current,
+          prior_period: prior,
+          changes: { spend: delta },
+          source_version: 1,
+        },
+        trend: {
+          ...emptyDashboard.trend,
+          metric,
+          current: [point],
+        },
+        breakdown: {
+          ...emptyDashboard.breakdown,
+          dimension: department ? 'commodity' : 'department',
+          rows: [
+            {
+              name: department ? 'PRODUCE' : 'FOOD',
+              current: totals,
+              prior: null,
+              change: null,
+              share: '100',
+            },
+          ],
+        },
+        signals: {
+          items: [
+            {
+              severity: 'info',
+              type: 'growth',
+              reason: 'Net spend rose in FOOD.',
               metric: 'spend',
+              delta,
+              comparison: prior,
+              route: '/command-center',
+              route_filters: {
+                start: current.start,
+                end: current.end,
+                region: 'EAST',
+                department: 'FOOD',
+                metric: 'spend',
+              },
+              evidence: {
+                name: 'FOOD',
+                current: '20.00',
+                prior: '8.00',
+                current_lines: 4,
+                prior_lines: 3,
+              },
+              source_version: 1,
             },
-            evidence: {
-              name: 'FOOD',
-              current: '20.00',
-              prior: '8.00',
-              current_lines: 4,
-              prior_lines: 3,
-            },
-            source_version: 1,
-          },
-        ],
-      },
-    }))
+          ],
+        },
+      }
+    })
     try {
       render(
         <MemoryRouter>
@@ -212,13 +229,47 @@ describe('Command Center', () => {
         expect.objectContaining({ region: 'EAST', start: current.start, end: current.end }),
         expect.any(AbortSignal),
       )
-      await user.selectOptions(await screen.findByLabelText('Trend metric'), 'units')
+      const selector = await screen.findByLabelText('Trend metric')
+      const contribution = screen.getByRole('heading', { name: 'Department contribution' })
+      const dashboardRequests = dashboard.mock.calls.length
+      await user.selectOptions(selector, 'units')
+      expect(screen.getByText('Updating trend…')).toBeVisible()
+      expect(contribution).toBeVisible()
+      expect(selector).toHaveFocus()
+      expect(dashboard).toHaveBeenCalledTimes(dashboardRequests)
+      expect(getTrend).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          region: 'EAST',
+          start: current.start,
+          end: current.end,
+          metric: 'units',
+        }),
+        expect.any(AbortSignal),
+      )
+      finishTrend()
       expect(await screen.findByRole('group', { name: 'Net units by day' })).toBeVisible()
-      await user.click(screen.getByRole('link', { name: 'View trend for FOOD' }))
+
+      await user.click(screen.getByRole('link', { name: /^FOOD$/ }))
+      expect(screen.getByText('Updating retail performance…')).toBeVisible()
+      expect(contribution).toBeVisible()
+      finishDepartment()
       expect(await screen.findByRole('heading', { name: 'Commodity contribution' })).toBeVisible()
       expect(screen.getByText('PRODUCE')).toBeVisible()
+      expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
       expect(dashboard).toHaveBeenLastCalledWith(
-        expect.objectContaining({ region: 'EAST', department: 'FOOD', metric: 'spend' }),
+        expect.objectContaining({ region: 'EAST', department: 'FOOD' }),
+        expect.any(AbortSignal),
+      )
+      expect(screen.getByRole('link', { name: 'View trend for FOOD' })).toHaveAttribute(
+        'href',
+        expect.stringContaining('department=FOOD'),
+      )
+
+      await user.click(screen.getByRole('link', { name: 'Back to departments' }))
+      expect(await screen.findByRole('heading', { name: 'Department contribution' })).toBeVisible()
+      expect(screen.getByLabelText('Trend metric')).toHaveValue('units')
+      expect(dashboard).toHaveBeenLastCalledWith(
+        expect.objectContaining({ region: 'EAST', department: undefined }),
         expect.any(AbortSignal),
       )
     } finally {

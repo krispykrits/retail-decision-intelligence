@@ -1,14 +1,23 @@
 import type { Dashboard, Metric, Point } from '../../api/dashboard'
 import { Panel } from '../../components/Panel'
+import { Spinner } from '../../components/Spinner'
 import { TrendChart } from '../../components/TrendChart'
 import { WorkspaceIcon } from '../../components/WorkspaceIcon'
 import { dateLabel, metrics, periodLabel, valueLabel } from './format'
 
 export function DashboardTrend({
   trend,
+  metric,
+  loading,
+  error,
+  retry,
   onMetricChange,
 }: {
   trend: Dashboard['trend']
+  metric: Metric
+  loading: boolean
+  error: boolean
+  retry: () => void
   onMetricChange: (metric: Metric) => void
 }) {
   const labelPoint = (point: Point) => ({
@@ -56,7 +65,7 @@ export function DashboardTrend({
           Trend metric
           <select
             className="rounded-lg border border-field-line bg-surface px-2 py-1.5 text-sm"
-            value={trend.metric}
+            value={metric}
             onChange={(event) => onMetricChange(event.target.value as Metric)}
           >
             {Object.entries(metrics).map(([key, title]) => (
@@ -67,16 +76,39 @@ export function DashboardTrend({
           </select>
         </label>
       </div>
-      <TrendChart
-        key={`${trend.metric}-${trend.current_period?.start}-${trend.current_period?.end}`}
-        label={`${metrics[trend.metric]} by ${trend.grain}`}
-        series={series}
-        ticks={indices.map((index) => ({
-          index: available[index].index,
-          label: dateLabel(available[index].start),
-        }))}
-        format={(value) => valueLabel(trend.metric, value)}
-      />
+      <div className="relative min-h-48" aria-busy={loading}>
+        <div className={loading || error ? 'opacity-20' : undefined} inert={loading || error}>
+          <TrendChart
+            key={`${trend.metric}-${trend.current_period?.start}-${trend.current_period?.end}`}
+            label={`${metrics[trend.metric]} by ${trend.grain}`}
+            series={series}
+            ticks={indices.map((index) => ({
+              index: available[index].index,
+              label: dateLabel(available[index].start),
+            }))}
+            format={(value) => valueLabel(trend.metric, value)}
+          />
+        </div>
+        {(loading || error) && (
+          <div
+            className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-ink"
+            role={error ? 'alert' : 'status'}
+          >
+            {error ? (
+              <>
+                Trend couldn’t load.
+                <button type="button" className="font-semibold text-link underline" onClick={retry}>
+                  Retry
+                </button>
+              </>
+            ) : (
+              <>
+                <Spinner /> Updating trend…
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </Panel>
   )
 }

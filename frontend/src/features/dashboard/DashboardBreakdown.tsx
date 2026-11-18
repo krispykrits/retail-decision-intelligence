@@ -12,10 +12,12 @@ export function DashboardBreakdown({
   breakdown,
   netSpend,
   departmentLink,
+  departmentsLink,
 }: {
   breakdown: Dashboard['breakdown']
   netSpend: string
   departmentLink: (name: string) => string
+  departmentsLink: string
 }) {
   const isDepartment = breakdown.dimension === 'department'
   const rows = breakdown.rows
@@ -38,10 +40,20 @@ export function DashboardBreakdown({
   }
   return (
     <Panel aria-labelledby="breakdown-title" className="@container">
-      <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
-        <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
-        {isDepartment ? 'Department contribution' : 'Commodity contribution'}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="breakdown-title" className="flex items-center gap-2 font-semibold">
+          <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
+          {isDepartment ? 'Department contribution' : 'Commodity contribution'}
+        </h2>
+        {!isDepartment && (
+          <Link
+            to={departmentsLink}
+            className="text-xs font-semibold underline-offset-2 hover:underline"
+          >
+            <span aria-hidden="true">← </span>Back to departments
+          </Link>
+        )}
+      </div>
       <p className="mt-1 mb-4 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
