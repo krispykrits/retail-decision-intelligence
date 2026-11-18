@@ -6,10 +6,17 @@ mock_provider "azurerm" {
   mock_resource "azurerm_storage_account" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
+  mock_resource "azurerm_storage_container" {
+    defaults = { resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/blobServices/default/containers/csv-imports" }
+  }
+  mock_resource "azurerm_storage_queue" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/queueServices/default/queues/csv-imports" }
+  }
   mock_data "azurerm_container_app" {
     defaults = {
       id                           = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/containerApps/rdi-test-app"
       container_app_environment_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.App/managedEnvironments/rdi-test-env"
+      ingress                      = [{ fqdn = "rdi-test-app.example.test" }]
     }
   }
   mock_data "azurerm_user_assigned_identity" {

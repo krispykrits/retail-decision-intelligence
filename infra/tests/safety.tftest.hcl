@@ -5,6 +5,7 @@ mock_provider "azurerm" {
   }
   mock_data "azurerm_resource_group" {
     defaults = {
+      id       = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test"
       name     = "rg-rdi-test"
       location = "eastus"
       tags     = { project = "retail-decision-intelligence" }
