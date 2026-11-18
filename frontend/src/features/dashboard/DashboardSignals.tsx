@@ -8,16 +8,19 @@ import { percentLabel, valueLabel } from './format'
 export function DashboardSignals({ signals }: { signals: Dashboard['signals'] }) {
   return (
     <Panel aria-labelledby="signals-title">
-      <h2 id="signals-title" className="flex items-center gap-2 font-semibold">
+      <h2 id="signals-title" className="mb-3 flex items-center gap-2 text-base font-semibold">
         <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
         Notable changes &amp; investigation signals
       </h2>
-      <p className="mt-0.5 mb-3 text-sm text-muted">
-        Observed shifts compared with the prior period.
-      </p>
       {signals.items.length ? (
         <DataTable
-          columns={{ evidence: 'Observed change', delta: 'Change', action: 'Investigation' }}
+          columns={{
+            evidence: 'Observed change',
+            delta: 'vs. prior period',
+            action: 'Investigation',
+          }}
+          className="text-xs [&_:is(th,td)]:py-2"
+          viewportClassName="rounded-none! border-0!"
         >
           {signals.items.map((signal) => (
             <tr key={signal.type}>

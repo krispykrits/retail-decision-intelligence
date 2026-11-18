@@ -28,8 +28,8 @@ export function DashboardSummary({ summary }: { summary: Dashboard['summary'] })
         const direction = Math.sign(Number(delta?.amount ?? 0))
         return (
           <Panel key={metric} className="flex items-start gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-blue-50 text-brand">
-              <WorkspaceIcon path={icon} className="size-6" />
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-brand">
+              <WorkspaceIcon path={icon} className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
@@ -45,10 +45,10 @@ export function DashboardSummary({ summary }: { summary: Dashboard['summary'] })
                   </span>
                 </span>
               </h2>
-              <p className="my-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+              <p className="mt-1 text-2xl leading-tight font-semibold tracking-tight tabular-nums 2xl:text-3xl">
                 {summary.current ? valueLabel(metric, summary.current[metric]) : '—'}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted">
                 {delta ? (
                   <>
                     <span title={prior ? periodLabel(prior) : undefined}>vs. prior period</span>

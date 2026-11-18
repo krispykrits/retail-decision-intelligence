@@ -196,14 +196,11 @@ export function TrendChart({
           </li>
         ))}
       </ul>
-      <figcaption
-        className="mt-2 min-h-7 rounded-md bg-canvas px-2 py-1 text-xs text-muted"
-        aria-live="polite"
-      >
+      <figcaption className="mt-2 text-xs text-muted" aria-live="polite">
         {active === undefined ? (
           'Select a point to compare periods.'
         ) : (
-          <dl className="space-y-1">
+          <dl className="space-y-1 rounded-lg bg-canvas px-2.5 py-2">
             {activePoints.map(({ id, label, point }) => (
               <div key={id} className="flex flex-wrap justify-between gap-x-3">
                 <dt>

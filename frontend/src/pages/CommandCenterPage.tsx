@@ -138,12 +138,12 @@ export function CommandCenterPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
         <div className="flex items-center gap-3">
-          <WorkspaceIcon path="/command-center" className="size-9 text-brand" />
+          <WorkspaceIcon path="/command-center" className="size-8 shrink-0 text-brand" />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Command Center</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Command Center</h1>
             {pending && data ? (
               <p role="status" className="mt-0.5 flex items-center gap-2 text-sm text-muted">
                 <Spinner />
@@ -151,7 +151,7 @@ export function CommandCenterPage() {
               </p>
             ) : (
               <p className="mt-0.5 text-sm text-muted">
-                Retail performance and changes worth investigating.
+                Retail performance and investigation signals.
               </p>
             )}
           </div>
@@ -244,7 +244,7 @@ export function CommandCenterPage() {
         <>
           <DashboardSummary summary={data.summary} />
 
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1.15fr_1.25fr_.85fr]">
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1.1fr_1.18fr_.87fr]">
             <DashboardTrend
               trend={trend ?? data.trend}
               coverage={data.options}
@@ -261,18 +261,21 @@ export function CommandCenterPage() {
           <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <DashboardSignals signals={data.signals} />
             <Panel aria-labelledby="explore-title">
-              <h2 id="explore-title" className="mb-3 flex items-center gap-2 font-semibold">
+              <h2
+                id="explore-title"
+                className="mb-3 flex items-center gap-2 text-base font-semibold"
+              >
                 <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
                 Where to explore next
               </h2>
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="grid gap-2.5 sm:grid-cols-2">
                 {investigationWorkspaces.map(({ path, title, detail, style }) => (
                   <li key={path}>
                     <Link
-                      className={`flex h-full items-center gap-2.5 rounded-xl px-3 py-3 text-ink no-underline transition-colors ${style}`}
+                      className={`flex h-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-ink no-underline transition-colors ${style}`}
                       to={path}
                     >
-                      <WorkspaceIcon path={path} className="size-6 text-brand" />
+                      <WorkspaceIcon path={path} className="size-5 shrink-0 text-brand" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{title}</span>
                         <span className="mt-0.5 block text-xs text-muted">{detail}</span>

@@ -83,13 +83,13 @@ export function DashboardBreakdown({
         <WorkspaceIcon path="/merchandise" className="size-5 text-brand" />
         {isDepartment ? 'Department contribution' : 'Commodity contribution'}
       </h2>
-      <p className="mt-1 mb-4 text-sm text-muted">
+      <p className="mt-1 mb-3 text-sm text-muted">
         {signed
           ? 'Negative bars show net returns and adjustments.'
           : 'Net spend and share of the selected period.'}
       </p>
       <div
-        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,2fr)_minmax(0,3fr)] lg:content-center lg:items-center' : ''}`}
+        className={`grid flex-1 content-start gap-4 ${showDonut ? 'lg:grid-cols-[minmax(7rem,2fr)_minmax(0,3fr)] lg:items-start' : ''}`}
       >
         {showDonut && (
           <figure
@@ -166,8 +166,8 @@ export function DashboardBreakdown({
         <div className="min-w-0">
           <DataTable
             columns={columns}
-            className="text-xs [&_:is(th,td)]:px-2 [&_thead]:sticky [&_thead]:top-0"
-            viewportClassName="max-h-52 focus-visible:outline-2 focus-visible:outline-focus"
+            className="text-xs [&_:is(th,td)]:px-1.5! [&_:is(th,td)]:py-1.5! [&_:is(th,td):not(:first-child)]:text-right [&_thead]:sticky [&_thead]:top-0 [&_thead]:bg-surface"
+            viewportClassName="max-h-52 rounded-none! border-0! focus-visible:outline-2 focus-visible:outline-focus"
             viewportLabel={
               isDepartment ? 'Department contribution rows' : 'Commodity contribution rows'
             }
@@ -181,7 +181,7 @@ export function DashboardBreakdown({
                     <span className="flex items-start gap-1.5">
                       {showDonut && row.share != null && (
                         <span
-                          className="mt-1 size-2 shrink-0 rounded-sm"
+                          className="mt-0.5 size-2 shrink-0 rounded-xs"
                           style={{ backgroundColor: sliceColor(index) }}
                           aria-hidden="true"
                         />
@@ -189,7 +189,7 @@ export function DashboardBreakdown({
                       {row.name}
                     </span>
                   </th>
-                  <td className="min-w-24">
+                  <td className="whitespace-nowrap">
                     {row.current ? (
                       <>
                         <span className="font-medium tabular-nums">

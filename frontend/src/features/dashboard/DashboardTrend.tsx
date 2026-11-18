@@ -44,7 +44,6 @@ export function DashboardTrend({
       index: point.index,
       value: Number(point.value),
       label: `${periodLabel(bucket)}${shortened ? ` (${days} ${days === 1 ? 'day' : 'days'})` : ''}`,
-      shortened,
     }
   }
 
@@ -65,7 +64,6 @@ export function DashboardTrend({
       : !trend.current_period?.partial && priorPeriod?.partial
         ? 'The prior period extends beyond the imported dates.'
         : 'A comparable prior period is unavailable.'
-  const hasShortWeek = [...selectedPoints, ...priorPoints].some((point) => point.shortened)
 
   return (
     <Panel
@@ -74,7 +72,7 @@ export function DashboardTrend({
       className="scroll-mt-4"
       tabIndex={-1}
     >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 id="trend-title" className="flex items-center gap-2 font-semibold">
             <WorkspaceIcon path="/forecast" className="size-5 text-brand" />
@@ -111,10 +109,7 @@ export function DashboardTrend({
             }))}
             format={(value) => valueLabel(trend.metric, value)}
           />
-          <p className="mt-2 text-xs text-muted">
-            {comparisonNote}
-            {hasShortWeek && ' Short weeks show their day count in the chart details.'}
-          </p>
+          <p className="mt-2 text-xs text-muted">{comparisonNote}</p>
         </div>
         {(loading || error) && (
           <div

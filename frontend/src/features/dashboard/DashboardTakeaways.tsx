@@ -20,7 +20,7 @@ export function DashboardTakeaways({
       icon: '/forecast',
       title: amount === 0 ? 'Net spend held steady' : `Net spend ${amount > 0 ? 'rose' : 'fell'}`,
       detail: `${spend.percent == null ? valueLabel('spend', spend.amount) : percentLabel(spend.percent)} vs. the prior period.`,
-      color: 'bg-emerald-50 text-success',
+      color: amount < 0 ? 'bg-red-50 text-error' : 'bg-emerald-50 text-success',
     })
   }
   if (leader?.current) {
@@ -39,7 +39,7 @@ export function DashboardTakeaways({
     items.push({
       icon: '/customers',
       title: 'Households across periods',
-      detail: `${cohorts.active_in_both} active in both · ${cohorts.active_only_in_current} only in this period · ${cohorts.active_only_in_previous} only in the prior period.`,
+      detail: `${cohorts.active_in_both} in both · ${cohorts.active_only_in_current} selected only · ${cohorts.active_only_in_previous} prior only.`,
       color: 'bg-violet-50 text-violet-800',
     })
   }
@@ -47,22 +47,22 @@ export function DashboardTakeaways({
     items.push({
       icon: '/households',
       title: `${valueLabel('households', inactive.inactive)} households inactive`,
-      detail: `Of ${valueLabel('households', inactive.eligible)} observed purchasing households, last purchase at least ${inactive.days} days before ${dateLabel(inactive.as_of)}.`,
+      detail: `${valueLabel('households', inactive.eligible)} households assessed. Inactive for ${inactive.days}+ days as of ${dateLabel(inactive.as_of)}.`,
       color: 'bg-violet-50 text-violet-800',
     })
   }
 
   return (
-    <Panel aria-labelledby="takeaways-title">
-      <h2 id="takeaways-title" className="mb-2 flex items-center gap-2 font-semibold">
+    <Panel aria-labelledby="takeaways-title" className="lg:col-span-2 2xl:col-span-1">
+      <h2 id="takeaways-title" className="mb-2 flex items-center gap-2 text-base font-semibold">
         <WorkspaceIcon path="/command-center" className="size-5 text-brand" />
         Key takeaways
       </h2>
       {items.length ? (
         <ul className="divide-y divide-line">
           {items.map(({ icon, title, detail, color }) => (
-            <li key={icon} className="flex gap-2.5 py-3 last:pb-0">
-              <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${color}`}>
+            <li key={icon} className="flex items-start gap-2.5 py-2.5 last:pb-0">
+              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${color}`}>
                 <WorkspaceIcon path={icon} className="size-5" />
               </span>
               <div className="min-w-0">
