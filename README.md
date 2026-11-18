@@ -34,6 +34,41 @@ make format     # format code
 make contracts  # regenerate API types after API changes
 ```
 
+## Customer model training and evaluation
+
+Run from the repository root. Point `.env` at a persistent database, run
+`make migrate`, and import Households, Products, and Transactions in Data
+Operations. Training uses the same database settings as the API.
+
+```bash
+# Evaluate both models and print JSON evidence.
+uv run --project backend --locked --group ml python -m retail_api.customers.train --dry-run
+
+# Publish the versioned evaluation and household scores to local SQL.
+uv run --project backend --locked --group ml python -m retail_api.customers.train \
+  --artifact-dir ../rdi-model-artifacts
+```
+
+The default cutoff is the latest imported transaction date. Use
+`--model clv` or `--model churn` for a single model and `--as-of YYYY-MM-DD`
+for an earlier cutoff. For Azure SQL, run from a host that can reach the
+database with an identity that can write the model tables. Supply
+`--artifact-container-url https://<account>.blob.core.windows.net/<private-container>`
+in place of `--artifact-dir` and use an Azure identity with permission to write
+blobs to that container.
+
+Both models use 180 days of purchase history. CLV estimates the next 90 days
+of net spend. Churn estimates the probability of zero positive-unit purchases
+in the next 60 days. The JSON output reports held-out dates, sample sizes,
+candidate and baseline metrics, and uncertainty in the primary metric
+improvement. Publication stores scores only when the candidate passes the
+validation gates. An import that changes the source data marks scores stale.
+Rerun training to refresh them.
+
+After signing in, check `/api/v1/customers/models/clv/evaluation` or
+`/api/v1/customers/models/churn/evaluation` in the API docs. The cohort summaries
+and paginated household endpoints use the published SQL snapshot.
+
 ## Container
 
 ```bash

@@ -1,0 +1,164 @@
+from datetime import date, datetime
+from decimal import Decimal
+from enum import StrEnum
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+from retail_api.dashboard.schemas import Region
+
+RISK_THRESHOLD = 0.5
+
+
+class ModelType(StrEnum):
+    CLV = "clv"
+    CHURN = "churn"
+
+
+class Metrics(BaseModel):
+    mae: float | None = None
+    rmse: float | None = None
+    pr_auc: float | None = None
+    roc_auc: float | None = None
+    brier: float | None = None
+    precision: float | None = None
+    recall: float | None = None
+    confusion: tuple[int, int, int, int] | None = Field(
+        default=None, description="True negatives, false positives, false negatives, true positives"
+    )
+    calibration: list["CalibrationBin"] = Field(default_factory=list)
+
+
+class CalibrationBin(BaseModel):
+    count: int
+    mean_probability: float
+    observed_rate: float
+
+
+class FoldEvidence(BaseModel):
+    cutoff: date
+    target_through: date
+    training_rows: int
+    validation_rows: int
+    validation_households: int
+    positive_rows: int | None = None
+    candidate: Metrics
+    baseline: Metrics
+
+
+class Evaluation(BaseModel):
+    eligible: bool
+    reason: str
+    baseline_name: str
+    algorithm: str
+    threshold: float | None
+    training_first_cutoff: date | None
+    training_last_cutoff: date | None
+    training_rows: int
+    training_households: int
+    training_positive_rows: int | None
+    validation_households: int
+    validation_positive_rows: int | None
+    primary_improvement_95_ci: tuple[float, float] | None
+    candidate: Metrics | None
+    baseline: Metrics | None
+    folds: list[FoldEvidence]
+
+
+class ModelEvidence(BaseModel):
+    model: ModelType
+    status: Literal["not_run", "unavailable", "stale", "available"]
+    reason: str
+    version: UUID | None = None
+    as_of: date | None = None
+    source_first_date: date | None = None
+    source_last_date: date | None = None
+    transaction_version: int | None = None
+    household_version: int | None = None
+    trained_at: datetime | None = None
+    history_days: int = 180
+    horizon_days: int
+    target: str
+    population: str
+    caveats: list[str] = Field(default_factory=list)
+    features: dict[str, str] = Field(default_factory=dict)
+    evaluation: Evaluation | None = None
+
+
+class CohortFilters(BaseModel):
+    region: Region | None = None
+    loyalty_flag: str | None = Field(default=None, max_length=1)
+    age_range: str | None = Field(default=None, max_length=80)
+    household_size: str | None = Field(default=None, max_length=80)
+
+
+class PageFilters(CohortFilters):
+    page: int = Field(default=1, ge=1, le=1_000_000)
+    page_size: int = Field(default=25, ge=1, le=100)
+
+
+class ChurnFilters(CohortFilters):
+    risk_threshold: float = Field(
+        default=RISK_THRESHOLD,
+        ge=0,
+        le=1,
+        description="Probability used to flag high risk. Lower scoring rows remain visible.",
+    )
+
+
+class ChurnPageFilters(PageFilters, ChurnFilters):
+    pass
+
+
+class CohortSummary(BaseModel):
+    observed_households: int = 0
+    eligible_households: int = 0
+    inactive_180d: int | None = None
+    scored_households: int = 0
+    mean_future_spend: float | None = None
+    high_risk_households: int | None = None
+
+
+class ForecastBin(BaseModel):
+    lower: float
+    upper: float
+    count: int
+
+
+class ModelSummary(CohortSummary):
+    evidence: ModelEvidence
+    risk_threshold: float | None = None
+    regions: dict[str, CohortSummary] = Field(default_factory=dict)
+    distribution: list[ForecastBin] = Field(default_factory=list)
+
+
+class HouseholdPrediction(BaseModel):
+    household_id: str
+    region: str | None
+    loyalty_flag: str | None
+    age_range: str | None
+    household_size: str | None
+    last_purchase: date
+    recency_days: int
+    purchase_days_180d: int
+    observed_spend_180d: Decimal
+    eligible: bool
+    forecast: float | None
+    high_risk: bool | None = None
+
+
+class PredictionPage(BaseModel):
+    evidence: ModelEvidence
+    total: int
+    page: int
+    page_size: int
+    items: list[HouseholdPrediction]
+
+
+class HouseholdPredictions(BaseModel):
+    household_id: str
+    clv: ModelEvidence
+    churn: ModelEvidence
+    future_spend: HouseholdPrediction | None
+    churn_risk: HouseholdPrediction | None

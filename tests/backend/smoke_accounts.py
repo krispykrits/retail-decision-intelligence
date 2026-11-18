@@ -2,6 +2,8 @@
 
 import json
 import secrets
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from http.cookies import SimpleCookie
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -13,6 +15,9 @@ from sqlalchemy.orm import Session
 
 from retail_api.accounts.models import Account, AccountSession
 from retail_api.config import Settings
+from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
+from retail_api.customers.queries import publish, source_versions
+from retail_api.customers.schemas import ModelEvidence, ModelType
 from retail_api.database import create_database_engine
 
 
@@ -117,7 +122,59 @@ def main() -> None:
             "as_of": "2018-08-17",
         }
         assert request("GET", f"/dashboard/trends{query}", 200) == overview["trend"]
-        print("SQL Server smoke passed for account sessions, CSV imports, history, and dashboard.")
+        endpoint = "/customers"
+        assert request("GET", f"{endpoint}/churn/summary", 200)["evidence"]["status"] == "not_run"
+        cutoff = date(2018, 8, 17)
+        version = uuid4()
+        model = ModelType.CHURN
+        with engine.begin() as db:
+            transaction_version, household_version = source_versions(db)
+            evidence = ModelEvidence(
+                model=model,
+                status="available",
+                reason="CI API fixture",
+                version=version,
+                as_of=cutoff,
+                trained_at=datetime.now(UTC),
+                source_first_date=date(2018, 2, 16),
+                source_last_date=cutoff,
+                transaction_version=transaction_version,
+                household_version=household_version,
+                horizon_days=HORIZONS[model],
+                target=TARGETS[model],
+                population=POPULATION,
+            )
+            publish(
+                db,
+                evidence,
+                [
+                    {
+                        "run_id": version,
+                        "household_id": "0010",
+                        "region": "CENTRAL",
+                        "loyalty_flag": "Y",
+                        "age_range": None,
+                        "household_size": None,
+                        "last_purchase": cutoff,
+                        "purchase_days_180d": 8,
+                        "eligible": True,
+                        "observed_spend_180d": Decimal("20.05"),
+                        "forecast": 0.8,
+                    }
+                ],
+                "file:///ci-fixture.joblib",
+            )
+        summary = request("GET", f"{endpoint}/churn/summary?region=CENTRAL", 200)
+        assert summary["high_risk_households"] == 1
+        assert sum(bucket["count"] for bucket in summary["distribution"]) == 1
+        assert (
+            request("GET", f"{endpoint}/churn/households?page_size=1", 200)["items"][0][
+                "household_id"
+            ]
+            == "0010"
+        )
+        print("SQL Server smoke passed for sessions, CSV imports, dashboard, and customer models.")
+
     finally:
         with Session(engine) as db, db.begin():
             db.execute(delete(AccountSession).where(AccountSession.account_id == account_id))

@@ -171,6 +171,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/customers/churn/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rank households by validated 60-day churn probability */
+        get: operations["churn_households_api_v1_customers_churn_households_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/churn/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summarize observed inactivity and modeled 60-day risk */
+        get: operations["churn_summary_api_v1_customers_churn_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/clv/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rank households by validated 90-day net spend */
+        get: operations["clv_households_api_v1_customers_clv_households_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/clv/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summarize modeled 90-day net spend for a cohort */
+        get: operations["clv_summary_api_v1_customers_clv_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/models/{model}/evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read versioned out-of-time model evidence */
+        get: operations["evaluation_api_v1_customers_models__model__evaluation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{hshd_num}/predictions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read published predictions for a pseudonymous household ID */
+        get: operations["household_predictions_api_v1_customers__hshd_num__predictions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard": {
         parameters: {
             query?: never;
@@ -532,12 +634,45 @@ export interface components {
             start: string;
             totals: components["schemas"]["Totals"];
         };
+        /** CalibrationBin */
+        CalibrationBin: {
+            /** Count */
+            count: number;
+            /** Mean Probability */
+            mean_probability: number;
+            /** Observed Rate */
+            observed_rate: number;
+        };
         /** Change */
         Change: {
             /** Amount */
             amount: string;
             /** Percent */
             percent: string | null;
+        };
+        /** CohortSummary */
+        CohortSummary: {
+            /**
+             * Eligible Households
+             * @default 0
+             */
+            eligible_households: number;
+            /** High Risk Households */
+            high_risk_households?: number | null;
+            /** Inactive 180D */
+            inactive_180d?: number | null;
+            /** Mean Future Spend */
+            mean_future_spend?: number | null;
+            /**
+             * Observed Households
+             * @default 0
+             */
+            observed_households: number;
+            /**
+             * Scored Households
+             * @default 0
+             */
+            scored_households: number;
         };
         /** Cohorts */
         Cohorts: {
@@ -615,6 +750,42 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** Evaluation */
+        Evaluation: {
+            /** Algorithm */
+            algorithm: string;
+            baseline: components["schemas"]["Metrics"] | null;
+            /** Baseline Name */
+            baseline_name: string;
+            candidate: components["schemas"]["Metrics"] | null;
+            /** Eligible */
+            eligible: boolean;
+            /** Folds */
+            folds: components["schemas"]["FoldEvidence"][];
+            /** Primary Improvement 95 Ci */
+            primary_improvement_95_ci: [
+                number,
+                number
+            ] | null;
+            /** Reason */
+            reason: string;
+            /** Threshold */
+            threshold: number | null;
+            /** Training First Cutoff */
+            training_first_cutoff: string | null;
+            /** Training Households */
+            training_households: number;
+            /** Training Last Cutoff */
+            training_last_cutoff: string | null;
+            /** Training Positive Rows */
+            training_positive_rows: number | null;
+            /** Training Rows */
+            training_rows: number;
+            /** Validation Households */
+            validation_households: number;
+            /** Validation Positive Rows */
+            validation_positive_rows: number | null;
+        };
         /** Evidence */
         Evidence: {
             /** Current */
@@ -638,6 +809,38 @@ export interface components {
             last_date: string | null;
             /** Regions */
             regions: string[];
+        };
+        /** FoldEvidence */
+        FoldEvidence: {
+            baseline: components["schemas"]["Metrics"];
+            candidate: components["schemas"]["Metrics"];
+            /**
+             * Cutoff
+             * Format: date
+             */
+            cutoff: string;
+            /** Positive Rows */
+            positive_rows?: number | null;
+            /**
+             * Target Through
+             * Format: date
+             */
+            target_through: string;
+            /** Training Rows */
+            training_rows: number;
+            /** Validation Households */
+            validation_households: number;
+            /** Validation Rows */
+            validation_rows: number;
+        };
+        /** ForecastBin */
+        ForecastBin: {
+            /** Count */
+            count: number;
+            /** Lower */
+            lower: number;
+            /** Upper */
+            upper: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -663,6 +866,45 @@ export interface components {
              * @default 0.1.0
              */
             version: string;
+        };
+        /** HouseholdPrediction */
+        HouseholdPrediction: {
+            /** Age Range */
+            age_range: string | null;
+            /** Eligible */
+            eligible: boolean;
+            /** Forecast */
+            forecast: number | null;
+            /** High Risk */
+            high_risk?: boolean | null;
+            /** Household Id */
+            household_id: string;
+            /** Household Size */
+            household_size: string | null;
+            /**
+             * Last Purchase
+             * Format: date
+             */
+            last_purchase: string;
+            /** Loyalty Flag */
+            loyalty_flag: string | null;
+            /** Observed Spend 180D */
+            observed_spend_180d: string;
+            /** Purchase Days 180D */
+            purchase_days_180d: number;
+            /** Recency Days */
+            recency_days: number;
+            /** Region */
+            region: string | null;
+        };
+        /** HouseholdPredictions */
+        HouseholdPredictions: {
+            churn: components["schemas"]["ModelEvidence"];
+            churn_risk: components["schemas"]["HouseholdPrediction"] | null;
+            clv: components["schemas"]["ModelEvidence"];
+            future_spend: components["schemas"]["HouseholdPrediction"] | null;
+            /** Household Id */
+            household_id: string;
         };
         /** ImportCapabilities */
         ImportCapabilities: {
@@ -777,6 +1019,116 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** Metrics */
+        Metrics: {
+            /** Brier */
+            brier?: number | null;
+            /** Calibration */
+            calibration?: components["schemas"]["CalibrationBin"][];
+            /**
+             * Confusion
+             * @description True negatives, false positives, false negatives, true positives
+             */
+            confusion?: [
+                number,
+                number,
+                number,
+                number
+            ] | null;
+            /** Mae */
+            mae?: number | null;
+            /** Pr Auc */
+            pr_auc?: number | null;
+            /** Precision */
+            precision?: number | null;
+            /** Recall */
+            recall?: number | null;
+            /** Rmse */
+            rmse?: number | null;
+            /** Roc Auc */
+            roc_auc?: number | null;
+        };
+        /** ModelEvidence */
+        ModelEvidence: {
+            /** As Of */
+            as_of?: string | null;
+            /** Caveats */
+            caveats?: string[];
+            evaluation?: components["schemas"]["Evaluation"] | null;
+            /** Features */
+            features?: {
+                [key: string]: string;
+            };
+            /**
+             * History Days
+             * @default 180
+             */
+            history_days: number;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Household Version */
+            household_version?: number | null;
+            model: components["schemas"]["ModelType"];
+            /** Population */
+            population: string;
+            /** Reason */
+            reason: string;
+            /** Source First Date */
+            source_first_date?: string | null;
+            /** Source Last Date */
+            source_last_date?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_run" | "unavailable" | "stale" | "available";
+            /** Target */
+            target: string;
+            /** Trained At */
+            trained_at?: string | null;
+            /** Transaction Version */
+            transaction_version?: number | null;
+            /** Version */
+            version?: string | null;
+        };
+        /** ModelSummary */
+        ModelSummary: {
+            /** Distribution */
+            distribution?: components["schemas"]["ForecastBin"][];
+            /**
+             * Eligible Households
+             * @default 0
+             */
+            eligible_households: number;
+            evidence: components["schemas"]["ModelEvidence"];
+            /** High Risk Households */
+            high_risk_households?: number | null;
+            /** Inactive 180D */
+            inactive_180d?: number | null;
+            /** Mean Future Spend */
+            mean_future_spend?: number | null;
+            /**
+             * Observed Households
+             * @default 0
+             */
+            observed_households: number;
+            /** Regions */
+            regions?: {
+                [key: string]: components["schemas"]["CohortSummary"];
+            };
+            /** Risk Threshold */
+            risk_threshold?: number | null;
+            /**
+             * Scored Households
+             * @default 0
+             */
+            scored_households: number;
+        };
+        /**
+         * ModelType
+         * @enum {string}
+         */
+        ModelType: "clv" | "churn";
         /** Period */
         Period: {
             /**
@@ -791,6 +1143,18 @@ export interface components {
              * Format: date
              */
             start: string;
+        };
+        /** PredictionPage */
+        PredictionPage: {
+            evidence: components["schemas"]["ModelEvidence"];
+            /** Items */
+            items: components["schemas"]["HouseholdPrediction"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -1409,6 +1773,329 @@ export interface operations {
                 };
             };
             /** @description Account configuration, SQL or email delivery unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    churn_households_api_v1_customers_churn_households_get: {
+        parameters: {
+            query?: {
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                loyalty_flag?: string | null;
+                age_range?: string | null;
+                household_size?: string | null;
+                /** @description Probability used to flag high risk. Lower scoring rows remain visible. */
+                risk_threshold?: number;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionPage"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    churn_summary_api_v1_customers_churn_summary_get: {
+        parameters: {
+            query?: {
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                loyalty_flag?: string | null;
+                age_range?: string | null;
+                household_size?: string | null;
+                /** @description Probability used to flag high risk. Lower scoring rows remain visible. */
+                risk_threshold?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelSummary"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clv_households_api_v1_customers_clv_households_get: {
+        parameters: {
+            query?: {
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                loyalty_flag?: string | null;
+                age_range?: string | null;
+                household_size?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionPage"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clv_summary_api_v1_customers_clv_summary_get: {
+        parameters: {
+            query?: {
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                loyalty_flag?: string | null;
+                age_range?: string | null;
+                household_size?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelSummary"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    evaluation_api_v1_customers_models__model__evaluation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model: components["schemas"]["ModelType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelEvidence"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    household_predictions_api_v1_customers__hshd_num__predictions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hshd_num: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdPredictions"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Household not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
