@@ -163,3 +163,80 @@ def test_failed_import_rolls_back_and_concurrent_retries_share_no_rows(
             assert db.scalar(select(func.count()).select_from(households)) == 1
     finally:
         engine.dispose()
+
+
+def test_direct_upload_survives_redelivery(
+    signed_in: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+    from uuid import UUID
+
+    from azure.storage.queue import QueueMessage
+
+    from retail_api.api import imports as imports_api
+    from retail_api.imports.worker import process_message
+
+    client = signed_in
+    settings = client.app.state.settings
+    settings.import_storage_account = "rditestimports"
+    contents = HOUSEHOLDS + HOUSEHOLD
+    queue: list[str] = []
+    deleted: list[str] = []
+
+    class FileBlob:
+        def get_blob_properties(self):
+            return SimpleNamespace(size=len(contents), etag="stable")
+
+        def download_blob(self, **kwargs):
+            return SimpleNamespace(readinto=lambda target: target.write(contents))
+
+    class FakeStorage:
+        def __init__(self, settings):
+            self.queue = SimpleNamespace(
+                send_message=lambda item, **kw: queue.append(item),
+                delete_message=lambda message: deleted.append(message.content),
+            )
+
+        def blob(self, import_id):
+            return FileBlob()
+
+        def upload_url(self, import_id):
+            return f"https://example.test/{import_id}.csv"
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(imports_api, "ImportStorage", FakeStorage)
+    payload = {"dataset": "households", "filename": "households.csv", "size_bytes": len(contents)}
+
+    def post(path, **kwargs):
+        token = client.get("/api/v1/auth/csrf").json()["token"]
+        return client.post(path, headers={"X-CSRF-Token": token}, **kwargs)
+
+    assert post("/api/v1/import-jobs", json=payload).status_code == 403
+    engine = client.app.state.database
+    with Session(engine) as db, db.begin():
+        db.scalars(select(Account)).one().is_superuser = True
+
+    response = post("/api/v1/import-jobs", json=payload)
+    assert response.status_code == 201
+    import_id = response.json()["import_id"]
+    path = f"/api/v1/import-jobs/{import_id}"
+    assert client.get(path).json()["status"] == "awaiting_upload"
+    assert post(f"{path}/submit").json()["status"] == "queued"
+    assert post(f"{path}/submit").json()["status"] == "queued"
+    assert queue == [import_id]
+
+    message = QueueMessage(content=import_id)
+    process_message(engine, FakeStorage(settings), settings, message)
+    process_message(engine, FakeStorage(settings), settings, message)
+    with engine.connect() as connection:
+        with BytesIO(contents) as source:
+            result = store.import_csv(
+                engine, Dataset.HOUSEHOLDS, "households.csv", source, import_id=UUID(import_id)
+            )
+        assert store.read_import(connection, UUID(import_id)) == result
+        assert connection.scalar(select(func.count()).select_from(households)) == 1
+    state = client.get(path).json()
+    assert state["status"] == "finished" and state["result"]["inserted"] == 1
+    assert deleted == [import_id, import_id]

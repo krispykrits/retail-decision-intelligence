@@ -24,9 +24,15 @@ SWAGGER_CSP = (
 )
 
 
-def security_headers(environment: Environment, *, documentation: bool) -> dict[str, str]:
+def security_headers(
+    environment: Environment, *, documentation: bool, import_storage_account: str | None = None
+) -> dict[str, str]:
     headers = COMMON_SECURITY_HEADERS.copy()
     if environment is Environment.DEVELOPMENT:
         headers["Strict-Transport-Security"] = f"max-age={HSTS_MAX_AGE_SECONDS}"
         headers["Content-Security-Policy"] = SWAGGER_CSP if documentation else APPLICATION_CSP
+        if import_storage_account:
+            headers["Content-Security-Policy"] += (
+                f"; connect-src 'self' https://{import_storage_account}.blob.core.windows.net"
+            )
     return headers

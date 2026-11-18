@@ -53,7 +53,7 @@ resource "random_password" "accounts" {
 
 # Deploy the combined React/FastAPI image after database setup completes.
 resource "azurerm_container_app" "app" {
-  depends_on                   = [terraform_data.database_access]
+  depends_on                   = [terraform_data.database_access, data.azapi_resource.import_storage]
   name                         = "${var.name_prefix}-app"
   resource_group_name          = local.resource_group_name
   container_app_environment_id = azurerm_container_app_environment.app.id
@@ -128,6 +128,13 @@ resource "azurerm_container_app" "app" {
       env {
         name        = "RDI_AUTH_SECRET"
         secret_name = "account-signing-key"
+      }
+      dynamic "env" {
+        for_each = var.import_storage_account == null ? [] : [var.import_storage_account]
+        content {
+          name  = "RDI_IMPORT_STORAGE_ACCOUNT"
+          value = env.value
+        }
       }
       # Without SMTP, registration/recovery explicitly report unavailable delivery.
       dynamic "env" {

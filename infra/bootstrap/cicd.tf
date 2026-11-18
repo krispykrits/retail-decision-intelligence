@@ -57,7 +57,7 @@ resource "azurerm_federated_identity_credential" "github" {
   subject             = "repo:${var.github_repository}:environment:development"
 }
 
-# Read the existing infrastructure; write only the app, its identity assignment, and state.
+# Read the infrastructure and manage the app, import job, its identity assignment, and state.
 resource "azurerm_role_assignment" "deployment" {
   for_each = local.configure_ci == 0 ? {} : {
     read = {
@@ -71,6 +71,10 @@ resource "azurerm_role_assignment" "deployment" {
     environment = {
       scope = data.azurerm_container_app.development[0].container_app_environment_id
       role  = "Container Apps Contributor"
+    }
+    jobs = {
+      scope = azurerm_resource_group.project.id
+      role  = "Container Apps Jobs Contributor"
     }
     identity = {
       scope = data.azurerm_user_assigned_identity.api[0].id

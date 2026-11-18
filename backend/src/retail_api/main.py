@@ -76,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             security_headers(
                 configuration.environment,
                 documentation=request.url.path in documentation_paths,
+                import_storage_account=configuration.import_storage_account,
             )
         )
         return response

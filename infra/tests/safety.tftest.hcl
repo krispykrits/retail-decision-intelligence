@@ -80,3 +80,21 @@ run "reject_broad_azure_access" {
   }
   expect_failures = [var.sql_allowed_ipv4_addresses]
 }
+
+run "queued_imports_run_on_demand" {
+  command = plan
+
+  variables {
+    import_storage_account = "rditestimports"
+  }
+
+  assert {
+    condition = (
+      azurerm_container_app.app.template[0].min_replicas == 0 &&
+      azurerm_container_app_job.imports[0].resource_group_name == var.resource_group_name &&
+      azurerm_container_app_job.imports[0].event_trigger_config[0].scale[0].min_executions == 0 &&
+      azurerm_container_app_job.imports[0].template[0].container[0].image == var.app_image
+    )
+    error_message = "Use an on-demand import job in the app resource group with the deployed image."
+  }
+}
