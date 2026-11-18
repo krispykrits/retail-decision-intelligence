@@ -156,7 +156,7 @@ export function DataOperationsPage() {
     <div className="space-y-3 md:space-y-4">
       <WorkspaceHeader path="/data" />
       <div
-        className={`grid items-start gap-3 md:gap-4 ${administrator ? 'xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
+        className={`grid gap-3 md:gap-4 ${administrator ? 'xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
       >
         {administrator && (
           <Panel aria-labelledby="upload-heading">
