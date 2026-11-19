@@ -111,6 +111,29 @@
         "title": "Bucket",
         "type": "object"
       },
+      "CalibrationBin": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "mean_probability": {
+            "title": "Mean Probability",
+            "type": "number"
+          },
+          "observed_rate": {
+            "title": "Observed Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count",
+          "mean_probability",
+          "observed_rate"
+        ],
+        "title": "CalibrationBin",
+        "type": "object"
+      },
       "Change": {
         "properties": {
           "amount": {
@@ -134,6 +157,60 @@
           "percent"
         ],
         "title": "Change",
+        "type": "object"
+      },
+      "CohortSummary": {
+        "properties": {
+          "eligible_households": {
+            "default": 0,
+            "title": "Eligible Households",
+            "type": "integer"
+          },
+          "high_risk_households": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Risk Households"
+          },
+          "inactive_180d": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive 180D"
+          },
+          "mean_future_spend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Future Spend"
+          },
+          "observed_households": {
+            "default": 0,
+            "title": "Observed Households",
+            "type": "integer"
+          },
+          "scored_households": {
+            "default": 0,
+            "title": "Scored Households",
+            "type": "integer"
+          }
+        },
+        "title": "CohortSummary",
         "type": "object"
       },
       "Cohorts": {
@@ -368,6 +445,183 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "Evaluation": {
+        "properties": {
+          "algorithm": {
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseline_name": {
+            "title": "Baseline Name",
+            "type": "string"
+          },
+          "candidate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "folds": {
+            "items": {
+              "$ref": "#/components/schemas/FoldEvidence"
+            },
+            "title": "Folds",
+            "type": "array"
+          },
+          "hyperparameters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Hyperparameters",
+            "type": "object"
+          },
+          "primary_improvement_95_ci": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Improvement 95 Ci"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "training_first_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training First Cutoff"
+          },
+          "training_households": {
+            "title": "Training Households",
+            "type": "integer"
+          },
+          "training_last_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Last Cutoff"
+          },
+          "training_positive_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Positive Rows"
+          },
+          "training_rows": {
+            "title": "Training Rows",
+            "type": "integer"
+          },
+          "validation_households": {
+            "title": "Validation Households",
+            "type": "integer"
+          },
+          "validation_positive_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Positive Rows"
+          }
+        },
+        "required": [
+          "eligible",
+          "reason",
+          "baseline_name",
+          "algorithm",
+          "threshold",
+          "training_first_cutoff",
+          "training_last_cutoff",
+          "training_rows",
+          "training_households",
+          "training_positive_rows",
+          "validation_households",
+          "validation_positive_rows",
+          "primary_improvement_95_ci",
+          "candidate",
+          "baseline",
+          "folds"
+        ],
+        "title": "Evaluation",
+        "type": "object"
+      },
       "Evidence": {
         "properties": {
           "current": {
@@ -451,6 +705,83 @@
         "title": "FilterOptions",
         "type": "object"
       },
+      "FoldEvidence": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "cutoff": {
+            "format": "date",
+            "title": "Cutoff",
+            "type": "string"
+          },
+          "positive_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positive Rows"
+          },
+          "target_through": {
+            "format": "date",
+            "title": "Target Through",
+            "type": "string"
+          },
+          "training_rows": {
+            "title": "Training Rows",
+            "type": "integer"
+          },
+          "validation_households": {
+            "title": "Validation Households",
+            "type": "integer"
+          },
+          "validation_rows": {
+            "title": "Validation Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cutoff",
+          "target_through",
+          "training_rows",
+          "validation_rows",
+          "validation_households",
+          "candidate",
+          "baseline"
+        ],
+        "title": "FoldEvidence",
+        "type": "object"
+      },
+      "ForecastBin": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "lower": {
+            "title": "Lower",
+            "type": "number"
+          },
+          "upper": {
+            "title": "Upper",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lower",
+          "upper",
+          "count"
+        ],
+        "title": "ForecastBin",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -485,6 +816,159 @@
           }
         },
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HouseholdPrediction": {
+        "properties": {
+          "age_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Range"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast"
+          },
+          "high_risk": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Risk"
+          },
+          "household_id": {
+            "title": "Household Id",
+            "type": "string"
+          },
+          "household_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Size"
+          },
+          "last_purchase": {
+            "format": "date",
+            "title": "Last Purchase",
+            "type": "string"
+          },
+          "loyalty_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Flag"
+          },
+          "observed_spend_180d": {
+            "title": "Observed Spend 180D",
+            "type": "string"
+          },
+          "purchase_days_180d": {
+            "title": "Purchase Days 180D",
+            "type": "integer"
+          },
+          "recency_days": {
+            "title": "Recency Days",
+            "type": "integer"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "required": [
+          "household_id",
+          "region",
+          "loyalty_flag",
+          "age_range",
+          "household_size",
+          "last_purchase",
+          "recency_days",
+          "purchase_days_180d",
+          "observed_spend_180d",
+          "eligible",
+          "forecast"
+        ],
+        "title": "HouseholdPrediction",
+        "type": "object"
+      },
+      "HouseholdPredictions": {
+        "properties": {
+          "churn": {
+            "$ref": "#/components/schemas/ModelEvidence"
+          },
+          "churn_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HouseholdPrediction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clv": {
+            "$ref": "#/components/schemas/ModelEvidence"
+          },
+          "future_spend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HouseholdPrediction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "household_id": {
+            "title": "Household Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "household_id",
+          "clv",
+          "churn",
+          "future_spend",
+          "churn_risk"
+        ],
+        "title": "HouseholdPredictions",
         "type": "object"
       },
       "ImportCapabilities": {
@@ -746,6 +1230,371 @@
         "title": "MetricPoint",
         "type": "object"
       },
+      "Metrics": {
+        "properties": {
+          "brier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brier"
+          },
+          "calibration": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationBin"
+            },
+            "title": "Calibration",
+            "type": "array"
+          },
+          "confusion": {
+            "anyOf": [
+              {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True negatives, false positives, false negatives, true positives",
+            "title": "Confusion"
+          },
+          "mae": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mae"
+          },
+          "pr_auc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Auc"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision"
+          },
+          "recall": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recall"
+          },
+          "rmse": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rmse"
+          },
+          "roc_auc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roc Auc"
+          }
+        },
+        "title": "Metrics",
+        "type": "object"
+      },
+      "ModelEvidence": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Evaluation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "features": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "object"
+          },
+          "history_days": {
+            "default": 180,
+            "title": "History Days",
+            "type": "integer"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "household_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Version"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelType"
+          },
+          "population": {
+            "title": "Population",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source First Date"
+          },
+          "source_last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Last Date"
+          },
+          "status": {
+            "enum": [
+              "not_run",
+              "unavailable",
+              "stale",
+              "available"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "trained_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trained At"
+          },
+          "transaction_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Version"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "model",
+          "status",
+          "reason",
+          "horizon_days",
+          "target",
+          "population"
+        ],
+        "title": "ModelEvidence",
+        "type": "object"
+      },
+      "ModelSummary": {
+        "properties": {
+          "distribution": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastBin"
+            },
+            "title": "Distribution",
+            "type": "array"
+          },
+          "eligible_households": {
+            "default": 0,
+            "title": "Eligible Households",
+            "type": "integer"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/ModelEvidence"
+          },
+          "high_risk_households": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Risk Households"
+          },
+          "inactive_180d": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive 180D"
+          },
+          "mean_future_spend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Future Spend"
+          },
+          "observed_households": {
+            "default": 0,
+            "title": "Observed Households",
+            "type": "integer"
+          },
+          "regions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CohortSummary"
+            },
+            "title": "Regions",
+            "type": "object"
+          },
+          "risk_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Threshold"
+          },
+          "scored_households": {
+            "default": 0,
+            "title": "Scored Households",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evidence"
+        ],
+        "title": "ModelSummary",
+        "type": "object"
+      },
+      "ModelType": {
+        "enum": [
+          "clv",
+          "churn"
+        ],
+        "title": "ModelType",
+        "type": "string"
+      },
       "Period": {
         "properties": {
           "end": {
@@ -769,6 +1618,41 @@
           "partial"
         ],
         "title": "Period",
+        "type": "object"
+      },
+      "PredictionPage": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/ModelEvidence"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HouseholdPrediction"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evidence",
+          "total",
+          "page",
+          "page_size",
+          "items"
+        ],
+        "title": "PredictionPage",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -1824,6 +2708,722 @@
         "summary": "Verify account email ownership",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/api/v1/customers/churn/households": {
+      "get": {
+        "operationId": "churn_households_api_v1_customers_churn_households_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loyalty_flag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loyalty Flag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age_range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "household_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size"
+            }
+          },
+          {
+            "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+            "in": "query",
+            "name": "risk_threshold",
+            "required": false,
+            "schema": {
+              "default": 0.5,
+              "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Risk Threshold",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 1000000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Rank households by validated 60-day churn probability",
+        "tags": [
+          "Customer Models"
+        ]
+      }
+    },
+    "/api/v1/customers/churn/summary": {
+      "get": {
+        "operationId": "churn_summary_api_v1_customers_churn_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loyalty_flag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loyalty Flag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age_range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "household_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size"
+            }
+          },
+          {
+            "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+            "in": "query",
+            "name": "risk_threshold",
+            "required": false,
+            "schema": {
+              "default": 0.5,
+              "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Risk Threshold",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Summarize observed inactivity and modeled 60-day risk",
+        "tags": [
+          "Customer Models"
+        ]
+      }
+    },
+    "/api/v1/customers/clv/households": {
+      "get": {
+        "operationId": "clv_households_api_v1_customers_clv_households_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loyalty_flag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loyalty Flag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age_range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "household_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 1000000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Rank households by validated 90-day net spend",
+        "tags": [
+          "Customer Models"
+        ]
+      }
+    },
+    "/api/v1/customers/clv/summary": {
+      "get": {
+        "operationId": "clv_summary_api_v1_customers_clv_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loyalty_flag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loyalty Flag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age_range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "household_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Summarize modeled 90-day net spend for a cohort",
+        "tags": [
+          "Customer Models"
+        ]
+      }
+    },
+    "/api/v1/customers/models/{model}/evaluation": {
+      "get": {
+        "operationId": "evaluation_api_v1_customers_models__model__evaluation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ModelType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEvidence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Read versioned out-of-time model evidence",
+        "tags": [
+          "Customer Models"
+        ]
+      }
+    },
+    "/api/v1/customers/{hshd_num}/predictions": {
+      "get": {
+        "operationId": "household_predictions_api_v1_customers__hshd_num__predictions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hshd_num",
+            "required": true,
+            "schema": {
+              "maxLength": 32,
+              "minLength": 1,
+              "pattern": "^[0-9]+$",
+              "title": "Hshd Num",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdPredictions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Household not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Read published predictions for a pseudonymous household ID",
+        "tags": [
+          "Customer Models"
         ]
       }
     },

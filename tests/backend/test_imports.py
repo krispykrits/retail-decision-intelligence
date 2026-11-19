@@ -410,3 +410,106 @@ def test_dashboard_reconciles_imported_data_and_filters(signed_in: TestClient) -
         client.get(base, params={**filters, "region": "WEST"}).json()["summary"]["current"] is None
     )
     assert TestClient(client.app).get(base).status_code == 401
+
+
+def test_customer_model_api_serves_only_current_validated_scores(signed_in: TestClient) -> None:
+    from datetime import UTC, date, datetime
+    from decimal import Decimal
+    from uuid import uuid4
+
+    from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
+    from retail_api.customers.queries import publish
+    from retail_api.customers.schemas import ModelEvidence, ModelType
+    from retail_api.imports.schema_v1 import dataset_state
+
+    client = signed_in
+    endpoint = "/api/v1/customers"
+    no_model = client.get(f"{endpoint}/churn/summary")
+    assert no_model.status_code == 200
+    assert no_model.headers["Cache-Control"] == "no-store"
+    assert no_model.json()["evidence"]["status"] == "not_run"
+    assert TestClient(client.app).get(f"{endpoint}/clv/summary").status_code == 401
+
+    with Session(client.app.state.database) as session, session.begin():
+        session.scalars(select(Account)).one().is_superuser = True
+    assert (
+        upload(
+            client, "households", HOUSEHOLDS + HOUSEHOLD + HOUSEHOLD.replace(b"0010", b"0020")
+        ).status_code
+        == 200
+    )
+
+    cutoff = date(2020, 8, 15)
+    with client.app.state.database.begin() as db:
+        for model in ModelType:
+            run = ModelEvidence(
+                model=model,
+                status="available",
+                reason="Validated test fixture",
+                version=uuid4(),
+                as_of=cutoff,
+                source_first_date=date(2019, 1, 1),
+                source_last_date=cutoff,
+                transaction_version=0,
+                household_version=1,
+                trained_at=datetime.now(UTC),
+                horizon_days=HORIZONS[model],
+                target=TARGETS[model],
+                population=POPULATION,
+            )
+            active = {
+                "run_id": run.version,
+                "household_id": "0010",
+                "region": "EAST",
+                "loyalty_flag": "Y",
+                "age_range": None,
+                "household_size": None,
+                "last_purchase": cutoff,
+                "purchase_days_180d": 12,
+                "observed_spend_180d": Decimal("100.0000"),
+                "eligible": True,
+                "forecast": 0.8 if model is ModelType.CHURN else 320.0,
+            }
+            inactive = {
+                **active,
+                "household_id": "0020",
+                "region": "WEST",
+                "last_purchase": date(2019, 10, 1),
+                "purchase_days_180d": 0,
+                "eligible": False,
+                "forecast": None,
+            }
+            publish(db, run, [active, inactive], "file:///test-artifact.joblib")
+
+    summary = client.get(f"{endpoint}/churn/summary", params={"risk_threshold": 0.75}).json()
+    assert summary["high_risk_households"] == summary["inactive_180d"] == 1
+    assert summary["regions"]["WEST"]["high_risk_households"] == 0
+    assert sum(bucket["count"] for bucket in summary["distribution"]) == 1
+    rows = client.get(
+        f"{endpoint}/churn/households", params={"region": "EAST", "page_size": 1}
+    ).json()
+    assert rows["total"] == 1
+    assert rows["items"][0]["household_id"] == "0010"
+    assert rows["items"][0]["high_risk"]
+    assert (
+        client.get(f"{endpoint}/churn/households", params={"risk_threshold": 1.1}).status_code
+        == 422
+    )
+    detail = client.get(f"{endpoint}/0010/predictions").json()
+    assert detail["future_spend"]["forecast"] == 320.0
+    assert detail["future_spend"]["recency_days"] == 0
+    assert client.get(f"{endpoint}/9999/predictions").status_code == 404
+
+    with client.app.state.database.begin() as db:
+        db.execute(
+            dataset_state.update()
+            .where(dataset_state.c.dataset == Dataset.HOUSEHOLDS)
+            .values(version=2)
+        )
+    stale = client.get(f"{endpoint}/models/churn/evaluation").json()
+    assert stale["status"] == "stale"
+    stale_summary = client.get(f"{endpoint}/churn/summary").json()
+    assert stale_summary["scored_households"] == 0
+    assert stale_summary["high_risk_households"] is None
+    assert not stale_summary["distribution"]
+    assert client.get(f"{endpoint}/0010/predictions").json()["churn_risk"]["forecast"] is None
