@@ -10,7 +10,7 @@ mock_provider "azurerm" {
     defaults = { resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/tfstate" }
   }
   mock_resource "azurerm_storage_queue" {
-    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/queueServices/default/queues/csv-imports" }
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/queueServices/default/queues/csv-imports" }
   }
   mock_data "azurerm_log_analytics_workspace" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.OperationalInsights/workspaces/rdi-test-logs" }
@@ -131,12 +131,8 @@ run "private_model_artifact_container" {
   }
 }
 
-run "consolidated_storage_after_cutover" {
+run "imports_use_shared_storage" {
   command = plan
-
-  variables {
-    retain_legacy_import_storage = false
-  }
 
   override_resource {
     override_during = plan
@@ -148,7 +144,6 @@ run "consolidated_storage_after_cutover" {
 
   assert {
     condition = (
-      length(azurerm_storage_account.imports) == 0 &&
       azurerm_storage_container.shared_imports[0].storage_account_id == azurerm_storage_account.state.id &&
       azurerm_storage_queue.shared_imports[0].storage_account_id == azurerm_storage_account.state.id &&
       azurerm_storage_container.shared_imports[0].container_access_type == "private"
