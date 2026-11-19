@@ -9,7 +9,9 @@ from sqlalchemy.pool import NullPool
 from retail_api.config import Settings
 
 
-def create_database_engine(settings: Settings, *, connect_timeout: int = 5) -> Engine:
+def create_database_engine(
+    settings: Settings, *, connect_timeout: int = 5, query_timeout: int = 5
+) -> Engine:
     """Connect lazily; close SQL connections between requests so SQL can pause."""
     url: str | URL = settings.database_url.get_secret_value()
     if settings.sql_server:
@@ -48,7 +50,7 @@ def create_database_engine(settings: Settings, *, connect_timeout: int = 5) -> E
 
     @event.listens_for(engine, "connect")
     def set_query_timeout(connection: Any, record: Any) -> None:
-        connection.timeout = 5
+        connection.timeout = query_timeout
 
     if settings.sql_server:
         client_id = os.environ.get("AZURE_CLIENT_ID")
