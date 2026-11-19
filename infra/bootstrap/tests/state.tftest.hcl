@@ -7,7 +7,7 @@ mock_provider "azurerm" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate" }
   }
   mock_resource "azurerm_storage_container" {
-    defaults = { resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/blobServices/default/containers/csv-imports" }
+    defaults = { resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/tfstate" }
   }
   mock_resource "azurerm_storage_queue" {
     defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditestimports/queueServices/default/queues/csv-imports" }
@@ -80,8 +80,84 @@ run "private_state_in_project_group" {
   assert {
     condition = (
       azurerm_federated_identity_credential.github[0].subject == "repo:example@123/retail@456:environment:development" &&
-      alltrue([for grant in azurerm_role_assignment.deployment : !contains(["Owner", "Contributor"], grant.role_definition_name)])
+      alltrue([for grant in azurerm_role_assignment.deployment : !contains(["Owner", "Contributor"], grant.role_definition_name)]) &&
+      azurerm_role_assignment.deployment["state"].scope == azurerm_storage_container.state.resource_manager_id
     )
     error_message = "Deployment must use development-only federation without broad Owner/Contributor grants."
+  }
+}
+
+run "private_model_artifact_container" {
+  command = plan
+
+  variables {
+    model_artifact_publisher_object_id = "33333333-3333-3333-3333-333333333333"
+  }
+
+  override_resource {
+    target = azurerm_storage_account.state
+    values = {
+      primary_blob_endpoint = "https://rditeststate.blob.core.windows.net/"
+    }
+  }
+
+  override_resource {
+    target = azurerm_storage_container.model_artifacts[0]
+    values = {
+      resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/model-artifacts"
+    }
+  }
+
+  assert {
+    condition = (
+      azurerm_storage_container.model_artifacts[0].container_access_type == "private" &&
+      azurerm_storage_container.model_artifacts[0].storage_account_id == azurerm_storage_account.state.id &&
+      output.model_artifact_container_url == "https://rditeststate.blob.core.windows.net/model-artifacts" &&
+      toset(azurerm_storage_management_policy.shared_imports[0].rule[0].filters[0].prefix_match) == toset(["csv-imports/"])
+    )
+    error_message = "Model artifacts must be private, use the existing storage account, and sit outside CSV expiry."
+  }
+
+  assert {
+    condition = (
+      azurerm_role_assignment.model_artifact_publisher[0].scope == azurerm_storage_container.model_artifacts[0].resource_manager_id &&
+      azurerm_role_assignment.model_artifact_publisher[0].principal_id == var.model_artifact_publisher_object_id &&
+      azurerm_role_assignment.model_artifact_publisher[0].role_definition_name == "Storage Blob Data Contributor"
+    )
+    error_message = "Publisher access must be scoped to the model artifact container."
+  }
+}
+
+run "consolidated_storage_after_cutover" {
+  command = plan
+
+  variables {
+    retain_legacy_import_storage = false
+  }
+
+  override_resource {
+    target = azurerm_storage_container.shared_imports[0]
+    values = {
+      resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/csv-imports"
+    }
+  }
+
+  assert {
+    condition = (
+      length(azurerm_storage_account.imports) == 0 &&
+      azurerm_storage_container.shared_imports[0].storage_account_id == azurerm_storage_account.state.id &&
+      azurerm_storage_queue.shared_imports[0].storage_account_id == azurerm_storage_account.state.id &&
+      azurerm_storage_container.shared_imports[0].container_access_type == "private"
+    )
+    error_message = "State, protected artifacts, CSV imports, and the queue must use one account."
+  }
+
+  assert {
+    condition = (
+      azurerm_role_assignment.shared_import_runtime["blobs"].scope == azurerm_storage_container.shared_imports[0].resource_manager_id &&
+      azurerm_role_assignment.shared_import_runtime["queue"].scope == azurerm_storage_queue.shared_imports[0].id &&
+      azurerm_role_assignment.shared_import_runtime["sign"].role_definition_name == "Storage Blob Delegator"
+    )
+    error_message = "The application may delegate upload access and read or write only its import data."
   }
 }

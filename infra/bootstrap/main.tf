@@ -78,6 +78,17 @@ resource "azurerm_storage_account" "state" {
     versioning_enabled = true
     delete_retention_policy { days = 7 }
     container_delete_retention_policy { days = 7 }
+
+    dynamic "cors_rule" {
+      for_each = data.azurerm_container_app.development
+      content {
+        allowed_origins    = ["https://${cors_rule.value.ingress[0].fqdn}"]
+        allowed_methods    = ["PUT"]
+        allowed_headers    = ["content-type", "if-none-match", "x-ms-blob-type", "x-ms-version"]
+        exposed_headers    = ["etag"]
+        max_age_in_seconds = 600
+      }
+    }
   }
 
   lifecycle {

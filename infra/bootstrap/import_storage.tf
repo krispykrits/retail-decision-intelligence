@@ -1,6 +1,16 @@
-# The operator provisions storage and grants runtime access without giving CI RBAC write access.
+variable "retain_legacy_import_storage" {
+  type        = bool
+  default     = true
+  description = "Keep the previous CSV storage during cutover. Set false after draining and verifying the import path."
+}
+
+locals {
+  retain_legacy_import_storage = var.retain_legacy_import_storage ? local.configure_ci : 0
+}
+
+# Preserve existing resources and their state addresses until the cutover is verified.
 resource "azurerm_storage_account" "imports" {
-  count                           = local.configure_ci
+  count                           = local.retain_legacy_import_storage
   name                            = "${replace(var.name_prefix, "-", "")}imports"
   resource_group_name             = azurerm_resource_group.project.name
   location                        = azurerm_resource_group.project.location
@@ -23,20 +33,20 @@ resource "azurerm_storage_account" "imports" {
 }
 
 resource "azurerm_storage_container" "imports" {
-  count                 = local.configure_ci
+  count                 = local.retain_legacy_import_storage
   name                  = "csv-imports"
   storage_account_id    = azurerm_storage_account.imports[0].id
   container_access_type = "private"
 }
 
 resource "azurerm_storage_queue" "imports" {
-  count              = local.configure_ci
+  count              = local.retain_legacy_import_storage
   name               = "csv-imports"
   storage_account_id = azurerm_storage_account.imports[0].id
 }
 
 resource "azurerm_storage_management_policy" "imports" {
-  count              = local.configure_ci
+  count              = local.retain_legacy_import_storage
   storage_account_id = azurerm_storage_account.imports[0].id
 
   rule {
@@ -55,7 +65,7 @@ resource "azurerm_storage_management_policy" "imports" {
 }
 
 resource "azurerm_role_assignment" "import_runtime" {
-  for_each = local.configure_ci == 0 ? {} : {
+  for_each = local.retain_legacy_import_storage == 0 ? {} : {
     sign = {
       scope = azurerm_storage_account.imports[0].id
       role  = "Storage Blob Delegator"
