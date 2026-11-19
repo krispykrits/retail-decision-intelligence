@@ -2,11 +2,13 @@ import { Link, useLocation } from 'react-router-dom'
 import type { ModelEvidence, PredictionPage } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
 import { DataTable } from '../../components/DataTable'
+import { LoadingProgress } from '../../components/LoadingProgress'
+import { Skeleton } from '../../components/Skeleton'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { numberLabel } from '../../lib/format'
 import type { ValueResult } from './useValueRequest'
 import { forecastLabel, isAvailable, optionalMoney } from './valueDisplay'
-import { ValueError, ValueLoading } from './ValueRequestState'
+import { ValueError } from './ValueRequestState'
 
 export function ValueRanking({
   result,
@@ -38,7 +40,23 @@ export function ValueRanking({
       <p className="mt-2 mb-4 text-sm text-muted">
         {available ? 'Highest forecast first.' : 'Recorded spending for the households in view.'}
       </p>
-      {!result && <ValueLoading label="Loading households" />}
+      {!result && (
+        <div role="status" className="relative">
+          <span className="sr-only">Loading households…</span>
+          <DataTable columns={columns} busy>
+            {[1, 2, 3, 4, 5].map((row) => (
+              <tr key={row} aria-hidden="true">
+                {Object.keys(columns).map((column) => (
+                  <td key={column}>
+                    <Skeleton className="h-4 w-16 max-w-full" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </DataTable>
+          <LoadingProgress />
+        </div>
+      )}
       {result?.error && <ValueError message="Could not load households." retry={retry} />}
       {data &&
         (data.items.length === 0 && page === 1 ? (

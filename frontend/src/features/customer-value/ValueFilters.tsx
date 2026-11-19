@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import type { Cohort } from '../../api/customerValue'
+import { LoadingProgress } from '../../components/LoadingProgress'
 
 import { regions } from './cohortQuery'
 
@@ -12,9 +13,11 @@ const labelClass = 'grid gap-1 text-xs font-semibold text-nav'
 
 export function ValueFilters({
   cohort,
+  updating,
   apply,
 }: {
   cohort: Cohort
+  updating: boolean
   apply: (params: URLSearchParams) => void
 }) {
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -95,9 +98,10 @@ export function ValueFilters({
       </details>
       <button
         type="submit"
-        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-link"
+        className="relative rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-link"
       >
-        Apply filters
+        {updating ? 'Applying filters…' : 'Apply filters'}
+        {updating && <LoadingProgress className="bg-white/35 [&>span]:bg-white" />}
       </button>
       <button
         type="reset"

@@ -10,7 +10,9 @@ import { HistoricalSpendTrend } from './HistoricalSpendTrend'
 import { readCohort } from './cohortQuery'
 import { ValueFilters } from './ValueFilters'
 import { ValueRanking } from './ValueRanking'
-import { ValueError, ValueLoading } from './ValueRequestState'
+import { ValueError } from './ValueRequestState'
+import { ValuePageSkeleton } from './ValuePageSkeleton'
+import { valueAnalysisGrid } from './valueLayout'
 import { ValueOutlook, ValueOverview } from './ValueSummary'
 import { ValueInsights } from './ValueInsights'
 import { ValueSegments } from './ValueSegments'
@@ -33,15 +35,18 @@ export function CustomerValuePage() {
   const cohortKey = filterParams.toString()
   const cohort = useMemo(() => readCohort(new URLSearchParams(cohortKey)), [cohortKey])
   const load = useCallback((signal: AbortSignal) => getCustomerValue(cohort, signal), [cohort])
-  const { result, retry } = useValueRequest(load)
-  const summary = result?.data
-  const loadRanking = useCallback(
-    (signal: AbortSignal) => getRankedHouseholds(cohort, page, signal),
-    [cohort, page],
+  const { result, previousData, retry } = useValueRequest(load)
+  const updating = !result && Boolean(previousData)
+  const summary = result ? result.data : previousData
+  const currentSummary = result?.data
+  const loadRanking = useMemo(
+    () =>
+      currentSummary?.evidence.version
+        ? (signal: AbortSignal) => getRankedHouseholds(cohort, page, signal)
+        : undefined,
+    [cohort, currentSummary, page],
   )
-  const { result: ranking, retry: retryRanking } = useValueRequest(
-    summary?.evidence.version ? loadRanking : undefined,
-  )
+  const { result: ranking, retry: retryRanking } = useValueRequest(loadRanking)
   const differentRun =
     ranking?.data &&
     (ranking.data.evidence.version !== summary?.evidence.version ||
@@ -56,7 +61,10 @@ export function CustomerValuePage() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <WorkspaceHeader path={customerIntelligencePath} />
+      <WorkspaceHeader
+        path={customerIntelligencePath}
+        status={updating ? 'Updating household spending…' : undefined}
+      />
       <nav
         aria-label="Customer Intelligence sections"
         className="flex gap-1 overflow-x-auto border-b border-line"
@@ -80,7 +88,12 @@ export function CustomerValuePage() {
             {dateLabel(summary.evidence.source_first_date)} – {dateLabel(summary.evidence.as_of)}
           </p>
         )}
-        <ValueFilters key={cohortKey} cohort={cohort} apply={(next) => setParams(next)} />
+        <ValueFilters
+          key={cohortKey}
+          cohort={cohort}
+          updating={updating}
+          apply={(next) => setParams(next)}
+        />
         <div className="relative flex items-center gap-2 rounded-lg bg-nav-selected px-3 py-2 text-sm font-medium text-link sm:ml-auto">
           About Customer Value
           <InfoTooltip label="Customer Value">
@@ -89,15 +102,15 @@ export function CustomerValuePage() {
           </InfoTooltip>
         </div>
       </div>
-      {!result && <ValueLoading label="Loading household spending" />}
+      {!result && !summary && <ValuePageSkeleton />}
       {result?.error && <ValueError message="Could not load Customer Value." retry={retry} />}
       {differentRun && (
         <ValueError message="The model or source data changed while loading." retry={retry} />
       )}
       {summary && !differentRun && (
-        <>
+        <div aria-busy={updating} inert={updating} className="space-y-3 md:space-y-4">
           <ValueOverview summary={summary} />
-          <div className="grid gap-3 md:gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className={valueAnalysisGrid}>
             <HistoricalSpendTrend summary={summary} />
             <ValueSegments summary={summary} />
             <ValueOutlook summary={summary} />
@@ -114,7 +127,7 @@ export function CustomerValuePage() {
             )}
             <ValueInsights summary={summary} />
           </div>
-        </>
+        </div>
       )}
     </div>
   )

@@ -184,6 +184,46 @@ describe('Customer Value', () => {
     expect(screen.getByRole('progressbar', { name: /Households forecast/ })).toHaveValue(25)
   })
 
+  it('preserves the overview while filters update and announces what is loading', async () => {
+    const user = userEvent.setup()
+    let finishInitial!: (value: ModelSummary) => void
+    let finishUpdate!: (value: ModelSummary) => void
+    vi.mocked(getCustomerValue)
+      .mockReturnValueOnce(
+        new Promise<ModelSummary>((resolve) => {
+          finishInitial = resolve
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<ModelSummary>((resolve) => {
+          finishUpdate = resolve
+        }),
+      )
+    openCustomerValue()
+
+    expect(screen.getByText('Loading household spending…')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Historical household value trend' }),
+    ).not.toBeInTheDocument()
+
+    finishInitial(summary)
+    await screen.findByRole('region', { name: 'Household value results' })
+    const history = screen.getByRole('region', { name: 'Historical household value trend' })
+    await user.selectOptions(screen.getByLabelText('Store region'), 'CENTRAL')
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+
+    expect(screen.getByText('Updating household spending…')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Applying filters…' })).toBeVisible()
+    expect(history).toBeInTheDocument()
+    expect(history.closest('[aria-busy="true"]')).toHaveAttribute('inert')
+    expect(getRankedHouseholds).toHaveBeenCalledTimes(1)
+
+    finishUpdate({ ...summary })
+    await waitFor(() => expect(getRankedHouseholds).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('Updating household spending…')).not.toBeInTheDocument()
+    expect(history.closest('[aria-busy="true"]')).toBeNull()
+  })
+
   it('filters cohorts, resets pagination, and retains the selection through household detail', async () => {
     const user = userEvent.setup()
     vi.mocked(getHouseholdValue).mockResolvedValue({
