@@ -99,6 +99,7 @@ run "private_model_artifact_container" {
     target          = azurerm_storage_account.state
     values = {
       primary_blob_endpoint = "https://rditeststate.blob.core.windows.net/"
+      id                    = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate"
     }
   }
 
