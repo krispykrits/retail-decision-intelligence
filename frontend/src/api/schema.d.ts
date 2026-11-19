@@ -871,6 +871,21 @@ export interface components {
              */
             version: string;
         };
+        /** HistoricalSpendPeriod */
+        HistoricalSpendPeriod: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Net Spend */
+            net_spend: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
         /** HouseholdPrediction */
         HouseholdPrediction: {
             /** Age Range */
@@ -894,6 +909,8 @@ export interface components {
             loyalty_flag: string | null;
             /** Observed Spend 180D */
             observed_spend_180d: string;
+            /** Observed Spend 90D */
+            observed_spend_90d?: string | null;
             /** Purchase Days 180D */
             purchase_days_180d: number;
             /** Recency Days */
@@ -1107,8 +1124,15 @@ export interface components {
             evidence: components["schemas"]["ModelEvidence"];
             /** High Risk Households */
             high_risk_households?: number | null;
+            /**
+             * Historical Spend
+             * @description Observed net spend in complete 90-day periods for the CLV cohort.
+             */
+            historical_spend?: components["schemas"]["HistoricalSpendPeriod"][];
             /** Inactive 180D */
             inactive_180d?: number | null;
+            /** Loyalty Filter */
+            loyalty_filter?: string | null;
             /** Mean Future Spend */
             mean_future_spend?: number | null;
             /**
@@ -1116,6 +1140,10 @@ export interface components {
              * @default 0
              */
             observed_households: number;
+            /** Observed Spend By Loyalty */
+            observed_spend_by_loyalty?: components["schemas"]["ObservedSpendLoyalty"][];
+            /** Observed Spend Segments */
+            observed_spend_segments?: components["schemas"]["ObservedSpendSegment"][];
             /** Regions */
             regions?: {
                 [key: string]: components["schemas"]["CohortSummary"];
@@ -1133,6 +1161,23 @@ export interface components {
          * @enum {string}
          */
         ModelType: "clv" | "churn";
+        /** ObservedSpendLoyalty */
+        ObservedSpendLoyalty: {
+            /** Households */
+            households: number;
+            /** Loyalty Flag */
+            loyalty_flag: string | null;
+            /** Net Spend */
+            net_spend: string;
+        };
+        /** ObservedSpendSegment */
+        ObservedSpendSegment: {
+            /** Households */
+            households: number;
+            /** Net Spend */
+            net_spend: string;
+            segment: components["schemas"]["ShoppingSegment"];
+        };
         /** Period */
         Period: {
             /**
@@ -1198,6 +1243,11 @@ export interface components {
          * @enum {string}
          */
         Role: "Analyst" | "Administrator";
+        /**
+         * ShoppingSegment
+         * @enum {string}
+         */
+        ShoppingSegment: "higher_spend" | "frequent" | "infrequent" | "other";
         /** Signal */
         Signal: {
             comparison: components["schemas"]["Period"];
@@ -1904,6 +1954,7 @@ export interface operations {
                 loyalty_flag?: string | null;
                 age_range?: string | null;
                 household_size?: string | null;
+                segment?: components["schemas"]["ShoppingSegment"] | null;
                 page?: number;
                 page_size?: number;
             };
@@ -1958,6 +2009,7 @@ export interface operations {
                 loyalty_flag?: string | null;
                 age_range?: string | null;
                 household_size?: string | null;
+                segment?: components["schemas"]["ShoppingSegment"] | null;
             };
             header?: never;
             path?: never;

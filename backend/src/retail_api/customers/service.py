@@ -33,12 +33,21 @@ class CustomerModels:
     ) -> ModelSummary:
         run = self.evidence(model)
         total, regions, distribution = queries.summary(self.db, run, filters, threshold)
+        historical, segments, loyalty_groups = (
+            queries.historical_spend(self.db, run, filters)
+            if model is ModelType.CLV and total.observed_households
+            else ([], [], [])
+        )
         return ModelSummary(
             **total.model_dump(),
             evidence=run,
             regions=regions,
             risk_threshold=threshold,
             distribution=distribution,
+            historical_spend=historical,
+            observed_spend_segments=segments,
+            observed_spend_by_loyalty=loyalty_groups,
+            loyalty_filter=filters.loyalty_flag if model is ModelType.CLV else None,
         )
 
     def page(

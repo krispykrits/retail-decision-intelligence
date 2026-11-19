@@ -1,4 +1,5 @@
 export const commandCenterPath = '/command-center'
+export const customerIntelligencePath = '/customers'
 export const dataOperationsPath = '/data'
 
 export const workspaces = [
@@ -9,7 +10,7 @@ export const workspaces = [
       'Compare retail performance across periods and investigate changes in spend, sales volume, and household shopping activity.',
   },
   {
-    path: '/customers',
+    path: customerIntelligencePath,
     title: 'Customer Intelligence',
     description: 'Household behavior, value, and retention.',
   },

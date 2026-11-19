@@ -1,8 +1,11 @@
 import secrets
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +16,8 @@ from sqlalchemy.orm import Session
 
 from retail_api.accounts.models import Account
 from retail_api.config import Settings
+from retail_api.customers.queries import publish, source_versions
+from retail_api.customers.schemas import ModelEvidence, ModelType
 from retail_api.database import create_database_engine
 from retail_api.imports import queries, store
 from retail_api.imports.schema_v1 import households, transactions
@@ -513,3 +518,123 @@ def test_customer_model_api_serves_only_current_validated_scores(signed_in: Test
     assert stale_summary["high_risk_households"] is None
     assert not stale_summary["distribution"]
     assert client.get(f"{endpoint}/0010/predictions").json()["churn_risk"]["forecast"] is None
+
+
+def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: TestClient) -> None:
+    client = signed_in
+    engine = client.app.state.database
+    with Session(engine) as db, db.begin():
+        db.scalars(select(Account)).one().is_superuser = True
+
+    assert (
+        upload(
+            client, "households", HOUSEHOLDS + HOUSEHOLD + HOUSEHOLD.replace(b"0010,Y", b"0011,N")
+        ).json()["inserted"]
+        == 2
+    )
+    assert upload(client, "products", PRODUCTS + PRODUCT).json()["inserted"] == 1
+
+    rows = (
+        b"00000001,0010,2020-02-17,00000001,1000,1,CENTRAL,8,2020\n"
+        b"00000002,0010,2020-02-18,00000001,30,1,WEST,8,2020\n"
+        b"00000003,0010,2020-05-17,00000001,-5,-1,CENTRAL,20,2020\n"
+        b"00000004,0010,2020-05-18,00000001,70,1,CENTRAL,21,2020\n"
+        b"00000005,0010,2020-08-15,00000001,20,1,CENTRAL,33,2020\n"
+        b"00000006,0010,2020-08-16,00000001,500,1,CENTRAL,33,2020\n"
+        b"00000007,0011,2020-08-15,00000001,60,1,CENTRAL,33,2020\n"
+    )
+    assert upload(client, "transactions", TRANSACTIONS + rows).json()["inserted"] == 7
+    endpoint = "/api/v1/customers/clv/summary"
+    assert client.get(endpoint).json()["historical_spend"] == []
+
+    cutoff = date(2020, 8, 15)
+    version = uuid4()
+    with engine.begin() as db:
+        transaction_version, household_version = source_versions(db)
+        evidence = ModelEvidence(
+            model=ModelType.CLV,
+            status="unavailable",
+            reason="The model did not pass validation.",
+            version=version,
+            as_of=cutoff,
+            source_first_date=date(2020, 2, 17),
+            source_last_date=date(2020, 8, 16),
+            trained_at=datetime.now(UTC),
+            transaction_version=transaction_version,
+            household_version=household_version,
+            horizon_days=90,
+            target="90-day net household spend",
+            population="Eligible households",
+        )
+        publish(
+            db,
+            evidence,
+            [
+                {
+                    "run_id": version,
+                    "household_id": household,
+                    "region": region,
+                    "loyalty_flag": loyalty,
+                    "age_range": None,
+                    "household_size": None,
+                    "last_purchase": cutoff,
+                    "purchase_days_180d": days,
+                    "observed_spend_180d": Decimal(spend),
+                    "eligible": True,
+                    "forecast": None,
+                }
+                for household, region, loyalty, days, spend in (
+                    ("0010", "CENTRAL", "Y", 3, 115),
+                    ("0011", "EAST", "N", 1, 60),
+                )
+            ],
+            None,
+        )
+
+    result = client.get(endpoint, params={"region": "CENTRAL", "loyalty_flag": "Y"})
+    assert result.status_code == 200
+    cohort = result.json()
+    assert cohort["observed_households"] == 1
+    assert cohort["distribution"] == []
+    assert [
+        (period["start"], period["end"], Decimal(period["net_spend"]))
+        for period in cohort["historical_spend"]
+    ] == [
+        ("2020-02-18", "2020-05-17", Decimal(25)),
+        ("2020-05-18", "2020-08-15", Decimal(90)),
+    ]
+    assert [
+        (segment["segment"], segment["households"], Decimal(segment["net_spend"]))
+        for segment in cohort["observed_spend_segments"]
+    ] == [("higher_spend", 1, Decimal(90))]
+    ranked = client.get("/api/v1/customers/clv/households", params={"region": "CENTRAL"}).json()
+    assert Decimal(ranked["items"][0]["observed_spend_90d"]) == 90
+    detail = client.get("/api/v1/customers/0010/predictions").json()
+    assert Decimal(detail["future_spend"]["observed_spend_90d"]) == 90
+    unfiltered = client.get(endpoint).json()
+    assert unfiltered["loyalty_filter"] is None
+    assert {
+        row["loyalty_flag"]: (row["households"], Decimal(row["net_spend"]))
+        for row in unfiltered["observed_spend_by_loyalty"]
+    } == {"Y": (1, Decimal(90)), "N": (1, Decimal(60))}
+    assert cohort["loyalty_filter"] == "Y"
+    non_member = client.get(endpoint, params={"loyalty_flag": "N"}).json()
+    assert non_member["loyalty_filter"] == "N"
+    assert {row["segment"] for row in non_member["observed_spend_segments"]} == {"other"}
+    high = client.get(endpoint, params={"segment": "higher_spend"}).json()
+    assert high["observed_households"] == 1
+    assert high["evidence"]["as_of"] == cutoff.isoformat()
+    assert high["historical_spend"] == cohort["historical_spend"]
+    filtered = client.get(
+        "/api/v1/customers/clv/households", params={"segment": "higher_spend"}
+    ).json()
+    assert [row["household_id"] for row in filtered["items"]] == ["0010"]
+    east = client.get(endpoint, params={"region": "EAST"}).json()
+    assert [Decimal(period["net_spend"]) for period in east["historical_spend"]] == [0, 60]
+    assert client.get(endpoint, params={"region": "WEST"}).json()["historical_spend"] == []
+
+    later = b"00000008,0010,2020-08-17,00000001,75,1,CENTRAL,34,2020\n"
+    assert upload(client, "transactions", TRANSACTIONS + later).json()["inserted"] == 1
+    stale = client.get(endpoint).json()
+    assert stale["evidence"]["status"] == "stale"
+    assert stale["historical_spend"] == stale["observed_spend_segments"] == []

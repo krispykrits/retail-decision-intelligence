@@ -94,9 +94,24 @@ class CohortFilters(BaseModel):
     household_size: str | None = Field(default=None, max_length=80)
 
 
+class ShoppingSegment(StrEnum):
+    HIGHER_SPEND = "higher_spend"
+    FREQUENT = "frequent"
+    INFREQUENT = "infrequent"
+    OTHER = "other"
+
+
+class ClvFilters(CohortFilters):
+    segment: ShoppingSegment | None = None
+
+
 class PageFilters(CohortFilters):
     page: int = Field(default=1, ge=1, le=1_000_000)
     page_size: int = Field(default=25, ge=1, le=100)
+
+
+class ClvPageFilters(PageFilters, ClvFilters):
+    pass
 
 
 class ChurnFilters(CohortFilters):
@@ -127,11 +142,38 @@ class ForecastBin(BaseModel):
     count: int
 
 
+class HistoricalSpendPeriod(BaseModel):
+    start: date
+    end: date
+    net_spend: Decimal
+
+
+class ObservedSpendGroup(BaseModel):
+    households: int
+    net_spend: Decimal
+
+
+class ObservedSpendSegment(ObservedSpendGroup):
+    segment: ShoppingSegment
+
+
+class ObservedSpendLoyalty(ObservedSpendGroup):
+    loyalty_flag: str | None
+
+
 class ModelSummary(CohortSummary):
     evidence: ModelEvidence
     risk_threshold: float | None = None
     regions: dict[str, CohortSummary] = Field(default_factory=dict)
     distribution: list[ForecastBin] = Field(default_factory=list)
+    historical_spend: list[HistoricalSpendPeriod] = Field(
+        default_factory=list,
+        description="Observed net spend in complete 90-day periods for the CLV cohort.",
+    )
+
+    observed_spend_segments: list[ObservedSpendSegment] = Field(default_factory=list)
+    observed_spend_by_loyalty: list[ObservedSpendLoyalty] = Field(default_factory=list)
+    loyalty_filter: str | None = None
 
 
 class HouseholdPrediction(BaseModel):
@@ -144,6 +186,7 @@ class HouseholdPrediction(BaseModel):
     recency_days: int
     purchase_days_180d: int
     observed_spend_180d: Decimal
+    observed_spend_90d: Decimal | None = None
     eligible: bool
     forecast: float | None
     high_risk: bool | None = None

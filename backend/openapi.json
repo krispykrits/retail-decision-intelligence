@@ -818,6 +818,31 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HistoricalSpendPeriod": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "net_spend"
+        ],
+        "title": "HistoricalSpendPeriod",
+        "type": "object"
+      },
       "HouseholdPrediction": {
         "properties": {
           "age_range": {
@@ -891,6 +916,17 @@
           "observed_spend_180d": {
             "title": "Observed Spend 180D",
             "type": "string"
+          },
+          "observed_spend_90d": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Spend 90D"
           },
           "purchase_days_180d": {
             "title": "Purchase Days 180D",
@@ -1530,6 +1566,14 @@
             ],
             "title": "High Risk Households"
           },
+          "historical_spend": {
+            "description": "Observed net spend in complete 90-day periods for the CLV cohort.",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalSpendPeriod"
+            },
+            "title": "Historical Spend",
+            "type": "array"
+          },
           "inactive_180d": {
             "anyOf": [
               {
@@ -1540,6 +1584,17 @@
               }
             ],
             "title": "Inactive 180D"
+          },
+          "loyalty_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Filter"
           },
           "mean_future_spend": {
             "anyOf": [
@@ -1556,6 +1611,20 @@
             "default": 0,
             "title": "Observed Households",
             "type": "integer"
+          },
+          "observed_spend_by_loyalty": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedSpendLoyalty"
+            },
+            "title": "Observed Spend By Loyalty",
+            "type": "array"
+          },
+          "observed_spend_segments": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedSpendSegment"
+            },
+            "title": "Observed Spend Segments",
+            "type": "array"
           },
           "regions": {
             "additionalProperties": {
@@ -1594,6 +1663,58 @@
         ],
         "title": "ModelType",
         "type": "string"
+      },
+      "ObservedSpendLoyalty": {
+        "properties": {
+          "households": {
+            "title": "Households",
+            "type": "integer"
+          },
+          "loyalty_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Flag"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "households",
+          "net_spend",
+          "loyalty_flag"
+        ],
+        "title": "ObservedSpendLoyalty",
+        "type": "object"
+      },
+      "ObservedSpendSegment": {
+        "properties": {
+          "households": {
+            "title": "Households",
+            "type": "integer"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/ShoppingSegment"
+          }
+        },
+        "required": [
+          "households",
+          "net_spend",
+          "segment"
+        ],
+        "title": "ObservedSpendSegment",
+        "type": "object"
       },
       "Period": {
         "properties": {
@@ -1735,6 +1856,16 @@
           "Administrator"
         ],
         "title": "Role",
+        "type": "string"
+      },
+      "ShoppingSegment": {
+        "enum": [
+          "higher_spend",
+          "frequent",
+          "infrequent",
+          "other"
+        ],
+        "title": "ShoppingSegment",
         "type": "string"
       },
       "Signal": {
@@ -3094,6 +3225,22 @@
           },
           {
             "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShoppingSegment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -3240,6 +3387,22 @@
                 }
               ],
               "title": "Household Size"
+            }
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShoppingSegment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
             }
           }
         ],

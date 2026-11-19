@@ -234,14 +234,16 @@ export function TrendChart({
                   </dd>
                 </div>
               ))}
-              <div className="flex justify-between gap-2 border-t border-line pt-1.5 font-semibold text-ink">
-                <dt>Difference</dt>
-                <dd>
-                  {difference === undefined
-                    ? 'Unavailable'
-                    : `${difference > 0 ? '+' : ''}${format(difference)}`}
-                </dd>
-              </div>
+              {series.length > 1 && (
+                <div className="flex justify-between gap-2 border-t border-line pt-1.5 font-semibold text-ink">
+                  <dt>Difference</dt>
+                  <dd>
+                    {difference === undefined
+                      ? 'Unavailable'
+                      : `${difference > 0 ? '+' : ''}${format(difference)}`}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
         )}

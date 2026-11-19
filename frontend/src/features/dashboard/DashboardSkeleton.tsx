@@ -1,3 +1,4 @@
+import { MetricSkeleton } from '../../components/MetricSkeleton'
 import { Panel } from '../../components/Panel'
 import { Skeleton } from '../../components/Skeleton'
 
@@ -8,12 +9,7 @@ export function DashboardSkeleton() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {['spend', 'baskets', 'households', 'average'].map((metric) => (
           <Panel key={metric} className="flex items-start gap-3">
-            <Skeleton className="size-10 shrink-0" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-3 w-24 max-w-full" />
-              <Skeleton className="h-6 w-28 max-w-full" />
-              <Skeleton className="h-3 w-20 max-w-full" />
-            </div>
+            <MetricSkeleton />
           </Panel>
         ))}
       </div>
