@@ -81,13 +81,17 @@ resource "azurerm_role_assignment" "deployment" {
       role  = "Managed Identity Operator"
     }
     state = {
-      scope = azurerm_storage_account.state.id
+      scope = azurerm_storage_container.state.resource_manager_id
       role  = "Storage Blob Data Contributor"
     }
   }
   scope                = each.value.scope
   role_definition_name = each.value.role
   principal_id         = azurerm_user_assigned_identity.deployment[0].principal_id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # The operator grants migration permissions once; the workflow never becomes SQL admin.

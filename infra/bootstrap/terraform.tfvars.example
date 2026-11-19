@@ -9,3 +9,6 @@ state_operator_object_id = "<deployment-principal-object-id>"
 # github_repository = "krispykrits@64175002/retail-decision-intelligence@1459028611"
 # name_prefix       = "<same-prefix-as-application>"
 # sql_location      = "westus3"
+
+# Optional Entra object ID to grant publishing access to model-artifacts.
+# model_artifact_publisher_object_id = "<publisher-object-id>"
