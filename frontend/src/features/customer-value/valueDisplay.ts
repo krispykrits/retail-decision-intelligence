@@ -1,4 +1,4 @@
-import type { HouseholdPrediction, ModelEvidence } from '../../api/customerValue'
+import type { HouseholdPrediction, ModelEvidence, ModelSummary } from '../../api/customerValue'
 import { moneyLabel } from '../../lib/format'
 
 export const statusLabels = {
@@ -25,4 +25,20 @@ export function loyaltyLabel(flag: string | null) {
   if (flag === 'Y') return 'Loyalty members'
   if (flag === 'N') return 'Non-members'
   return 'Membership unknown'
+}
+
+export function spendingSegments(summary: ModelSummary) {
+  return (summary.observed_spend_segments ?? [])
+    .filter(({ households }) => households > 0)
+    .map((row) => ({ ...row, average: Number(row.net_spend) / row.households }))
+    .sort((left, right) => right.average - left.average)
+}
+
+export function observedChange(summary: ModelSummary) {
+  const recent = summary.historical_spend?.at(-1)
+  const prior = summary.historical_spend?.at(-2)
+  if (!recent || !prior) return null
+  const before = Number(prior.net_spend)
+  const amount = Number(recent.net_spend) - before
+  return { amount, percent: before > 0 ? (amount / before) * 100 : null }
 }

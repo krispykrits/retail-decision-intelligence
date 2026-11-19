@@ -85,7 +85,10 @@ const summary: ModelSummary = {
   scored_households: 25,
   mean_future_spend: 985.24,
   distribution: [{ lower: 500, upper: 1500, count: 25 }],
-  observed_spend_segments: [{ loyalty_flag: 'Y', households: 26, net_spend: '4500.10' }],
+  observed_spend_segments: [
+    { loyalty_flag: 'Y', households: 20, net_spend: '3800.00' },
+    { loyalty_flag: 'N', households: 6, net_spend: '700.10' },
+  ],
   historical_spend: [
     { start: '2020-02-18', end: '2020-05-17', net_spend: '3012.23' },
     { start: '2020-05-18', end: '2020-08-15', net_spend: '4500.10' },
@@ -162,9 +165,18 @@ describe('Customer Value', () => {
     expect(screen.getByRole('heading', { name: 'Observed spend by segment' })).toBeVisible()
     expect(
       within(screen.getByRole('region', { name: 'Observed spend by segment' })).getByText(
-        '$173.08',
+        '$190.00',
       ),
     ).toBeVisible()
+    expect(screen.getByText('+49.4%')).toBeVisible()
+    const takeaways = within(screen.getByRole('region', { name: 'Key takeaways' }))
+    expect(takeaways.getByText(/rose by 49.4% compared with the previous 90 days/)).toBeVisible()
+    expect(takeaways.getByText(/Loyalty members averaged \$190.00/)).toBeVisible()
+    expect(takeaways.getByText(/25 of 26 households have a forecast/)).toBeVisible()
+    expect(takeaways.getByRole('link', { name: /Review households/ })).toHaveAttribute(
+      'href',
+      '#household-spending',
+    )
     expect(within(ranking).getAllByRole('row')).toHaveLength(6)
     expect(screen.getByText('1–5 of 26')).toBeVisible()
 

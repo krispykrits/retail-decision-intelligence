@@ -2,7 +2,7 @@ import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { Icon, type IconName } from '../../components/WorkspaceIcon'
 import { dateAfter, moneyLabel, numberLabel } from '../../lib/format'
-import { isAvailable, optionalMoney, statusLabels } from './valueDisplay'
+import { isAvailable, observedChange, optionalMoney, statusLabels } from './valueDisplay'
 
 export function ValueOverview({ summary }: { summary: ModelSummary }) {
   const ready = isAvailable(summary.evidence)
@@ -11,13 +11,18 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
     recent && summary.observed_households
       ? Number(recent.net_spend) / summary.observed_households
       : null
-  const stats: [string, string, IconName][] = [
+  const stats: [string, string, IconName, ReturnType<typeof observedChange>?][] = [
     [
       'Households',
       summary.evidence.version ? numberLabel(summary.observed_households) : '—',
       '/customers',
     ],
-    ['Observed spend · last 90 days', optionalMoney(recent?.net_spend), 'wallet'],
+    [
+      'Observed spend · last 90 days',
+      optionalMoney(recent?.net_spend),
+      'wallet',
+      observedChange(summary),
+    ],
     ['Average per household · last 90 days', optionalMoney(average), 'calculator'],
     ['Forecast status', ready ? 'Ready' : statusLabels[summary.evidence.status], '/forecast'],
   ]
@@ -29,7 +34,7 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
         See what households spent and what they are expected to spend over the next 90 days.
       </p>
       <dl className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {stats.map(([label, value, icon]) => (
+        {stats.map(([label, value, icon, change]) => (
           <div
             key={label}
             className="flex items-start gap-2 rounded-xl border border-line bg-canvas p-3 sm:items-center sm:gap-3"
@@ -40,7 +45,22 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
             />
             <div>
               <dt className="text-xs font-semibold text-nav">{label}</dt>
-              <dd className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">{value}</dd>
+              <dd className="mt-1 text-xl leading-tight font-semibold tracking-tight tabular-nums sm:text-2xl">
+                {value}
+              </dd>
+              {change && (
+                <dd className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <span>vs. prior 90 days</span>
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${change.amount > 0 ? 'bg-emerald-50 text-success' : change.amount < 0 ? 'bg-red-50 text-error' : 'bg-surface text-nav'}`}
+                  >
+                    {change.amount > 0 && '+'}
+                    {change.percent === null
+                      ? moneyLabel(change.amount)
+                      : `${change.percent.toFixed(1)}%`}
+                  </span>
+                </dd>
+              )}
             </div>
           </div>
         ))}

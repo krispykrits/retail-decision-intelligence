@@ -55,7 +55,7 @@ export function CustomerValuePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <WorkspaceHeader path={customerIntelligencePath} />
       <nav
         aria-label="Customer Intelligence sections"
@@ -89,7 +89,7 @@ export function CustomerValuePage() {
           </InfoTooltip>
         </div>
       </div>
-      {!result && <ValueLoading label="Loading cohort and model evidence" />}
+      {!result && <ValueLoading label="Loading household spending" />}
       {result?.error && <ValueError message="Could not load Customer Value." retry={retry} />}
       {differentRun && (
         <ValueError message="The model or source data changed while loading." retry={retry} />
@@ -97,12 +97,12 @@ export function CustomerValuePage() {
       {summary && !differentRun && (
         <>
           <ValueOverview summary={summary} />
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="grid gap-3 md:gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,0.9fr)]">
             <HistoricalSpendTrend summary={summary} />
             <ValueSegments summary={summary} />
             <ValueOutlook summary={summary} />
           </div>
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="grid items-start gap-3 md:gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             {summary.evidence.version && (
               <ValueRanking
                 result={ranking}

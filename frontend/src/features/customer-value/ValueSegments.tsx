@@ -1,12 +1,10 @@
 import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { moneyLabel, numberLabel } from '../../lib/format'
-import { loyaltyLabel } from './valueDisplay'
+import { loyaltyLabel, spendingSegments } from './valueDisplay'
 
 export function ValueSegments({ summary }: { summary: ModelSummary }) {
-  const segments = (summary.observed_spend_segments ?? [])
-    .map((row) => ({ ...row, average: Number(row.net_spend) / row.households }))
-    .sort((left, right) => right.average - left.average)
+  const segments = spendingSegments(summary)
   const max = Math.max(1, ...segments.map(({ average }) => Math.abs(average)))
 
   return (

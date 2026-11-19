@@ -33,7 +33,7 @@ export function ValueRanking({
   }
 
   return (
-    <Panel aria-labelledby="clv-households">
+    <Panel id="household-spending" tabIndex={-1} aria-labelledby="clv-households">
       <PanelHeading id="clv-households" title="Household value detail" icon="/customers" />
       <p className="mt-2 mb-4 text-sm text-muted">
         {available ? 'Highest forecast first.' : 'Recorded spending for the households in view.'}
