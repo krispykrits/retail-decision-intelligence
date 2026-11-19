@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getCustomerValue, getRankedHouseholds } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
+import { HistoricalSpendTrend } from './HistoricalSpendTrend'
 import { ModelEvidencePanel } from './ModelEvidencePanel'
 import { readCohort } from './cohortQuery'
 import { ValueFilters } from './ValueFilters'
@@ -60,9 +61,12 @@ export function CustomerValuePage() {
       {summary && !differentRun && (
         <>
           <ValueOverview summary={summary} />
-          <div className="grid items-start gap-4 xl:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <HistoricalSpendTrend summary={summary} />
             <ValueDistribution summary={summary} />
-            <ModelEvidencePanel evidence={summary.evidence} />
+            <div className="lg:col-span-2 2xl:col-span-1">
+              <ModelEvidencePanel evidence={summary.evidence} />
+            </div>
           </div>
           {summary.evidence.version && (
             <ValueRanking

@@ -127,11 +127,21 @@ class ForecastBin(BaseModel):
     count: int
 
 
+class HistoricalSpendPeriod(BaseModel):
+    start: date
+    end: date
+    net_spend: Decimal
+
+
 class ModelSummary(CohortSummary):
     evidence: ModelEvidence
     risk_threshold: float | None = None
     regions: dict[str, CohortSummary] = Field(default_factory=dict)
     distribution: list[ForecastBin] = Field(default_factory=list)
+    historical_spend: list[HistoricalSpendPeriod] = Field(
+        default_factory=list,
+        description="Observed net spend in complete 90-day periods for the CLV cohort.",
+    )
 
 
 class HouseholdPrediction(BaseModel):

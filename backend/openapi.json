@@ -818,6 +818,31 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HistoricalSpendPeriod": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "net_spend"
+        ],
+        "title": "HistoricalSpendPeriod",
+        "type": "object"
+      },
       "HouseholdPrediction": {
         "properties": {
           "age_range": {
@@ -1529,6 +1554,14 @@
               }
             ],
             "title": "High Risk Households"
+          },
+          "historical_spend": {
+            "description": "Observed net spend in complete 90-day periods for the CLV cohort.",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalSpendPeriod"
+            },
+            "title": "Historical Spend",
+            "type": "array"
           },
           "inactive_180d": {
             "anyOf": [

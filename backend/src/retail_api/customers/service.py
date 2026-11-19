@@ -39,6 +39,9 @@ class CustomerModels:
             regions=regions,
             risk_threshold=threshold,
             distribution=distribution,
+            historical_spend=queries.historical_spend(self.db, run, filters)
+            if model is ModelType.CLV and total.observed_households
+            else [],
         )
 
     def page(

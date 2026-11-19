@@ -84,6 +84,10 @@ const summary: ModelSummary = {
   scored_households: 25,
   mean_future_spend: 985.24,
   distribution: [{ lower: 500, upper: 1500, count: 25 }],
+  historical_spend: [
+    { start: '2020-02-18', end: '2020-05-17', net_spend: '3012.23' },
+    { start: '2020-05-18', end: '2020-08-15', net_spend: '4500.10' },
+  ],
 }
 
 function openCustomerValue(path = '/customers') {
@@ -132,6 +136,15 @@ describe('Customer Value', () => {
       'aria-sort',
       'descending',
     )
+    const history = screen.getByRole('group', {
+      name: 'Observed household net spend by 90-day period',
+    })
+    const lastPeriod = within(history).getByRole('button', {
+      name: /May 18, 2020.*Aug 15, 2020.*4,500.10/,
+    })
+    await user.click(lastPeriod)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Observed net spend')
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent('Difference')
     expect(screen.getByText('$294.21')).toBeVisible()
     expect(screen.getByText('$314.34')).toBeVisible()
     expect(screen.getByText(/Aug 16, 2020.*Nov 13, 2020/)).toBeVisible()
@@ -184,7 +197,11 @@ describe('Customer Value', () => {
     'suppresses forecasts when model status is %s',
     async (status) => {
       const rejected = { ...evidence, status, reason: 'Refresh model evaluation.' }
-      vi.mocked(getCustomerValue).mockResolvedValue({ ...summary, evidence: rejected })
+      vi.mocked(getCustomerValue).mockResolvedValue({
+        ...summary,
+        historical_spend: status === 'stale' ? [] : summary.historical_spend,
+        evidence: rejected,
+      })
       vi.mocked(getRankedHouseholds).mockResolvedValue({
         evidence: rejected,
         items: [household],
@@ -200,12 +217,18 @@ describe('Customer Value', () => {
       expect(within(ranking).queryByText('$875.42')).not.toBeInTheDocument()
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
       expect(screen.getByText(rejected.reason)).toBeVisible()
+      if (status === 'stale') {
+        expect(screen.getByText(/reconcile this cohort/)).toBeVisible()
+      } else {
+        expect(screen.getByRole('group', { name: /Observed household net spend/ })).toBeVisible()
+      }
     },
   )
 
   it('shows an unevaluated state without requesting rankings', async () => {
     vi.mocked(getCustomerValue).mockResolvedValue({
       ...summary,
+      historical_spend: [],
       evidence: { ...evidence, version: null, evaluation: null, as_of: null, status: 'not_run' },
     })
     openCustomerValue()

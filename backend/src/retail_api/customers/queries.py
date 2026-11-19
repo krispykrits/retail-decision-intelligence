@@ -1,4 +1,4 @@
-from datetime import UTC, date
+from datetime import UTC, date, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -11,12 +11,13 @@ from retail_api.customers.schemas import (
     CohortFilters,
     CohortSummary,
     ForecastBin,
+    HistoricalSpendPeriod,
     HouseholdPrediction,
     ModelEvidence,
     ModelType,
     PageFilters,
 )
-from retail_api.imports.schema_v1 import dataset_state, households
+from retail_api.imports.schema_v1 import dataset_state, households, transactions
 from retail_api.imports.schemas import Dataset
 
 
@@ -155,6 +156,49 @@ def summary(
         else []
     )
     return convert(total), regions, bins
+
+
+def historical_spend(
+    db: Connection, evidence: ModelEvidence, filters: CohortFilters
+) -> list[HistoricalSpendPeriod]:
+    if (
+        evidence.status == "stale"
+        or evidence.version is None
+        or evidence.as_of is None
+        or evidence.source_first_date is None
+    ):
+        return []
+
+    days = HORIZONS[ModelType.CLV]
+    count = min(4, ((evidence.as_of - evidence.source_first_date).days + 1) // days)
+    if count <= 0:
+        return []
+
+    ends = [evidence.as_of - timedelta(days=days * offset) for offset in reversed(range(count))]
+    periods = [(end - timedelta(days=days - 1), end) for end in ends]
+    c = transactions.c
+    # Region and other filters describe the households in the run's snapshot.
+    # Include all recorded purchases and returns for those households.
+    totals = db.execute(
+        sa.select(
+            *(
+                sa.func.coalesce(
+                    sa.func.sum(sa.case((c.purchase_date.between(start, end), c.spend), else_=0)),
+                    0,
+                )
+                for start, end in periods
+            )
+        )
+        .select_from(transactions.join(predictions, c.household_id == predictions.c.household_id))
+        .where(
+            *cohort_predicates(evidence.version, filters),
+            c.purchase_date.between(periods[0][0], periods[-1][1]),
+        )
+    ).one()
+    return [
+        HistoricalSpendPeriod(start=start, end=end, net_spend=total)
+        for (start, end), total in zip(periods, totals, strict=True)
+    ]
 
 
 def distribution(

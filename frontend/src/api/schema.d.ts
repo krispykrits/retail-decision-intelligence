@@ -871,6 +871,21 @@ export interface components {
              */
             version: string;
         };
+        /** HistoricalSpendPeriod */
+        HistoricalSpendPeriod: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Net Spend */
+            net_spend: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
         /** HouseholdPrediction */
         HouseholdPrediction: {
             /** Age Range */
@@ -1107,6 +1122,11 @@ export interface components {
             evidence: components["schemas"]["ModelEvidence"];
             /** High Risk Households */
             high_risk_households?: number | null;
+            /**
+             * Historical Spend
+             * @description Observed net spend in complete 90-day periods for the CLV cohort.
+             */
+            historical_spend?: components["schemas"]["HistoricalSpendPeriod"][];
             /** Inactive 180D */
             inactive_180d?: number | null;
             /** Mean Future Spend */
