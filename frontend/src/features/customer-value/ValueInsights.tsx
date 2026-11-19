@@ -56,7 +56,9 @@ export function ValueInsights({ summary }: { summary: ModelSummary }) {
 
   return (
     <Panel aria-labelledby="clv-insights" className="@container">
-      <PanelHeading id="clv-insights" title="Key takeaways" icon="checklist" />
+      <PanelHeading id="clv-insights" title="Key takeaways" icon="checklist" className="relative">
+        See what changed in spending and which groups or households are worth a closer look.
+      </PanelHeading>
       <TakeawayList items={items} />
       {summary.evidence.version && (
         <a

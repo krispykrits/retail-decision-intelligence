@@ -19,7 +19,15 @@ export function HistoricalSpendTrend({ summary }: { summary: ModelSummary }) {
 
   return (
     <Panel aria-labelledby="clv-history" className="h-full">
-      <PanelHeading id="clv-history" title="Historical household value trend" icon="/forecast" />
+      <PanelHeading
+        id="clv-history"
+        title="Historical household value trend"
+        icon="/forecast"
+        className="relative"
+      >
+        See how much these households spent after returns. Each point covers 90 days of recorded
+        purchases.
+      </PanelHeading>
       {points.length > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">

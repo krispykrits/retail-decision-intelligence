@@ -38,7 +38,15 @@ export function ValueRanking({
 
   return (
     <Panel id="household-spending" tabIndex={-1} aria-labelledby="clv-households">
-      <PanelHeading id="clv-households" title="Household value detail" icon="/customers" />
+      <PanelHeading
+        id="clv-households"
+        title="Household value detail"
+        icon="/customers"
+        className="relative"
+      >
+        Compare what each household spent in the past 90 days with its expected spending in the next
+        90 days. Select a household for more detail.
+      </PanelHeading>
       <p className="mt-2 mb-4 text-sm text-muted">
         {available ? 'Highest forecast first.' : 'Recorded spending for the households in view.'}
         {observedPeriod && (

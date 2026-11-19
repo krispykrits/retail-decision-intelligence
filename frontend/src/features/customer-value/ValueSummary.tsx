@@ -1,4 +1,5 @@
 import type { ModelSummary } from '../../api/customerValue'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { Icon, type IconName } from '../../components/WorkspaceIcon'
 import { dateAfter, dateLabel, moneyLabel, numberLabel } from '../../lib/format'
@@ -11,25 +12,46 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
     recent && summary.observed_households
       ? Number(recent.net_spend) / summary.observed_households
       : null
-  const stats: [string, string, IconName, ReturnType<typeof observedChange>?][] = [
+  const stats: [string, string, IconName, string, ReturnType<typeof observedChange>?][] = [
     [
       'Households',
       summary.evidence.version ? numberLabel(summary.observed_households) : '—',
       '/customers',
+      'Number of households that match the filters. Some households may have no forecast.',
     ],
     [
       'Observed spend · last 90 days',
       optionalMoney(recent?.net_spend),
       'wallet',
+      'Total these households spent in the 90 days shown, after returns.',
       observedChange(summary),
     ],
-    ['Average per household · last 90 days', optionalMoney(average), 'calculator'],
-    ['Forecast status', ready ? 'Ready' : statusLabels[summary.evidence.status], '/forecast'],
+    [
+      'Average per household · last 90 days',
+      optionalMoney(average),
+      'calculator',
+      'Total spending after returns divided by the number of households in view. Households that did not spend are included.',
+    ],
+    [
+      'Forecast status',
+      ready ? 'Ready' : statusLabels[summary.evidence.status],
+      '/forecast',
+      'Shows whether the 90-day forecast is ready to use or needs to be updated.',
+    ],
   ]
 
   return (
     <Panel aria-labelledby="clv-overview">
-      <PanelHeading id="clv-overview" title="Customer Value (CLV)" icon="wallet" />
+      <PanelHeading
+        id="clv-overview"
+        title="Customer Value (CLV)"
+        icon="wallet"
+        helpLabel="the Customer Value overview"
+        className="relative"
+      >
+        Compare what the households in view actually spent with what they are expected to spend
+        next.
+      </PanelHeading>
       <p className="mt-1.5 text-sm text-muted">
         See what households spent and what they are expected to spend over the next 90 days.
       </p>
@@ -39,7 +61,7 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
         </p>
       )}
       <dl className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {stats.map(([label, value, icon, change]) => (
+        {stats.map(([label, value, icon, help, change]) => (
           <div
             key={label}
             className="flex items-start gap-2 rounded-xl border border-line bg-canvas p-3 sm:items-center sm:gap-3"
@@ -49,7 +71,10 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
               className="hidden size-8 rounded-lg bg-nav-selected p-1.5 text-brand sm:block"
             />
             <div>
-              <dt className="text-xs font-semibold text-nav">{label}</dt>
+              <dt className="relative flex items-center gap-1.5 text-xs font-semibold text-nav">
+                {label}
+                <InfoTooltip label={label}>{help}</InfoTooltip>
+              </dt>
               <dd className="mt-1 text-xl leading-tight font-semibold tracking-tight tabular-nums sm:text-2xl">
                 {value}
               </dd>
@@ -81,7 +106,10 @@ export function ValueOutlook({ summary }: { summary: ModelSummary }) {
 
   return (
     <Panel aria-labelledby="clv-outlook" className="h-full">
-      <PanelHeading id="clv-outlook" title="90-day outlook" icon="/forecast" />
+      <PanelHeading id="clv-outlook" title="90-day outlook" icon="/forecast" className="relative">
+        See how much households with a forecast are expected to spend in the 90 days shown. The
+        figures are estimates.
+      </PanelHeading>
       {isAvailable(evidence) && evidence.as_of && summary.scored_households > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">

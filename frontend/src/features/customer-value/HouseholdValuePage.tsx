@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getHouseholdValue } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
+import { InfoTooltip } from '../../components/InfoTooltip'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { dateAfter, dateLabel, moneyLabel, numberLabel } from '../../lib/format'
@@ -36,7 +37,12 @@ export function HouseholdValuePage() {
             id="clv-household-detail"
             title={`Household ${detail.household_id}`}
             icon="/customers"
-          />
+            helpLabel="this household’s spending summary"
+            className="relative"
+          >
+            See this household’s recorded spending and shopping activity, plus its next 90 days of
+            expected spending when available.
+          </PanelHeading>
           <p className="mt-2 text-sm text-muted">
             Model status: {statusLabels[detail.clv.status]}
             {detail.clv.as_of && ` · Data through ${dateLabel(detail.clv.as_of)}`}
@@ -48,20 +54,43 @@ export function HouseholdValuePage() {
                 [
                   'Observed spend · last 90 days',
                   optionalMoney(detail.future_spend.observed_spend_90d),
+                  'What this household spent in the past 90 days, after returns.',
                 ],
                 [
                   `Observed net spend · last ${detail.clv.history_days} days`,
                   moneyLabel(detail.future_spend.observed_spend_180d),
+                  'What this household spent over the longer period shown, after returns.',
                 ],
                 [
                   `Predicted net spend · next ${detail.clv.horizon_days} days`,
                   forecastLabel(detail.future_spend, detail.clv),
+                  'How much this household is expected to spend during the forecast dates.',
                 ],
-                ['Last purchase', dateLabel(detail.future_spend.last_purchase)],
-                ['Purchase days', numberLabel(detail.future_spend.purchase_days_180d)],
-                ['Store region', detail.future_spend.region ?? '—'],
-                ['Age range', detail.future_spend.age_range ?? '—'],
-                ['Household size', detail.future_spend.household_size ?? '—'],
+                [
+                  'Last purchase',
+                  dateLabel(detail.future_spend.last_purchase),
+                  'The latest purchase date in the records used for this view.',
+                ],
+                [
+                  'Purchase days',
+                  numberLabel(detail.future_spend.purchase_days_180d),
+                  'The number of days this household made at least one purchase in the past 180 days.',
+                ],
+                [
+                  'Store region',
+                  detail.future_spend.region ?? '—',
+                  'The store region this household shopped in on its most recent purchase date.',
+                ],
+                [
+                  'Age range',
+                  detail.future_spend.age_range ?? '—',
+                  'The age group listed in the household record.',
+                ],
+                [
+                  'Household size',
+                  detail.future_spend.household_size ?? '—',
+                  'The number of people listed in the household record.',
+                ],
                 [
                   'Loyalty membership',
                   detail.future_spend.loyalty_flag === 'Y'
@@ -69,10 +98,14 @@ export function HouseholdValuePage() {
                     : detail.future_spend.loyalty_flag === 'N'
                       ? 'Non-member'
                       : '—',
+                  'Whether the household record shows loyalty program membership.',
                 ],
-              ].map(([label, value]) => (
+              ].map(([label, value, help]) => (
                 <div key={label} className="rounded-lg bg-canvas p-3">
-                  <dt className="text-xs text-muted">{label}</dt>
+                  <dt className="relative flex items-center gap-1.5 text-xs text-muted">
+                    {label}
+                    <InfoTooltip label={label}>{help}</InfoTooltip>
+                  </dt>
                   <dd className="mt-1 font-semibold">{value}</dd>
                 </div>
               ))}

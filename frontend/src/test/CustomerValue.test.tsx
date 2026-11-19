@@ -156,9 +156,24 @@ describe('Customer Value', () => {
       name: /May 18, 2020.*Aug 15, 2020.*4,500.10/,
     })
     await user.click(lastPeriod)
-    const chart = screen.getByRole('region', { name: 'Historical household value trend' })
-    expect(within(chart).getByRole('tooltip')).toHaveTextContent('Observed net spend')
-    expect(within(chart).getByRole('tooltip')).not.toHaveTextContent('Difference')
+    const chartTooltip = document.getElementById(lastPeriod.getAttribute('aria-describedby') ?? '')
+    expect(chartTooltip).toHaveTextContent('Observed net spend')
+    expect(chartTooltip).not.toHaveTextContent('Difference')
+    for (const label of [
+      'the Customer Value overview',
+      'Households',
+      'Observed spend · last 90 days',
+      'Average per household · last 90 days',
+      'Forecast status',
+      'Historical household value trend',
+      'Observed spend by customer segment',
+      '90-day outlook',
+      'Household value detail',
+      'Key takeaways',
+    ]) {
+      const help = screen.getByRole('button', { name: `How ${label} is determined` })
+      expect(help.getAttribute('aria-describedby')).toBeTruthy()
+    }
     expect(screen.queryByText('$294.21')).not.toBeInTheDocument()
     expect(screen.queryByText(evidence.version!)).not.toBeInTheDocument()
     expect(screen.getByText(/Aug 16, 2020.*Nov 13, 2020/)).toBeVisible()
@@ -263,6 +278,9 @@ describe('Customer Value', () => {
     await user.click(link)
     expect(await screen.findByRole('heading', { name: 'Household 001994' })).toBeVisible()
     expect(screen.getByText('$875.42')).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'How Last purchase is determined' }),
+    ).toHaveAccessibleDescription('The latest purchase date in the records used for this view.')
     expect(getHouseholdValue).toHaveBeenCalledWith('001994', expect.anything())
     expect(screen.getByRole('link', { name: /Back to Customer Value/ })).toHaveAttribute(
       'href',

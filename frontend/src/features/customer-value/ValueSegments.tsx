@@ -16,10 +16,9 @@ export function ValueSegments({ summary }: { summary: ModelSummary }) {
         icon="/customers"
         className="relative"
       >
-        Groups use shopping activity in the 90 days before the model’s most recent observed period.
-        Higher-spend households are positive-spend shoppers in the top quarter. Among the rest,
-        frequent shoppers purchased on six or more days and infrequent shoppers on one or two days.
-        All remaining households are grouped as Other.
+        Compare average spending across groups based on how households shopped in the previous 90
+        days. The highest-spending quarter comes first. Among the rest, six or more shopping days
+        means frequent, one or two means infrequent, and everyone else is grouped as Other.
       </PanelHeading>
       <p className="mt-2 text-sm text-muted">
         Average net spend per household in the 90 days ending at the forecast cutoff.
