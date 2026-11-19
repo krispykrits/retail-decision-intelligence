@@ -95,14 +95,16 @@ run "private_model_artifact_container" {
   }
 
   override_resource {
-    target = azurerm_storage_account.state
+    override_during = plan
+    target          = azurerm_storage_account.state
     values = {
       primary_blob_endpoint = "https://rditeststate.blob.core.windows.net/"
     }
   }
 
   override_resource {
-    target = azurerm_storage_container.model_artifacts[0]
+    override_during = plan
+    target          = azurerm_storage_container.model_artifacts[0]
     values = {
       resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/model-artifacts"
     }
@@ -136,7 +138,8 @@ run "consolidated_storage_after_cutover" {
   }
 
   override_resource {
-    target = azurerm_storage_container.shared_imports[0]
+    override_during = plan
+    target          = azurerm_storage_container.shared_imports[0]
     values = {
       resource_manager_id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-rdi-test/providers/Microsoft.Storage/storageAccounts/rditeststate/blobServices/default/containers/csv-imports"
     }
