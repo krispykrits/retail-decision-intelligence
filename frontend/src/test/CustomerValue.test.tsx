@@ -89,6 +89,10 @@ const summary: ModelSummary = {
     { segment: 'higher_spend', households: 20, net_spend: '3800.00' },
     { segment: 'frequent', households: 6, net_spend: '700.10' },
   ],
+  observed_spend_by_loyalty: [
+    { loyalty_flag: 'Y', households: 20, net_spend: '3800.00' },
+    { loyalty_flag: 'N', households: 6, net_spend: '700.10' },
+  ],
   historical_spend: [
     { start: '2020-02-18', end: '2020-05-17', net_spend: '3012.23' },
     { start: '2020-05-18', end: '2020-08-15', net_spend: '4500.10' },
@@ -166,7 +170,7 @@ describe('Customer Value', () => {
       'Average per household · last 90 days',
       'Forecast status',
       'Historical household value trend',
-      'Observed spend by customer segment',
+      'Observed spend by loyalty membership',
       '90-day outlook',
       'Household value detail',
       'Key takeaways',
@@ -181,17 +185,20 @@ describe('Customer Value', () => {
     expect(document.querySelector('input[type="date"]')).toBeNull()
 
     expect(
-      screen.getByRole('heading', { name: 'Observed spend by customer segment' }),
+      screen.getByRole('heading', { name: 'Observed spend by loyalty membership' }),
     ).toBeVisible()
     expect(
-      within(screen.getByRole('region', { name: 'Observed spend by customer segment' })).getByText(
-        '$190.00',
-      ),
+      within(
+        screen.getByRole('region', { name: 'Observed spend by loyalty membership' }),
+      ).getByText('$190.00'),
+    ).toBeVisible()
+    expect(
+      screen.getByText('Members spent $73.32 more per household than non-members.'),
     ).toBeVisible()
     expect(screen.getByText('+49.4%')).toBeVisible()
     const takeaways = within(screen.getByRole('region', { name: 'Key takeaways' }))
     expect(takeaways.getByText(/rose by 49.4% compared with the previous 90 days/)).toBeVisible()
-    expect(takeaways.getByText(/Higher-spend households averaged \$190.00/)).toBeVisible()
+    expect(takeaways.getByText(/Loyalty members averaged \$190.00/)).toBeVisible()
     expect(takeaways.getByText(/25 of 26 households have a forecast/)).toBeVisible()
     expect(takeaways.getByRole('link', { name: /Review households/ })).toHaveAttribute(
       'href',
@@ -202,6 +209,34 @@ describe('Customer Value', () => {
 
     await user.click(screen.getByText('View spending ranges'))
     expect(screen.getByRole('progressbar', { name: /Households forecast/ })).toHaveValue(25)
+  })
+
+  it.each([
+    ['Y', 'loyalty members'],
+    ['N', 'non-members'],
+  ] as const)('shows shopping segments when loyalty is %s', async (loyalty, label) => {
+    const user = userEvent.setup()
+    vi.mocked(getCustomerValue)
+      .mockResolvedValueOnce(summary)
+      .mockResolvedValueOnce({
+        ...summary,
+        loyalty_filter: loyalty,
+        observed_spend_by_loyalty: summary.observed_spend_by_loyalty?.filter(
+          (row) => row.loyalty_flag === loyalty,
+        ),
+      })
+    openCustomerValue()
+    await screen.findByRole('heading', { name: 'Observed spend by loyalty membership' })
+    await user.selectOptions(screen.getByLabelText('Loyalty membership'), loyalty)
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+
+    const card = within(
+      await screen.findByRole('region', { name: 'Observed spend by customer segment' }),
+    )
+    expect(card.getByText(new RegExp(`Showing ${label} only`, 'i'))).toBeVisible()
+    expect(card.getByText('Higher-spend households')).toBeVisible()
+    expect(card.getByText('Frequent shoppers')).toBeVisible()
+    expect(card.queryByText(/Members spent/)).not.toBeInTheDocument()
   })
 
   it('preserves the overview while filters update and announces what is loading', async () => {
@@ -258,22 +293,22 @@ describe('Customer Value', () => {
     await screen.findByRole('link', { name: household.household_id })
     expect(getRankedHouseholds).toHaveBeenLastCalledWith(expect.anything(), 2, expect.anything())
     await user.selectOptions(screen.getByLabelText('Store region'), 'CENTRAL')
-    await user.selectOptions(screen.getByLabelText('Customer segment'), 'frequent')
+    await user.selectOptions(screen.getByLabelText('Loyalty membership'), 'Y')
     await user.click(screen.getByRole('button', { name: 'Apply filters' }))
 
     const link = await screen.findByRole('link', { name: household.household_id })
     expect(getCustomerValue).toHaveBeenLastCalledWith(
-      expect.objectContaining({ region: 'CENTRAL', segment: 'frequent' }),
+      expect.objectContaining({ region: 'CENTRAL', loyalty_flag: 'Y' }),
       expect.anything(),
     )
     expect(getRankedHouseholds).toHaveBeenLastCalledWith(
-      expect.objectContaining({ region: 'CENTRAL', segment: 'frequent' }),
+      expect.objectContaining({ region: 'CENTRAL', loyalty_flag: 'Y' }),
       1,
       expect.anything(),
     )
     expect(link).toHaveAttribute(
       'href',
-      '/customers/households/001994?region=CENTRAL&segment=frequent',
+      '/customers/households/001994?region=CENTRAL&loyalty_flag=Y',
     )
     await user.click(link)
     expect(await screen.findByRole('heading', { name: 'Household 001994' })).toBeVisible()
@@ -284,7 +319,7 @@ describe('Customer Value', () => {
     expect(getHouseholdValue).toHaveBeenCalledWith('001994', expect.anything())
     expect(screen.getByRole('link', { name: /Back to Customer Value/ })).toHaveAttribute(
       'href',
-      '/customers?region=CENTRAL&segment=frequent',
+      '/customers?region=CENTRAL&loyalty_flag=Y',
     )
   })
 

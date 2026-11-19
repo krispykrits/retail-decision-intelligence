@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import UTC, date, timedelta
 from decimal import Decimal
 from typing import Any
@@ -17,6 +18,7 @@ from retail_api.customers.schemas import (
     HouseholdPrediction,
     ModelEvidence,
     ModelType,
+    ObservedSpendLoyalty,
     ObservedSpendSegment,
     PageFilters,
     ShoppingSegment,
@@ -231,10 +233,10 @@ def summary(
 
 def historical_spend(
     db: Connection, evidence: ModelEvidence, filters: CohortFilters
-) -> tuple[list[HistoricalSpendPeriod], list[ObservedSpendSegment]]:
+) -> tuple[list[HistoricalSpendPeriod], list[ObservedSpendSegment], list[ObservedSpendLoyalty]]:
     periods = observed_periods(evidence)
     if not periods or evidence.version is None:
-        return [], []
+        return [], [], []
 
     c = transactions.c
     p = predictions.c
@@ -247,6 +249,7 @@ def historical_spend(
     rows = db.execute(
         sa.select(
             membership.c.segment,
+            p.loyalty_flag,
             sa.func.count(sa.distinct(p.household_id)),
             *(
                 sa.func.sum(sa.case((c.purchase_date.between(start, end), c.spend), else_=0))
@@ -255,7 +258,7 @@ def historical_spend(
         )
         .select_from(joined)
         .where(*cohort_predicates(evidence, filters, membership))
-        .group_by(membership.c.segment)
+        .group_by(membership.c.segment, p.loyalty_flag)
     ).all()
     series = [
         HistoricalSpendPeriod(
@@ -263,12 +266,32 @@ def historical_spend(
             end=end,
             net_spend=sum((row[index] for row in rows), Decimal(0)),
         )
-        for index, (start, end) in enumerate(periods, start=2)
+        for index, (start, end) in enumerate(periods, start=3)
     ]
+    segment_counts: dict[str, int] = defaultdict(int)
+    segment_amounts: dict[str, Decimal] = defaultdict(Decimal)
+    loyalty_counts: dict[str | None, int] = defaultdict(int)
+    loyalty_amounts: dict[str | None, Decimal] = defaultdict(Decimal)
+    for segment, loyalty, count, *amounts in rows:
+        recent = amounts[-1]
+        segment_counts[segment] += count
+        segment_amounts[segment] += recent
+        loyalty_counts[loyalty] += count
+        loyalty_amounts[loyalty] += recent
+
     segments = [
-        ObservedSpendSegment(segment=row[0], households=row[1], net_spend=row[-1]) for row in rows
+        ObservedSpendSegment(
+            segment=ShoppingSegment(segment), households=count, net_spend=segment_amounts[segment]
+        )
+        for segment, count in segment_counts.items()
     ]
-    return series, segments
+    loyalty_groups = [
+        ObservedSpendLoyalty(
+            loyalty_flag=loyalty, households=count, net_spend=loyalty_amounts[loyalty]
+        )
+        for loyalty, count in loyalty_counts.items()
+    ]
+    return series, segments, loyalty_groups
 
 
 def recent_spending(

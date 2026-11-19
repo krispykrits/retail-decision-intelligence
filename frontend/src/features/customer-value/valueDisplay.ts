@@ -1,5 +1,6 @@
 import type { HouseholdPrediction, ModelEvidence, ModelSummary } from '../../api/customerValue'
 import { moneyLabel } from '../../lib/format'
+import { segmentLabels } from './cohortQuery'
 
 export const statusLabels = {
   available: 'Available',
@@ -21,8 +22,25 @@ export function forecastLabel(row: HouseholdPrediction, evidence: ModelEvidence)
   return optionalMoney(row.forecast)
 }
 
-export function spendingSegments(summary: ModelSummary) {
-  return (summary.observed_spend_segments ?? [])
+export function loyaltyLabel(flag: string | null | undefined) {
+  if (flag === 'Y') return 'Loyalty members'
+  if (flag === 'N') return 'Non-members'
+  return 'Unknown membership'
+}
+
+export function spendingGroups(summary: ModelSummary) {
+  const groups = summary.loyalty_filter
+    ? (summary.observed_spend_segments ?? []).map((row) => ({
+        ...row,
+        key: row.segment,
+        label: segmentLabels[row.segment],
+      }))
+    : (summary.observed_spend_by_loyalty ?? []).map((row) => ({
+        ...row,
+        key: row.loyalty_flag ?? 'unknown',
+        label: loyaltyLabel(row.loyalty_flag),
+      }))
+  return groups
     .filter(({ households }) => households > 0)
     .map((row) => ({ ...row, average: Number(row.net_spend) / row.households }))
     .sort((left, right) => right.average - left.average)

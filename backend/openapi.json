@@ -1585,6 +1585,17 @@
             ],
             "title": "Inactive 180D"
           },
+          "loyalty_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Filter"
+          },
           "mean_future_spend": {
             "anyOf": [
               {
@@ -1600,6 +1611,13 @@
             "default": 0,
             "title": "Observed Households",
             "type": "integer"
+          },
+          "observed_spend_by_loyalty": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedSpendLoyalty"
+            },
+            "title": "Observed Spend By Loyalty",
+            "type": "array"
           },
           "observed_spend_segments": {
             "items": {
@@ -1646,6 +1664,36 @@
         "title": "ModelType",
         "type": "string"
       },
+      "ObservedSpendLoyalty": {
+        "properties": {
+          "households": {
+            "title": "Households",
+            "type": "integer"
+          },
+          "loyalty_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Flag"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "households",
+          "net_spend",
+          "loyalty_flag"
+        ],
+        "title": "ObservedSpendLoyalty",
+        "type": "object"
+      },
       "ObservedSpendSegment": {
         "properties": {
           "households": {
@@ -1661,9 +1709,9 @@
           }
         },
         "required": [
-          "segment",
           "households",
-          "net_spend"
+          "net_spend",
+          "segment"
         ],
         "title": "ObservedSpendSegment",
         "type": "object"

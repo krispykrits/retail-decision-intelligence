@@ -1131,6 +1131,8 @@ export interface components {
             historical_spend?: components["schemas"]["HistoricalSpendPeriod"][];
             /** Inactive 180D */
             inactive_180d?: number | null;
+            /** Loyalty Filter */
+            loyalty_filter?: string | null;
             /** Mean Future Spend */
             mean_future_spend?: number | null;
             /**
@@ -1138,6 +1140,8 @@ export interface components {
              * @default 0
              */
             observed_households: number;
+            /** Observed Spend By Loyalty */
+            observed_spend_by_loyalty?: components["schemas"]["ObservedSpendLoyalty"][];
             /** Observed Spend Segments */
             observed_spend_segments?: components["schemas"]["ObservedSpendSegment"][];
             /** Regions */
@@ -1157,6 +1161,15 @@ export interface components {
          * @enum {string}
          */
         ModelType: "clv" | "churn";
+        /** ObservedSpendLoyalty */
+        ObservedSpendLoyalty: {
+            /** Households */
+            households: number;
+            /** Loyalty Flag */
+            loyalty_flag: string | null;
+            /** Net Spend */
+            net_spend: string;
+        };
         /** ObservedSpendSegment */
         ObservedSpendSegment: {
             /** Households */

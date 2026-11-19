@@ -2,8 +2,7 @@ import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { TakeawayList, type Takeaway } from '../../components/TakeawayList'
 import { moneyLabel, numberLabel } from '../../lib/format'
-import { segmentLabels } from './cohortQuery'
-import { isAvailable, observedChange, spendingSegments } from './valueDisplay'
+import { isAvailable, observedChange, spendingGroups } from './valueDisplay'
 
 const percent = new Intl.NumberFormat('en-US', {
   style: 'percent',
@@ -29,7 +28,7 @@ export function ValueInsights({ summary }: { summary: ModelSummary }) {
     })
   }
 
-  const [highest, second] = spendingSegments(summary)
+  const [highest, second] = spendingGroups(summary).filter(({ key }) => key !== 'unknown')
   if (highest && second) {
     const gap = highest.average - second.average
     items.push({
@@ -37,8 +36,8 @@ export function ValueInsights({ summary }: { summary: ModelSummary }) {
       title: 'Which group spent more per household',
       detail:
         gap === 0
-          ? `${segmentLabels[highest.segment]} and ${segmentLabels[second.segment].toLowerCase()} had the same average spend.`
-          : `${segmentLabels[highest.segment]} averaged ${moneyLabel(highest.average)} in the latest 90 days shown, ${moneyLabel(gap)} more than ${segmentLabels[second.segment].toLowerCase()}.`,
+          ? `${highest.label} and ${second.label.toLowerCase()} had the same average spend.`
+          : `${highest.label} averaged ${moneyLabel(highest.average)} in the latest 90 days shown, ${moneyLabel(gap)} more than ${second.label.toLowerCase()}.`,
       tone: 'blue',
     })
   }

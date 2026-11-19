@@ -148,10 +148,17 @@ class HistoricalSpendPeriod(BaseModel):
     net_spend: Decimal
 
 
-class ObservedSpendSegment(BaseModel):
-    segment: ShoppingSegment
+class ObservedSpendGroup(BaseModel):
     households: int
     net_spend: Decimal
+
+
+class ObservedSpendSegment(ObservedSpendGroup):
+    segment: ShoppingSegment
+
+
+class ObservedSpendLoyalty(ObservedSpendGroup):
+    loyalty_flag: str | None
 
 
 class ModelSummary(CohortSummary):
@@ -165,6 +172,8 @@ class ModelSummary(CohortSummary):
     )
 
     observed_spend_segments: list[ObservedSpendSegment] = Field(default_factory=list)
+    observed_spend_by_loyalty: list[ObservedSpendLoyalty] = Field(default_factory=list)
+    loyalty_filter: str | None = None
 
 
 class HouseholdPrediction(BaseModel):

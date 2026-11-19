@@ -1,34 +1,38 @@
 import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { moneyLabel, numberLabel } from '../../lib/format'
-import { segmentLabels } from './cohortQuery'
-import { spendingSegments } from './valueDisplay'
+import { loyaltyLabel, spendingGroups } from './valueDisplay'
 
 export function ValueSegments({ summary }: { summary: ModelSummary }) {
-  const segments = spendingSegments(summary)
+  const segments = spendingGroups(summary)
+  const membership = summary.loyalty_filter
+  const member = segments.find(({ key }) => key === 'Y')
+  const nonMember = segments.find(({ key }) => key === 'N')
   const max = Math.max(1, ...segments.map(({ average }) => Math.abs(average)))
 
   return (
     <Panel aria-labelledby="clv-segments" className="h-full">
       <PanelHeading
         id="clv-segments"
-        title="Observed spend by customer segment"
+        title={
+          membership ? 'Observed spend by customer segment' : 'Observed spend by loyalty membership'
+        }
         icon="/customers"
         className="relative"
       >
-        Compare average spending across groups based on how households shopped in the previous 90
-        days. The highest-spending quarter comes first. Among the rest, six or more shopping days
-        means frequent, one or two means infrequent, and everyone else is grouped as Other.
+        {membership
+          ? 'Groups are based on shopping habits in the 90 days before the period shown. The top spenders form one group. Among the rest, those who shopped on six or more days are frequent shoppers, those who shopped on one or two days are infrequent shoppers, and the rest are grouped as Other.'
+          : 'Compare what members and non-members spent per household, after returns. Households without a recorded membership are shown separately.'}
       </PanelHeading>
       <p className="mt-2 text-sm text-muted">
-        Average net spend per household in the 90 days ending at the forecast cutoff.
+        Average spend per household in the 90 days before the forecast starts.
+        {membership && ` Showing ${loyaltyLabel(membership).toLowerCase()} only.`}
       </p>
       {segments.length > 0 ? (
         <ul className="mt-4 space-y-4">
-          {segments.map(({ segment, households, average }) => {
-            const label = segmentLabels[segment]
+          {segments.map(({ key, label, households, average }) => {
             return (
-              <li key={segment}>
+              <li key={key}>
                 <div className="mb-1 flex justify-between gap-2 text-sm">
                   <span>
                     {label} <span className="text-xs text-muted">({numberLabel(households)})</span>
@@ -48,6 +52,13 @@ export function ValueSegments({ summary }: { summary: ModelSummary }) {
       ) : (
         <p className="mt-4 text-sm text-muted">
           No segment spending is available for this selection.
+        </p>
+      )}
+      {member && nonMember && (
+        <p className="mt-4 border-t border-line pt-3 text-xs text-muted">
+          {member.average === nonMember.average
+            ? 'Members and non-members spent the same amount per household.'
+            : `Members spent ${moneyLabel(Math.abs(member.average - nonMember.average))} ${member.average > nonMember.average ? 'more' : 'less'} per household than non-members.`}
         </p>
       )}
     </Panel>

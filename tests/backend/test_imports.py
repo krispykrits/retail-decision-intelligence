@@ -611,6 +611,16 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
     assert Decimal(ranked["items"][0]["observed_spend_90d"]) == 90
     detail = client.get("/api/v1/customers/0010/predictions").json()
     assert Decimal(detail["future_spend"]["observed_spend_90d"]) == 90
+    unfiltered = client.get(endpoint).json()
+    assert unfiltered["loyalty_filter"] is None
+    assert {
+        row["loyalty_flag"]: (row["households"], Decimal(row["net_spend"]))
+        for row in unfiltered["observed_spend_by_loyalty"]
+    } == {"Y": (1, Decimal(90)), "N": (1, Decimal(60))}
+    assert cohort["loyalty_filter"] == "Y"
+    non_member = client.get(endpoint, params={"loyalty_flag": "N"}).json()
+    assert non_member["loyalty_filter"] == "N"
+    assert {row["segment"] for row in non_member["observed_spend_segments"]} == {"other"}
     high = client.get(endpoint, params={"segment": "higher_spend"}).json()
     assert high["observed_households"] == 1
     assert high["evidence"]["as_of"] == cutoff.isoformat()
