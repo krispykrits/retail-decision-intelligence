@@ -18,12 +18,12 @@ export function HistoricalSpendTrend({ summary }: { summary: ModelSummary }) {
   }))
 
   return (
-    <Panel aria-labelledby="clv-history">
+    <Panel aria-labelledby="clv-history" className="h-full">
       <PanelHeading id="clv-history" title="Historical household value trend" icon="/forecast" />
       {points.length > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">
-            Recorded net spend for the selected households in complete 90-day periods.
+            Total spent after returns, grouped into 90-day periods.
           </p>
           <div className="mt-3">
             <TrendChart
@@ -38,12 +38,17 @@ export function HistoricalSpendTrend({ summary }: { summary: ModelSummary }) {
           </div>
         </>
       ) : (
-        <p className="mt-2 text-sm text-muted">
-          {summary.evidence.status === 'stale'
-            ? 'Refresh the model run to reconcile this cohort with the current transactions.'
-            : 'No complete 90-day history is available for this cohort.'}
-        </p>
+        <p className="mt-2 text-sm text-muted">{emptyMessage(summary)}</p>
       )}
     </Panel>
   )
+}
+
+function emptyMessage(summary: ModelSummary) {
+  if (summary.historical_spend === undefined) return 'Spending history needs a newer app version.'
+  if (summary.evidence.status === 'stale')
+    return 'Spending history is paused because the source data changed.'
+  if (!summary.evidence.version) return 'Spending history will appear after the first model run.'
+  if (!summary.observed_households) return 'No households match your filters.'
+  return 'There are fewer than 90 days of recorded spending.'
 }

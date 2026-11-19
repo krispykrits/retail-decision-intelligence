@@ -17,6 +17,12 @@ export function optionalMoney(value: number | string | null | undefined) {
 
 export function forecastLabel(row: HouseholdPrediction, evidence: ModelEvidence) {
   if (!isAvailable(evidence)) return 'Unavailable'
-  if (!row.eligible) return 'Ineligible'
+  if (!row.eligible) return 'No forecast'
   return optionalMoney(row.forecast)
+}
+
+export function loyaltyLabel(flag: string | null) {
+  if (flag === 'Y') return 'Loyalty members'
+  if (flag === 'N') return 'Non-members'
+  return 'Membership unknown'
 }

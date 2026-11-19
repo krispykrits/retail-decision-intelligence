@@ -44,45 +44,55 @@ export function ValueFilters({
         </select>
       </label>
       <label className={labelClass}>
-        Loyalty membership
+        Customer segment
         <select name="loyalty_flag" className={fieldClass} defaultValue={cohort.loyalty_flag ?? ''}>
-          <option value="">All households</option>
-          <option value="Y">Member</option>
+          <option value="">All segments</option>
+          <option value="Y">Loyalty member</option>
           <option value="N">Non-member</option>
         </select>
       </label>
-      <label className={labelClass}>
-        Age range
-        <input
-          className={`${fieldClass} w-32`}
-          name="age_range"
-          defaultValue={cohort.age_range ?? ''}
-          list="clv-age-ranges"
-          maxLength={80}
-          placeholder="All age ranges"
-        />
-        <datalist id="clv-age-ranges">
-          {ageRanges.map((value) => (
-            <option key={value} value={value} />
-          ))}
-        </datalist>
-      </label>
-      <label className={labelClass}>
-        Household size
-        <input
-          className={`${fieldClass} w-31`}
-          name="household_size"
-          defaultValue={cohort.household_size ?? ''}
-          list="clv-household-sizes"
-          maxLength={80}
-          placeholder="All sizes"
-        />
-        <datalist id="clv-household-sizes">
-          {householdSizes.map((value) => (
-            <option key={value} value={value} />
-          ))}
-        </datalist>
-      </label>
+      <details
+        open={cohort.age_range || cohort.household_size ? true : undefined}
+        className="relative"
+      >
+        <summary className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-link">
+          More filters
+        </summary>
+        <div className="mt-2 grid gap-2 rounded-lg border border-line bg-surface p-3 shadow-panel sm:absolute sm:z-10">
+          <label className={labelClass}>
+            Age range
+            <input
+              className={`${fieldClass} w-32`}
+              name="age_range"
+              defaultValue={cohort.age_range ?? ''}
+              list="clv-age-ranges"
+              maxLength={80}
+              placeholder="All age ranges"
+            />
+            <datalist id="clv-age-ranges">
+              {ageRanges.map((value) => (
+                <option key={value} value={value} />
+              ))}
+            </datalist>
+          </label>
+          <label className={labelClass}>
+            Household size
+            <input
+              className={`${fieldClass} w-31`}
+              name="household_size"
+              defaultValue={cohort.household_size ?? ''}
+              list="clv-household-sizes"
+              maxLength={80}
+              placeholder="All sizes"
+            />
+            <datalist id="clv-household-sizes">
+              {householdSizes.map((value) => (
+                <option key={value} value={value} />
+              ))}
+            </datalist>
+          </label>
+        </div>
+      </details>
       <button
         type="submit"
         className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-link"

@@ -16,7 +16,7 @@ export async function getCustomerValue(query: Cohort, signal: AbortSignal) {
 
 export async function getRankedHouseholds(query: Cohort, page: number, signal: AbortSignal) {
   const { data } = await client.GET('/api/v1/customers/clv/households', {
-    params: { query: { ...query, page } },
+    params: { query: { ...query, page, page_size: 5 } },
     signal,
   })
   if (!data) throw new Error('Household results are unavailable.')

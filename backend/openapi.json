@@ -917,6 +917,17 @@
             "title": "Observed Spend 180D",
             "type": "string"
           },
+          "observed_spend_90d": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Spend 90D"
+          },
           "purchase_days_180d": {
             "title": "Purchase Days 180D",
             "type": "integer"
@@ -1590,6 +1601,13 @@
             "title": "Observed Households",
             "type": "integer"
           },
+          "observed_spend_segments": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedSpendSegment"
+            },
+            "title": "Observed Spend Segments",
+            "type": "array"
+          },
           "regions": {
             "additionalProperties": {
               "$ref": "#/components/schemas/CohortSummary"
@@ -1627,6 +1645,36 @@
         ],
         "title": "ModelType",
         "type": "string"
+      },
+      "ObservedSpendSegment": {
+        "properties": {
+          "households": {
+            "title": "Households",
+            "type": "integer"
+          },
+          "loyalty_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Flag"
+          },
+          "net_spend": {
+            "title": "Net Spend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loyalty_flag",
+          "households",
+          "net_spend"
+        ],
+        "title": "ObservedSpendSegment",
+        "type": "object"
       },
       "Period": {
         "properties": {

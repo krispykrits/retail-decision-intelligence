@@ -3,9 +3,9 @@ import type { ModelEvidence, PredictionPage } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
 import { DataTable } from '../../components/DataTable'
 import { Panel, PanelHeading } from '../../components/Panel'
-import { dateLabel, moneyLabel, numberLabel } from '../../lib/format'
+import { numberLabel } from '../../lib/format'
 import type { ValueResult } from './useValueRequest'
-import { forecastLabel, isAvailable } from './valueDisplay'
+import { forecastLabel, isAvailable, optionalMoney } from './valueDisplay'
 import { ValueError, ValueLoading } from './ValueRequestState'
 
 export function ValueRanking({
@@ -28,24 +28,21 @@ export function ValueRanking({
   const columns = {
     id: 'Household',
     region: 'Region',
-    last: 'Last purchase',
-    historical: `Observed · ${evidence.history_days} days`,
-    forecast: `Forecast · next ${evidence.horizon_days} days`,
+    historical: 'Observed · 90 days',
+    forecast: `${evidence.horizon_days}-day forecast`,
   }
 
   return (
     <Panel aria-labelledby="clv-households">
       <PanelHeading id="clv-households" title="Household value detail" icon="/customers" />
       <p className="mt-2 mb-4 text-sm text-muted">
-        {available
-          ? 'Ranked by predicted net spend.'
-          : 'Showing recorded spending from the published snapshot when available.'}
+        {available ? 'Highest forecast first.' : 'Recorded spending for the households in view.'}
       </p>
       {!result && <ValueLoading label="Loading households" />}
       {result?.error && <ValueError message="Could not load households." retry={retry} />}
       {data &&
         (data.items.length === 0 && page === 1 ? (
-          <p className="text-sm text-muted">No household records match this cohort.</p>
+          <p className="text-sm text-muted">No households match your filters.</p>
         ) : (
           <>
             <DataTable
@@ -67,8 +64,7 @@ export function ValueRanking({
                     </Link>
                   </th>
                   <td>{row.region ?? '—'}</td>
-                  <td>{dateLabel(row.last_purchase)}</td>
-                  <td>{moneyLabel(row.observed_spend_180d)}</td>
+                  <td>{optionalMoney(row.observed_spend_90d)}</td>
                   <td className="font-medium">{forecastLabel(row, evidence)}</td>
                 </tr>
               ))}
@@ -87,7 +83,9 @@ export function ValueRanking({
                   Previous
                 </button>
                 <span className="text-muted">
-                  Page {numberLabel(data.page)} · {numberLabel(data.total)} households
+                  {data.items.length > 0
+                    ? `${numberLabel((data.page - 1) * data.page_size + 1)}–${numberLabel((data.page - 1) * data.page_size + data.items.length)} of ${numberLabel(data.total)}`
+                    : 'This page has no households.'}
                 </span>
                 {page > totalPages ? (
                   <button type="button" className="text-link" onClick={() => selectPage(1)}>

@@ -73,6 +73,7 @@ const household: HouseholdPrediction = {
   recency_days: 2,
   purchase_days_180d: 34,
   observed_spend_180d: '1774.5300',
+  observed_spend_90d: '834.25',
   eligible: true,
   forecast: 875.42,
 }
@@ -84,6 +85,7 @@ const summary: ModelSummary = {
   scored_households: 25,
   mean_future_spend: 985.24,
   distribution: [{ lower: 500, upper: 1500, count: 25 }],
+  observed_spend_segments: [{ loyalty_flag: 'Y', households: 26, net_spend: '4500.10' }],
   historical_spend: [
     { start: '2020-02-18', end: '2020-05-17', net_spend: '3012.23' },
     { start: '2020-05-18', end: '2020-08-15', net_spend: '4500.10' },
@@ -117,22 +119,30 @@ beforeEach(() => {
   vi.mocked(getCustomerValue).mockResolvedValue(summary)
   vi.mocked(getRankedHouseholds).mockResolvedValue({
     evidence,
-    items: [household],
+    items: [
+      household,
+      ...['002001', '002002', '002003', '002004'].map((household_id) => ({
+        ...household,
+        household_id,
+        observed_spend_90d: '570.00',
+        forecast: 605.48,
+      })),
+    ],
     total: 26,
     page: 1,
-    page_size: 25,
+    page_size: 5,
   })
 })
 
 describe('Customer Value', () => {
-  it('shows ranked validated forecasts, baseline metrics, and traceable model evidence', async () => {
+  it('shows historical spending, segments and a ranked forecast without ML details', async () => {
     const user = userEvent.setup()
     openCustomerValue()
 
     const ranking = await screen.findByRole('region', { name: 'Household value results' })
-    expect(within(ranking).getByText('$1,774.53')).toBeVisible()
+    expect(within(ranking).getByText('$834.25')).toBeVisible()
     expect(within(ranking).getByText('$875.42')).toBeVisible()
-    expect(within(ranking).getByRole('columnheader', { name: /Forecast/ })).toHaveAttribute(
+    expect(within(ranking).getByRole('columnheader', { name: /forecast/i })).toHaveAttribute(
       'aria-sort',
       'descending',
     )
@@ -143,17 +153,23 @@ describe('Customer Value', () => {
       name: /May 18, 2020.*Aug 15, 2020.*4,500.10/,
     })
     await user.click(lastPeriod)
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Observed net spend')
-    expect(screen.getByRole('tooltip')).not.toHaveTextContent('Difference')
-    expect(screen.getByText('$294.21')).toBeVisible()
-    expect(screen.getByText('$314.34')).toBeVisible()
+    const chart = screen.getByRole('region', { name: 'Historical household value trend' })
+    expect(within(chart).getByRole('tooltip')).toHaveTextContent('Observed net spend')
+    expect(within(chart).getByRole('tooltip')).not.toHaveTextContent('Difference')
+    expect(screen.queryByText('$294.21')).not.toBeInTheDocument()
+    expect(screen.queryByText(evidence.version!)).not.toBeInTheDocument()
     expect(screen.getByText(/Aug 16, 2020.*Nov 13, 2020/)).toBeVisible()
-    expect(screen.getByRole('progressbar')).toHaveValue(25)
+    expect(screen.getByRole('heading', { name: 'Observed spend by segment' })).toBeVisible()
+    expect(
+      within(screen.getByRole('region', { name: 'Observed spend by segment' })).getByText(
+        '$173.08',
+      ),
+    ).toBeVisible()
+    expect(within(ranking).getAllByRole('row')).toHaveLength(6)
+    expect(screen.getByText('1–5 of 26')).toBeVisible()
 
-    await user.click(screen.getByText('Run provenance and holdouts'))
-    expect(screen.getByText(evidence.version!)).toBeVisible()
-    expect(screen.getByText('Transactions 2 · Households 7')).toBeVisible()
-    expect(screen.getByText(/May 18, 2020.*Aug 15, 2020/)).toBeVisible()
+    await user.click(screen.getByText('View spending ranges'))
+    expect(screen.getByRole('progressbar', { name: /Households forecast/ })).toHaveValue(25)
   })
 
   it('filters cohorts, resets pagination, and retains the selection through household detail', async () => {
@@ -200,25 +216,27 @@ describe('Customer Value', () => {
       vi.mocked(getCustomerValue).mockResolvedValue({
         ...summary,
         historical_spend: status === 'stale' ? [] : summary.historical_spend,
+        observed_spend_segments: status === 'stale' ? [] : summary.observed_spend_segments,
         evidence: rejected,
       })
       vi.mocked(getRankedHouseholds).mockResolvedValue({
         evidence: rejected,
-        items: [household],
+        items: [{ ...household, observed_spend_90d: status === 'stale' ? null : '834.25' }],
         total: 1,
         page: 1,
-        page_size: 25,
+        page_size: 5,
       })
       openCustomerValue()
 
       const ranking = await screen.findByRole('region', { name: 'Household value results' })
-      expect(within(ranking).getByText('$1,774.53')).toBeVisible()
+      expect(within(ranking).getByText(status === 'stale' ? '—' : '$834.25')).toBeVisible()
       expect(within(ranking).getByText('Unavailable')).toBeVisible()
       expect(within(ranking).queryByText('$875.42')).not.toBeInTheDocument()
-      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-      expect(screen.getByText(rejected.reason)).toBeVisible()
+      expect(
+        screen.queryByRole('progressbar', { name: /Households forecast/ }),
+      ).not.toBeInTheDocument()
       if (status === 'stale') {
-        expect(screen.getByText(/reconcile this cohort/)).toBeVisible()
+        expect(screen.getByText(/spending history is paused/i)).toBeVisible()
       } else {
         expect(screen.getByRole('group', { name: /Observed household net spend/ })).toBeVisible()
       }
@@ -238,6 +256,14 @@ describe('Customer Value', () => {
     expect(screen.queryByText('$985.24')).not.toBeInTheDocument()
   })
 
+  it('distinguishes an older API from a cohort with no spending history', async () => {
+    vi.mocked(getCustomerValue).mockResolvedValue({ ...summary, historical_spend: undefined })
+    openCustomerValue()
+
+    expect(await screen.findByText('Spending history needs a newer app version.')).toBeVisible()
+    expect(screen.queryByText(/fewer than 90 days/)).not.toBeInTheDocument()
+  })
+
   it('refreshes both views when the ranking came from a different model run', async () => {
     const user = userEvent.setup()
     vi.mocked(getRankedHouseholds).mockResolvedValueOnce({
@@ -245,7 +271,7 @@ describe('Customer Value', () => {
       items: [household],
       total: 1,
       page: 1,
-      page_size: 25,
+      page_size: 5,
     })
     openCustomerValue()
 

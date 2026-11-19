@@ -5,7 +5,7 @@ import { customerIntelligencePath } from '../../app/workspaces'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { dateAfter, dateLabel, moneyLabel, numberLabel } from '../../lib/format'
-import { forecastLabel, isAvailable, statusLabels } from './valueDisplay'
+import { forecastLabel, isAvailable, optionalMoney, statusLabels } from './valueDisplay'
 import { ValueError, ValueLoading } from './ValueRequestState'
 import { useValueRequest } from './useValueRequest'
 
@@ -41,12 +41,14 @@ export function HouseholdValuePage() {
             Model status: {statusLabels[detail.clv.status]}
             {detail.clv.as_of && ` · Data through ${dateLabel(detail.clv.as_of)}`}
           </p>
-          {!isAvailable(detail.clv) && (
-            <p className="mt-2 text-sm text-muted">{detail.clv.reason}</p>
-          )}
+
           {detail.future_spend ? (
             <dl className="mt-4 grid gap-x-3 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
               {[
+                [
+                  'Observed spend · last 90 days',
+                  optionalMoney(detail.future_spend.observed_spend_90d),
+                ],
                 [
                   `Observed net spend · last ${detail.clv.history_days} days`,
                   moneyLabel(detail.future_spend.observed_spend_180d),
@@ -87,7 +89,9 @@ export function HouseholdValuePage() {
             </p>
           )}
           {detail.future_spend?.eligible === false && (
-            <p className="mt-4 text-sm text-muted">{detail.clv.population}</p>
+            <p className="mt-4 text-sm text-muted">
+              This household has no qualifying purchase in the past {detail.clv.history_days} days.
+            </p>
           )}
         </Panel>
       )}

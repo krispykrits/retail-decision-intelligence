@@ -909,6 +909,8 @@ export interface components {
             loyalty_flag: string | null;
             /** Observed Spend 180D */
             observed_spend_180d: string;
+            /** Observed Spend 90D */
+            observed_spend_90d?: string | null;
             /** Purchase Days 180D */
             purchase_days_180d: number;
             /** Recency Days */
@@ -1136,6 +1138,8 @@ export interface components {
              * @default 0
              */
             observed_households: number;
+            /** Observed Spend Segments */
+            observed_spend_segments?: components["schemas"]["ObservedSpendSegment"][];
             /** Regions */
             regions?: {
                 [key: string]: components["schemas"]["CohortSummary"];
@@ -1153,6 +1157,15 @@ export interface components {
          * @enum {string}
          */
         ModelType: "clv" | "churn";
+        /** ObservedSpendSegment */
+        ObservedSpendSegment: {
+            /** Households */
+            households: number;
+            /** Loyalty Flag */
+            loyalty_flag: string | null;
+            /** Net Spend */
+            net_spend: string;
+        };
         /** Period */
         Period: {
             /**

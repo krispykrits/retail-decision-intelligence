@@ -603,6 +603,14 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
         ("2020-02-18", "2020-05-17", Decimal(25)),
         ("2020-05-18", "2020-08-15", Decimal(90)),
     ]
+    assert [
+        (segment["loyalty_flag"], segment["households"], Decimal(segment["net_spend"]))
+        for segment in cohort["observed_spend_segments"]
+    ] == [("Y", 1, Decimal(90))]
+    ranked = client.get("/api/v1/customers/clv/households", params={"region": "CENTRAL"}).json()
+    assert Decimal(ranked["items"][0]["observed_spend_90d"]) == 90
+    detail = client.get("/api/v1/customers/0010/predictions").json()
+    assert Decimal(detail["future_spend"]["observed_spend_90d"]) == 90
     east = client.get(endpoint, params={"region": "EAST"}).json()
     assert [Decimal(period["net_spend"]) for period in east["historical_spend"]] == [0, 60]
     assert client.get(endpoint, params={"region": "WEST"}).json()["historical_spend"] == []
@@ -611,4 +619,4 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
     assert upload(client, "transactions", TRANSACTIONS + later).json()["inserted"] == 1
     stale = client.get(endpoint).json()
     assert stale["evidence"]["status"] == "stale"
-    assert stale["historical_spend"] == []
+    assert stale["historical_spend"] == stale["observed_spend_segments"] == []

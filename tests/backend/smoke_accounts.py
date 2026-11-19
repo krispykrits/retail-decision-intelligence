@@ -178,6 +178,10 @@ def main() -> None:
             Decimal(0),
             Decimal("-1.18"),
         ]
+        segment = clv["observed_spend_segments"][0]
+        assert segment["households"] == 1 and Decimal(segment["net_spend"]) == Decimal("-1.18")
+        clv_row = request("GET", f"{endpoint}/clv/households?page_size=5", 200)["items"][0]
+        assert Decimal(clv_row["observed_spend_90d"]) == Decimal("-1.18")
         print("SQL Server smoke passed for sessions, CSV imports, dashboard, and customer models.")
 
     finally:

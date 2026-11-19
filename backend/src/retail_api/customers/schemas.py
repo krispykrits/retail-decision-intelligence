@@ -133,6 +133,12 @@ class HistoricalSpendPeriod(BaseModel):
     net_spend: Decimal
 
 
+class ObservedSpendSegment(BaseModel):
+    loyalty_flag: str | None
+    households: int
+    net_spend: Decimal
+
+
 class ModelSummary(CohortSummary):
     evidence: ModelEvidence
     risk_threshold: float | None = None
@@ -142,6 +148,8 @@ class ModelSummary(CohortSummary):
         default_factory=list,
         description="Observed net spend in complete 90-day periods for the CLV cohort.",
     )
+
+    observed_spend_segments: list[ObservedSpendSegment] = Field(default_factory=list)
 
 
 class HouseholdPrediction(BaseModel):
@@ -154,6 +162,7 @@ class HouseholdPrediction(BaseModel):
     recency_days: int
     purchase_days_180d: int
     observed_spend_180d: Decimal
+    observed_spend_90d: Decimal | None = None
     eligible: bool
     forecast: float | None
     high_risk: bool | None = None

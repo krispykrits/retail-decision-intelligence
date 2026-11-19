@@ -1,4 +1,5 @@
 from datetime import UTC, date, timedelta
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from retail_api.customers.schemas import (
     HouseholdPrediction,
     ModelEvidence,
     ModelType,
+    ObservedSpendSegment,
     PageFilters,
 )
 from retail_api.imports.schema_v1 import dataset_state, households, transactions
@@ -160,45 +162,79 @@ def summary(
 
 def historical_spend(
     db: Connection, evidence: ModelEvidence, filters: CohortFilters
-) -> list[HistoricalSpendPeriod]:
+) -> tuple[list[HistoricalSpendPeriod], list[ObservedSpendSegment]]:
     if (
         evidence.status == "stale"
         or evidence.version is None
         or evidence.as_of is None
         or evidence.source_first_date is None
     ):
-        return []
+        return [], []
 
     days = HORIZONS[ModelType.CLV]
     count = min(4, ((evidence.as_of - evidence.source_first_date).days + 1) // days)
     if count <= 0:
-        return []
+        return [], []
 
     ends = [evidence.as_of - timedelta(days=days * offset) for offset in reversed(range(count))]
     periods = [(end - timedelta(days=days - 1), end) for end in ends]
     c = transactions.c
-    # Region and other filters describe the households in the run's snapshot.
-    # Include all recorded purchases and returns for those households.
-    totals = db.execute(
+    p = predictions.c
+    # Keep households without transactions in the segment denominator.
+    joined = predictions.outerjoin(
+        transactions,
+        (p.household_id == c.household_id) & c.purchase_date.between(periods[0][0], periods[-1][1]),
+    )
+    rows = db.execute(
         sa.select(
+            p.loyalty_flag,
+            sa.func.count(sa.distinct(p.household_id)),
             *(
-                sa.func.coalesce(
-                    sa.func.sum(sa.case((c.purchase_date.between(start, end), c.spend), else_=0)),
-                    0,
-                )
+                sa.func.sum(sa.case((c.purchase_date.between(start, end), c.spend), else_=0))
                 for start, end in periods
-            )
+            ),
         )
-        .select_from(transactions.join(predictions, c.household_id == predictions.c.household_id))
-        .where(
-            *cohort_predicates(evidence.version, filters),
-            c.purchase_date.between(periods[0][0], periods[-1][1]),
+        .select_from(joined)
+        .where(*cohort_predicates(evidence.version, filters))
+        .group_by(p.loyalty_flag)
+    ).all()
+    series = [
+        HistoricalSpendPeriod(
+            start=start,
+            end=end,
+            net_spend=sum((row[index] for row in rows), Decimal(0)),
         )
-    ).one()
-    return [
-        HistoricalSpendPeriod(start=start, end=end, net_spend=total)
-        for (start, end), total in zip(periods, totals, strict=True)
+        for index, (start, end) in enumerate(periods, start=2)
     ]
+    segments = [
+        ObservedSpendSegment(loyalty_flag=row[0], households=row[1], net_spend=row[-1])
+        for row in rows
+    ]
+    return series, segments
+
+
+def recent_spending(
+    db: Connection, evidence: ModelEvidence, household_ids: list[str]
+) -> dict[str, Decimal]:
+    if (
+        evidence.model is not ModelType.CLV
+        or evidence.status == "stale"
+        or evidence.as_of is None
+        or evidence.source_first_date is None
+        or not household_ids
+    ):
+        return {}
+    start = evidence.as_of - timedelta(days=HORIZONS[ModelType.CLV] - 1)
+    if start < evidence.source_first_date:
+        return {}
+    c = transactions.c
+    rows = db.execute(
+        sa.select(c.household_id, sa.func.sum(c.spend))
+        .where(c.household_id.in_(household_ids), c.purchase_date.between(start, evidence.as_of))
+        .group_by(c.household_id)
+    )
+    amounts = {household: spend for household, spend in rows}
+    return {household: amounts.get(household, Decimal(0)) for household in household_ids}
 
 
 def distribution(
@@ -254,10 +290,14 @@ def page(
         .offset((filters.page - 1) * filters.page_size)
         .limit(filters.page_size)
     )
-    return total, [
+    rows = [
         as_prediction(row, evidence.as_of, available, threshold)
         for row in db.execute(query).mappings()
     ]
+    amounts = recent_spending(db, evidence, [row.household_id for row in rows])
+    for row in rows:
+        row.observed_spend_90d = amounts.get(row.household_id)
+    return total, rows
 
 
 def household(
@@ -276,11 +316,11 @@ def household(
         .mappings()
         .one_or_none()
     )
-    return (
-        as_prediction(row, evidence.as_of, evidence.status == "available", threshold)
-        if row
-        else None
-    )
+    if row is None:
+        return None
+    prediction = as_prediction(row, evidence.as_of, evidence.status == "available", threshold)
+    prediction.observed_spend_90d = recent_spending(db, evidence, [household_id]).get(household_id)
+    return prediction
 
 
 def publish(

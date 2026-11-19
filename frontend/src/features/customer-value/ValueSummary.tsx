@@ -1,119 +1,115 @@
 import type { ModelSummary } from '../../api/customerValue'
-import { DataTable } from '../../components/DataTable'
 import { Panel, PanelHeading } from '../../components/Panel'
-import { dateAfter, dateLabel, moneyLabel, numberLabel } from '../../lib/format'
+import { Icon, type IconName } from '../../components/WorkspaceIcon'
+import { dateAfter, moneyLabel, numberLabel } from '../../lib/format'
 import { isAvailable, optionalMoney, statusLabels } from './valueDisplay'
 
 export function ValueOverview({ summary }: { summary: ModelSummary }) {
-  const { evidence } = summary
-  const available = isAvailable(evidence)
+  const ready = isAvailable(summary.evidence)
+  const recent = summary.historical_spend?.at(-1)
+  const average =
+    recent && summary.observed_households
+      ? Number(recent.net_spend) / summary.observed_households
+      : null
+  const stats: [string, string, IconName][] = [
+    [
+      'Households',
+      summary.evidence.version ? numberLabel(summary.observed_households) : '—',
+      '/customers',
+    ],
+    ['Observed spend · last 90 days', optionalMoney(recent?.net_spend), 'wallet'],
+    ['Average per household · last 90 days', optionalMoney(average), 'calculator'],
+    ['Forecast status', ready ? 'Ready' : statusLabels[summary.evidence.status], '/forecast'],
+  ]
 
   return (
     <Panel aria-labelledby="clv-overview">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <PanelHeading id="clv-overview" title="Cohort coverage" icon="wallet" />
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${available ? 'bg-success/10 text-success' : 'bg-canvas text-nav'}`}
-        >
-          {statusLabels[evidence.status]}
-        </span>
-      </div>
-      {evidence.as_of && (
-        <p className="mt-2 text-sm text-muted">
-          Data through {dateLabel(evidence.as_of)}
-          {available && (
-            <>
-              {' '}
-              · Forecast period {dateAfter(evidence.as_of, 1)} –{' '}
-              {dateAfter(evidence.as_of, evidence.horizon_days)}
-            </>
-          )}
-        </p>
-      )}
-      {!available && <p className="mt-2 text-sm text-muted">{evidence.reason}</p>}
-      {evidence.version && (
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ['Observed households', numberLabel(summary.observed_households)],
-            ['Eligible households', numberLabel(summary.eligible_households)],
-            ['Households scored', available ? numberLabel(summary.scored_households) : '—'],
-            [
-              'Mean predicted net spend',
-              available ? optionalMoney(summary.mean_future_spend) : '—',
-            ],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-xl border border-line bg-canvas p-3">
+      <PanelHeading id="clv-overview" title="Customer Value (CLV)" icon="wallet" />
+      <p className="mt-1.5 text-sm text-muted">
+        See what households spent and what they are expected to spend over the next 90 days.
+      </p>
+      <dl className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {stats.map(([label, value, icon]) => (
+          <div
+            key={label}
+            className="flex items-start gap-2 rounded-xl border border-line bg-canvas p-3 sm:items-center sm:gap-3"
+          >
+            <Icon
+              name={icon}
+              className="hidden size-8 rounded-lg bg-nav-selected p-1.5 text-brand sm:block"
+            />
+            <div>
               <dt className="text-xs font-semibold text-nav">{label}</dt>
-              <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
+              <dd className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">{value}</dd>
             </div>
-          ))}
-        </dl>
-      )}
+          </div>
+        ))}
+      </dl>
     </Panel>
   )
 }
 
-export function ValueDistribution({ summary }: { summary: ModelSummary }) {
+export function ValueOutlook({ summary }: { summary: ModelSummary }) {
+  const { evidence } = summary
   const bins = summary.distribution ?? []
-  const maxCount = Math.max(1, ...bins.map((bin) => bin.count))
-  const regions = Object.entries(summary.regions ?? {}).sort(([a], [b]) => a.localeCompare(b))
+  const largestBin = Math.max(1, ...bins.map((bin) => bin.count))
 
   return (
-    <Panel aria-labelledby="clv-distribution">
-      <PanelHeading id="clv-distribution" title="Predicted spend distribution" icon="pie" />
-      {!isAvailable(summary.evidence) ? (
-        <p className="mt-3 text-sm text-muted">
-          Forecast distribution requires an available model.
-        </p>
-      ) : bins.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">No forecasts match this cohort.</p>
-      ) : (
+    <Panel aria-labelledby="clv-outlook" className="h-full">
+      <PanelHeading id="clv-outlook" title="90-day outlook" icon="/forecast" />
+      {isAvailable(evidence) && evidence.as_of && summary.scored_households > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">
-            Households by projected net spend over the next {summary.evidence.horizon_days} days.
+            {dateAfter(evidence.as_of, 1)} – {dateAfter(evidence.as_of, evidence.horizon_days)}
           </p>
-          <ul className="mt-4 space-y-3">
-            {bins.map((bin) => {
-              const range =
-                bin.lower === bin.upper
-                  ? moneyLabel(bin.lower)
-                  : `${moneyLabel(bin.lower)} – ${moneyLabel(bin.upper)}`
-              return (
-                <li key={bin.lower} className="grid gap-1 text-xs">
-                  <div className="flex justify-between gap-2">
-                    <span>{range}</span>
-                    <span className="font-semibold tabular-nums">{numberLabel(bin.count)}</span>
-                  </div>
-                  <progress
-                    aria-label={`Households forecast at ${range}`}
-                    value={bin.count}
-                    max={maxCount}
-                    className="h-2 w-full overflow-hidden rounded-full border-none bg-canvas [&::-moz-progress-bar]:bg-brand [&::-webkit-progress-bar]:bg-canvas [&::-webkit-progress-value]:bg-brand"
-                  />
-                </li>
-              )
-            })}
-          </ul>
-          {regions.length > 1 && (
-            <details className="mt-4 border-t border-line pt-3">
+          <dl className="mt-3 divide-y divide-line text-sm">
+            <div className="flex items-center justify-between gap-2 py-2">
+              <dt>Average expected spend</dt>
+              <dd className="font-semibold">{optionalMoney(summary.mean_future_spend)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2 py-2">
+              <dt>Households with a forecast</dt>
+              <dd className="font-semibold">{numberLabel(summary.scored_households)}</dd>
+            </div>
+          </dl>
+          {bins.length > 0 && (
+            <details className="mt-2 border-t border-line pt-3">
               <summary className="cursor-pointer text-sm font-semibold text-link">
-                Compare by store region
+                View spending ranges
               </summary>
-              <DataTable
-                className="mt-1"
-                columns={{ region: 'Region', scored: 'Scored', average: 'Mean forecast' }}
-              >
-                {regions.map(([region, cohort]) => (
-                  <tr key={region}>
-                    <th scope="row">{region}</th>
-                    <td>{numberLabel(cohort.scored_households)}</td>
-                    <td>{optionalMoney(cohort.mean_future_spend)}</td>
-                  </tr>
-                ))}
-              </DataTable>
+              <ul className="mt-3 space-y-2.5">
+                {bins.map(({ lower, upper, count }) => {
+                  const range =
+                    lower === upper
+                      ? moneyLabel(lower)
+                      : `${moneyLabel(lower)} – ${moneyLabel(upper)}`
+                  return (
+                    <li key={lower} className="grid gap-1 text-xs">
+                      <div className="flex justify-between gap-2">
+                        <span>{range}</span>
+                        <span className="font-semibold tabular-nums">{numberLabel(count)}</span>
+                      </div>
+                      <progress
+                        aria-label={`Households forecast at ${range}`}
+                        max={largestBin}
+                        value={count}
+                        className="h-1.5 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-brand [&::-webkit-progress-bar]:bg-canvas [&::-webkit-progress-value]:bg-brand"
+                      />
+                    </li>
+                  )
+                })}
+              </ul>
             </details>
           )}
         </>
+      ) : (
+        <p className="mt-2 text-sm text-muted">
+          {evidence.status === 'stale'
+            ? 'New data is available. Forecasts are due for a refresh.'
+            : isAvailable(evidence)
+              ? 'No forecasts match your filters.'
+              : 'Spending forecasts are unavailable.'}
+        </p>
       )}
     </Panel>
   )
