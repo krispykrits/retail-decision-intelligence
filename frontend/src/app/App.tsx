@@ -2,15 +2,25 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { WorkspacePage } from '../pages/WorkspacePage'
-import { commandCenterPath, dataOperationsPath, workspaces, type Workspace } from './workspaces'
+import {
+  commandCenterPath,
+  customerIntelligencePath,
+  dataOperationsPath,
+  workspaces,
+  type Workspace,
+} from './workspaces'
 import { RequireAccount } from '../auth/RequireAccount'
 import { AccountPage } from '../features/accounts/AccountPage'
 import { DataOperationsPage } from '../features/data-operations/DataOperationsPage'
 import { CommandCenterPage } from '../features/dashboard/CommandCenterPage'
 
+import { CustomerValuePage } from '../features/customer-value/CustomerValuePage'
+import { HouseholdValuePage } from '../features/customer-value/HouseholdValuePage'
+
 const workspacePages: Partial<Record<Workspace['path'], typeof CommandCenterPage>> = {
   [commandCenterPath]: CommandCenterPage,
   [dataOperationsPath]: DataOperationsPage,
+  [customerIntelligencePath]: CustomerValuePage,
 }
 
 export function App() {
@@ -30,6 +40,10 @@ export function App() {
               />
             )
           })}
+          <Route
+            path={`${customerIntelligencePath}/households/:householdId`}
+            element={<HouseholdValuePage />}
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
