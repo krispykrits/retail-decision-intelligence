@@ -94,9 +94,24 @@ class CohortFilters(BaseModel):
     household_size: str | None = Field(default=None, max_length=80)
 
 
+class ShoppingSegment(StrEnum):
+    HIGHER_SPEND = "higher_spend"
+    FREQUENT = "frequent"
+    INFREQUENT = "infrequent"
+    OTHER = "other"
+
+
+class ClvFilters(CohortFilters):
+    segment: ShoppingSegment | None = None
+
+
 class PageFilters(CohortFilters):
     page: int = Field(default=1, ge=1, le=1_000_000)
     page_size: int = Field(default=25, ge=1, le=100)
+
+
+class ClvPageFilters(PageFilters, ClvFilters):
+    pass
 
 
 class ChurnFilters(CohortFilters):
@@ -134,7 +149,7 @@ class HistoricalSpendPeriod(BaseModel):
 
 
 class ObservedSpendSegment(BaseModel):
-    loyalty_flag: str | None
+    segment: ShoppingSegment
     households: int
     net_spend: Decimal
 

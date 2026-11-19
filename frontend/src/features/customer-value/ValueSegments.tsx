@@ -1,7 +1,8 @@
 import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { moneyLabel, numberLabel } from '../../lib/format'
-import { loyaltyLabel, spendingSegments } from './valueDisplay'
+import { segmentLabels } from './cohortQuery'
+import { spendingSegments } from './valueDisplay'
 
 export function ValueSegments({ summary }: { summary: ModelSummary }) {
   const segments = spendingSegments(summary)
@@ -9,16 +10,26 @@ export function ValueSegments({ summary }: { summary: ModelSummary }) {
 
   return (
     <Panel aria-labelledby="clv-segments" className="h-full">
-      <PanelHeading id="clv-segments" title="Observed spend by segment" icon="/customers" />
+      <PanelHeading
+        id="clv-segments"
+        title="Observed spend by customer segment"
+        icon="/customers"
+        className="relative"
+      >
+        Groups use shopping activity in the 90 days before the model’s most recent observed period.
+        Higher-spend households are positive-spend shoppers in the top quarter. Among the rest,
+        frequent shoppers purchased on six or more days and infrequent shoppers on one or two days.
+        All remaining households are grouped as Other.
+      </PanelHeading>
       <p className="mt-2 text-sm text-muted">
-        Average per household in the last 90 days, grouped by loyalty membership.
+        Average net spend per household in the 90 days ending at the forecast cutoff.
       </p>
       {segments.length > 0 ? (
         <ul className="mt-4 space-y-4">
-          {segments.map(({ loyalty_flag, households, average }) => {
-            const label = loyaltyLabel(loyalty_flag)
+          {segments.map(({ segment, households, average }) => {
+            const label = segmentLabels[segment]
             return (
-              <li key={loyalty_flag ?? 'none'}>
+              <li key={segment}>
                 <div className="mb-1 flex justify-between gap-2 text-sm">
                   <span>
                     {label} <span className="text-xs text-muted">({numberLabel(households)})</span>

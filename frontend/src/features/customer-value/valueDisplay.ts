@@ -21,12 +21,6 @@ export function forecastLabel(row: HouseholdPrediction, evidence: ModelEvidence)
   return optionalMoney(row.forecast)
 }
 
-export function loyaltyLabel(flag: string | null) {
-  if (flag === 'Y') return 'Loyalty members'
-  if (flag === 'N') return 'Non-members'
-  return 'Membership unknown'
-}
-
 export function spendingSegments(summary: ModelSummary) {
   return (summary.observed_spend_segments ?? [])
     .filter(({ households }) => households > 0)

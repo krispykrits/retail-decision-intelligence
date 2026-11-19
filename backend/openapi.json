@@ -1652,24 +1652,16 @@
             "title": "Households",
             "type": "integer"
           },
-          "loyalty_flag": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Loyalty Flag"
-          },
           "net_spend": {
             "title": "Net Spend",
             "type": "string"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/ShoppingSegment"
           }
         },
         "required": [
-          "loyalty_flag",
+          "segment",
           "households",
           "net_spend"
         ],
@@ -1816,6 +1808,16 @@
           "Administrator"
         ],
         "title": "Role",
+        "type": "string"
+      },
+      "ShoppingSegment": {
+        "enum": [
+          "higher_spend",
+          "frequent",
+          "infrequent",
+          "other"
+        ],
+        "title": "ShoppingSegment",
         "type": "string"
       },
       "Signal": {
@@ -3175,6 +3177,22 @@
           },
           {
             "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShoppingSegment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -3321,6 +3339,22 @@
                 }
               ],
               "title": "Household Size"
+            }
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShoppingSegment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
             }
           }
         ],

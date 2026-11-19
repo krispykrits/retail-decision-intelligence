@@ -1,7 +1,7 @@
 import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { Icon, type IconName } from '../../components/WorkspaceIcon'
-import { dateAfter, moneyLabel, numberLabel } from '../../lib/format'
+import { dateAfter, dateLabel, moneyLabel, numberLabel } from '../../lib/format'
 import { isAvailable, observedChange, optionalMoney, statusLabels } from './valueDisplay'
 
 export function ValueOverview({ summary }: { summary: ModelSummary }) {
@@ -33,6 +33,11 @@ export function ValueOverview({ summary }: { summary: ModelSummary }) {
       <p className="mt-1.5 text-sm text-muted">
         See what households spent and what they are expected to spend over the next 90 days.
       </p>
+      {recent && (
+        <p className="mt-1 text-xs text-muted">
+          Observed spending · {dateLabel(recent.start)} – {dateLabel(recent.end)}
+        </p>
+      )}
       <dl className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {stats.map(([label, value, icon, change]) => (
           <div
@@ -80,7 +85,8 @@ export function ValueOutlook({ summary }: { summary: ModelSummary }) {
       {isAvailable(evidence) && evidence.as_of && summary.scored_households > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">
-            {dateAfter(evidence.as_of, 1)} – {dateAfter(evidence.as_of, evidence.horizon_days)}
+            Forecast period · {dateAfter(evidence.as_of, 1)} –{' '}
+            {dateAfter(evidence.as_of, evidence.horizon_days)}
           </p>
           <dl className="mt-3 divide-y divide-line text-sm">
             <div className="flex items-center justify-between gap-2 py-2">

@@ -2,9 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getCustomerValue, getRankedHouseholds } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
-import { dateLabel } from '../../lib/format'
 import { InfoTooltip } from '../../components/InfoTooltip'
-import { Icon } from '../../components/WorkspaceIcon'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { HistoricalSpendTrend } from './HistoricalSpendTrend'
 import { readCohort } from './cohortQuery'
@@ -81,13 +79,6 @@ export function CustomerValuePage() {
         ))}
       </nav>
       <div className="flex flex-wrap items-end gap-3">
-        {summary?.evidence.source_first_date && summary.evidence.as_of && (
-          <p className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
-            <Icon name="calendar" className="size-4 text-brand" />
-            <span className="sr-only">Recorded data period</span>
-            {dateLabel(summary.evidence.source_first_date)} – {dateLabel(summary.evidence.as_of)}
-          </p>
-        )}
         <ValueFilters
           key={cohortKey}
           cohort={cohort}
@@ -97,7 +88,7 @@ export function CustomerValuePage() {
         <div className="relative flex items-center gap-2 rounded-lg bg-nav-selected px-3 py-2 text-sm font-medium text-link sm:ml-auto">
           About Customer Value
           <InfoTooltip label="Customer Value">
-            Observed spending includes returns. The forecast estimates what households may spend in
+            Recorded spending includes returns. The forecast estimates what households may spend in
             the next 90 days as a proxy for customer lifetime value.
           </InfoTooltip>
         </div>
@@ -119,6 +110,7 @@ export function CustomerValuePage() {
             {summary.evidence.version && (
               <ValueRanking
                 result={ranking}
+                observedPeriod={summary.historical_spend?.at(-1)}
                 page={page}
                 evidence={summary.evidence}
                 selectPage={selectPage}

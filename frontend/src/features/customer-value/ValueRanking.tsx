@@ -5,19 +5,21 @@ import { DataTable } from '../../components/DataTable'
 import { LoadingProgress } from '../../components/LoadingProgress'
 import { Skeleton } from '../../components/Skeleton'
 import { Panel, PanelHeading } from '../../components/Panel'
-import { numberLabel } from '../../lib/format'
+import { dateLabel, numberLabel } from '../../lib/format'
 import type { ValueResult } from './useValueRequest'
 import { forecastLabel, isAvailable, optionalMoney } from './valueDisplay'
 import { ValueError } from './ValueRequestState'
 
 export function ValueRanking({
   result,
+  observedPeriod,
   page,
   evidence,
   selectPage,
   retry,
 }: {
   result?: ValueResult<PredictionPage>
+  observedPeriod?: { start: string; end: string }
   page: number
   evidence: ModelEvidence
   selectPage: (page: number) => void
@@ -39,6 +41,12 @@ export function ValueRanking({
       <PanelHeading id="clv-households" title="Household value detail" icon="/customers" />
       <p className="mt-2 mb-4 text-sm text-muted">
         {available ? 'Highest forecast first.' : 'Recorded spending for the households in view.'}
+        {observedPeriod && (
+          <>
+            {' '}
+            Observed {dateLabel(observedPeriod.start)} – {dateLabel(observedPeriod.end)}.
+          </>
+        )}
       </p>
       {!result && (
         <div role="status" className="relative">

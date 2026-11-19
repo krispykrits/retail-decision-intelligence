@@ -604,13 +604,21 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
         ("2020-05-18", "2020-08-15", Decimal(90)),
     ]
     assert [
-        (segment["loyalty_flag"], segment["households"], Decimal(segment["net_spend"]))
+        (segment["segment"], segment["households"], Decimal(segment["net_spend"]))
         for segment in cohort["observed_spend_segments"]
-    ] == [("Y", 1, Decimal(90))]
+    ] == [("higher_spend", 1, Decimal(90))]
     ranked = client.get("/api/v1/customers/clv/households", params={"region": "CENTRAL"}).json()
     assert Decimal(ranked["items"][0]["observed_spend_90d"]) == 90
     detail = client.get("/api/v1/customers/0010/predictions").json()
     assert Decimal(detail["future_spend"]["observed_spend_90d"]) == 90
+    high = client.get(endpoint, params={"segment": "higher_spend"}).json()
+    assert high["observed_households"] == 1
+    assert high["evidence"]["as_of"] == cutoff.isoformat()
+    assert high["historical_spend"] == cohort["historical_spend"]
+    filtered = client.get(
+        "/api/v1/customers/clv/households", params={"segment": "higher_spend"}
+    ).json()
+    assert [row["household_id"] for row in filtered["items"]] == ["0010"]
     east = client.get(endpoint, params={"region": "EAST"}).json()
     assert [Decimal(period["net_spend"]) for period in east["historical_spend"]] == [0, 60]
     assert client.get(endpoint, params={"region": "WEST"}).json()["historical_spend"] == []

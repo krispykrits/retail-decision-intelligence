@@ -2,7 +2,8 @@ import type { ModelSummary } from '../../api/customerValue'
 import { Panel, PanelHeading } from '../../components/Panel'
 import { TakeawayList, type Takeaway } from '../../components/TakeawayList'
 import { moneyLabel, numberLabel } from '../../lib/format'
-import { isAvailable, loyaltyLabel, observedChange, spendingSegments } from './valueDisplay'
+import { segmentLabels } from './cohortQuery'
+import { isAvailable, observedChange, spendingSegments } from './valueDisplay'
 
 const percent = new Intl.NumberFormat('en-US', {
   style: 'percent',
@@ -36,8 +37,8 @@ export function ValueInsights({ summary }: { summary: ModelSummary }) {
       title: 'Which group spent more per household',
       detail:
         gap === 0
-          ? `${loyaltyLabel(highest.loyalty_flag)} and ${loyaltyLabel(second.loyalty_flag).toLowerCase()} had the same average spend.`
-          : `${loyaltyLabel(highest.loyalty_flag)} averaged ${moneyLabel(highest.average)} over the last 90 days, ${moneyLabel(gap)} more than ${loyaltyLabel(second.loyalty_flag).toLowerCase()}.`,
+          ? `${segmentLabels[highest.segment]} and ${segmentLabels[second.segment].toLowerCase()} had the same average spend.`
+          : `${segmentLabels[highest.segment]} averaged ${moneyLabel(highest.average)} in the latest 90 days shown, ${moneyLabel(gap)} more than ${segmentLabels[second.segment].toLowerCase()}.`,
       tone: 'blue',
     })
   }

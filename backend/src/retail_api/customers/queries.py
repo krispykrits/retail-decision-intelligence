@@ -1,14 +1,15 @@
 from datetime import UTC, date, timedelta
 from decimal import Decimal
 from typing import Any
-from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, RowMapping
+from sqlalchemy.sql.selectable import Subquery
 
 from retail_api.customers.definition import HORIZONS, POPULATION, TARGETS
 from retail_api.customers.schema_v1 import model_runs, predictions
 from retail_api.customers.schemas import (
+    ClvFilters,
     CohortFilters,
     CohortSummary,
     ForecastBin,
@@ -18,6 +19,7 @@ from retail_api.customers.schemas import (
     ModelType,
     ObservedSpendSegment,
     PageFilters,
+    ShoppingSegment,
 )
 from retail_api.imports.schema_v1 import dataset_state, households, transactions
 from retail_api.imports.schemas import Dataset
@@ -69,15 +71,82 @@ def latest_evidence(db: Connection, model: ModelType, versions: tuple[int, int])
     return result
 
 
-def cohort_predicates(version: UUID, filters: CohortFilters) -> list[Any]:
-    return [
-        predictions.c.run_id == version,
+def cohort_predicates(
+    evidence: ModelEvidence, filters: CohortFilters, membership: Subquery | None = None
+) -> list[Any]:
+    predicates = [
+        predictions.c.run_id == evidence.version,
         *(
             predictions.c[name] == value
             for name in ("region", "loyalty_flag", "age_range", "household_size")
             if (value := getattr(filters, name)) is not None
         ),
     ]
+
+    if isinstance(filters, ClvFilters) and filters.segment:
+        if evidence.status == "stale":
+            predicates.append(sa.false())
+        elif membership is not None:
+            predicates.append(membership.c.segment == filters.segment)
+        else:
+            members = segment_membership(evidence)
+            predicates.append(
+                predictions.c.household_id.in_(
+                    sa.select(members.c.household_id).where(members.c.segment == filters.segment)
+                )
+            )
+    return predicates
+
+
+def segment_membership(evidence: ModelEvidence) -> Subquery:
+    assert evidence.as_of is not None
+    p, t = predictions.c, transactions.c
+    days = HORIZONS[ModelType.CLV]
+    end = evidence.as_of - timedelta(days=days)
+    start = end - timedelta(days=days - 1)
+    purchases = (
+        sa.select(
+            p.household_id,
+            sa.func.coalesce(sa.func.sum(t.spend), 0).label("spend"),
+            sa.func.count(sa.distinct(sa.case((t.units > 0, t.purchase_date)))).label("days"),
+        )
+        .select_from(
+            predictions.outerjoin(
+                transactions,
+                (p.household_id == t.household_id) & t.purchase_date.between(start, end),
+            )
+        )
+        .where(p.run_id == evidence.version)
+        .group_by(p.household_id)
+        .subquery()
+    )
+    c = purchases.c
+    ranked = sa.select(
+        c.household_id,
+        c.spend,
+        c.days,
+        sa.func.ntile(4).over(order_by=(c.spend.desc(), c.household_id)).label("quartile"),
+    ).subquery()
+    r = ranked.c
+    return sa.select(
+        r.household_id,
+        sa.case(
+            ((r.quartile == 1) & (r.spend > 0) & (r.days > 0), ShoppingSegment.HIGHER_SPEND),
+            (r.days >= 6, ShoppingSegment.FREQUENT),
+            (r.days.between(1, 2), ShoppingSegment.INFREQUENT),
+            else_=ShoppingSegment.OTHER,
+        ).label("segment"),
+    ).subquery()
+
+
+def observed_periods(evidence: ModelEvidence) -> list[tuple[date, date]]:
+    if evidence.status == "stale" or not evidence.as_of or not evidence.source_first_date:
+        return []
+    start, end = evidence.source_first_date, evidence.as_of
+    days = HORIZONS[ModelType.CLV]
+    count = min(4, max(0, (end - start).days + 1) // days)
+    ends = [end - timedelta(days=days * offset) for offset in reversed(range(count))]
+    return [(last - timedelta(days=days - 1), last) for last in ends]
 
 
 def as_prediction(
@@ -115,7 +184,7 @@ def summary(
         if threshold is not None
         else sa.literal(0).label("high_risk_households"),
     ]
-    predicates = cohort_predicates(evidence.version, filters)
+    predicates = cohort_predicates(evidence, filters)
     total = (
         db.execute(
             sa.select(
@@ -163,31 +232,21 @@ def summary(
 def historical_spend(
     db: Connection, evidence: ModelEvidence, filters: CohortFilters
 ) -> tuple[list[HistoricalSpendPeriod], list[ObservedSpendSegment]]:
-    if (
-        evidence.status == "stale"
-        or evidence.version is None
-        or evidence.as_of is None
-        or evidence.source_first_date is None
-    ):
+    periods = observed_periods(evidence)
+    if not periods or evidence.version is None:
         return [], []
 
-    days = HORIZONS[ModelType.CLV]
-    count = min(4, ((evidence.as_of - evidence.source_first_date).days + 1) // days)
-    if count <= 0:
-        return [], []
-
-    ends = [evidence.as_of - timedelta(days=days * offset) for offset in reversed(range(count))]
-    periods = [(end - timedelta(days=days - 1), end) for end in ends]
     c = transactions.c
     p = predictions.c
     # Keep households without transactions in the segment denominator.
-    joined = predictions.outerjoin(
+    membership = segment_membership(evidence)
+    joined = predictions.join(membership, p.household_id == membership.c.household_id).outerjoin(
         transactions,
         (p.household_id == c.household_id) & c.purchase_date.between(periods[0][0], periods[-1][1]),
     )
     rows = db.execute(
         sa.select(
-            p.loyalty_flag,
+            membership.c.segment,
             sa.func.count(sa.distinct(p.household_id)),
             *(
                 sa.func.sum(sa.case((c.purchase_date.between(start, end), c.spend), else_=0))
@@ -195,8 +254,8 @@ def historical_spend(
             ),
         )
         .select_from(joined)
-        .where(*cohort_predicates(evidence.version, filters))
-        .group_by(p.loyalty_flag)
+        .where(*cohort_predicates(evidence, filters, membership))
+        .group_by(membership.c.segment)
     ).all()
     series = [
         HistoricalSpendPeriod(
@@ -207,30 +266,26 @@ def historical_spend(
         for index, (start, end) in enumerate(periods, start=2)
     ]
     segments = [
-        ObservedSpendSegment(loyalty_flag=row[0], households=row[1], net_spend=row[-1])
-        for row in rows
+        ObservedSpendSegment(segment=row[0], households=row[1], net_spend=row[-1]) for row in rows
     ]
     return series, segments
 
 
 def recent_spending(
-    db: Connection, evidence: ModelEvidence, household_ids: list[str]
+    db: Connection,
+    evidence: ModelEvidence,
+    household_ids: list[str],
 ) -> dict[str, Decimal]:
-    if (
-        evidence.model is not ModelType.CLV
-        or evidence.status == "stale"
-        or evidence.as_of is None
-        or evidence.source_first_date is None
-        or not household_ids
-    ):
+    if evidence.model is not ModelType.CLV or not household_ids:
         return {}
-    start = evidence.as_of - timedelta(days=HORIZONS[ModelType.CLV] - 1)
-    if start < evidence.source_first_date:
+    periods = observed_periods(evidence)
+    if not periods:
         return {}
+    start, end = periods[-1]
     c = transactions.c
     rows = db.execute(
         sa.select(c.household_id, sa.func.sum(c.spend))
-        .where(c.household_id.in_(household_ids), c.purchase_date.between(start, evidence.as_of))
+        .where(c.household_id.in_(household_ids), c.purchase_date.between(start, end))
         .group_by(c.household_id)
     )
     amounts = {household: spend for household, spend in rows}
@@ -280,7 +335,7 @@ def page(
     assert evidence.as_of is not None
     c = predictions.c
     available = evidence.status == "available"
-    predicates = cohort_predicates(evidence.version, filters)
+    predicates = cohort_predicates(evidence, filters)
     total = db.scalar(sa.select(sa.func.count()).select_from(predictions).where(*predicates)) or 0
     order = [sa.case((c.forecast.is_(None), 1), else_=0), c.forecast.desc()] if available else []
     query = (

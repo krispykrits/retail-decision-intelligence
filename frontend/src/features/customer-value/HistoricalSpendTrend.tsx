@@ -23,7 +23,9 @@ export function HistoricalSpendTrend({ summary }: { summary: ModelSummary }) {
       {points.length > 0 ? (
         <>
           <p className="mt-2 text-sm text-muted">
-            Total spent after returns, grouped into 90-day periods.
+            Recorded net spend · {dateLabel(periods[0].start)} –{' '}
+            {dateLabel(periods[periods.length - 1].end)}
+            <span className="block text-xs">Each point covers 90 days.</span>
           </p>
           <div className="mt-3">
             <TrendChart

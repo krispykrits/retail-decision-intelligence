@@ -86,8 +86,8 @@ const summary: ModelSummary = {
   mean_future_spend: 985.24,
   distribution: [{ lower: 500, upper: 1500, count: 25 }],
   observed_spend_segments: [
-    { loyalty_flag: 'Y', households: 20, net_spend: '3800.00' },
-    { loyalty_flag: 'N', households: 6, net_spend: '700.10' },
+    { segment: 'higher_spend', households: 20, net_spend: '3800.00' },
+    { segment: 'frequent', households: 6, net_spend: '700.10' },
   ],
   historical_spend: [
     { start: '2020-02-18', end: '2020-05-17', net_spend: '3012.23' },
@@ -162,16 +162,21 @@ describe('Customer Value', () => {
     expect(screen.queryByText('$294.21')).not.toBeInTheDocument()
     expect(screen.queryByText(evidence.version!)).not.toBeInTheDocument()
     expect(screen.getByText(/Aug 16, 2020.*Nov 13, 2020/)).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Observed spend by segment' })).toBeVisible()
+    expect(screen.getByText(/Observed spending · May 18, 2020.*Aug 15, 2020/)).toBeVisible()
+    expect(document.querySelector('input[type="date"]')).toBeNull()
+
     expect(
-      within(screen.getByRole('region', { name: 'Observed spend by segment' })).getByText(
+      screen.getByRole('heading', { name: 'Observed spend by customer segment' }),
+    ).toBeVisible()
+    expect(
+      within(screen.getByRole('region', { name: 'Observed spend by customer segment' })).getByText(
         '$190.00',
       ),
     ).toBeVisible()
     expect(screen.getByText('+49.4%')).toBeVisible()
     const takeaways = within(screen.getByRole('region', { name: 'Key takeaways' }))
     expect(takeaways.getByText(/rose by 49.4% compared with the previous 90 days/)).toBeVisible()
-    expect(takeaways.getByText(/Loyalty members averaged \$190.00/)).toBeVisible()
+    expect(takeaways.getByText(/Higher-spend households averaged \$190.00/)).toBeVisible()
     expect(takeaways.getByText(/25 of 26 households have a forecast/)).toBeVisible()
     expect(takeaways.getByRole('link', { name: /Review households/ })).toHaveAttribute(
       'href',
@@ -238,26 +243,30 @@ describe('Customer Value', () => {
     await screen.findByRole('link', { name: household.household_id })
     expect(getRankedHouseholds).toHaveBeenLastCalledWith(expect.anything(), 2, expect.anything())
     await user.selectOptions(screen.getByLabelText('Store region'), 'CENTRAL')
+    await user.selectOptions(screen.getByLabelText('Customer segment'), 'frequent')
     await user.click(screen.getByRole('button', { name: 'Apply filters' }))
 
     const link = await screen.findByRole('link', { name: household.household_id })
     expect(getCustomerValue).toHaveBeenLastCalledWith(
-      expect.objectContaining({ region: 'CENTRAL' }),
+      expect.objectContaining({ region: 'CENTRAL', segment: 'frequent' }),
       expect.anything(),
     )
     expect(getRankedHouseholds).toHaveBeenLastCalledWith(
-      expect.objectContaining({ region: 'CENTRAL' }),
+      expect.objectContaining({ region: 'CENTRAL', segment: 'frequent' }),
       1,
       expect.anything(),
     )
-    expect(link).toHaveAttribute('href', '/customers/households/001994?region=CENTRAL')
+    expect(link).toHaveAttribute(
+      'href',
+      '/customers/households/001994?region=CENTRAL&segment=frequent',
+    )
     await user.click(link)
     expect(await screen.findByRole('heading', { name: 'Household 001994' })).toBeVisible()
     expect(screen.getByText('$875.42')).toBeVisible()
     expect(getHouseholdValue).toHaveBeenCalledWith('001994', expect.anything())
     expect(screen.getByRole('link', { name: /Back to Customer Value/ })).toHaveAttribute(
       'href',
-      '/customers?region=CENTRAL',
+      '/customers?region=CENTRAL&segment=frequent',
     )
   })
 

@@ -1161,10 +1161,9 @@ export interface components {
         ObservedSpendSegment: {
             /** Households */
             households: number;
-            /** Loyalty Flag */
-            loyalty_flag: string | null;
             /** Net Spend */
             net_spend: string;
+            segment: components["schemas"]["ShoppingSegment"];
         };
         /** Period */
         Period: {
@@ -1231,6 +1230,11 @@ export interface components {
          * @enum {string}
          */
         Role: "Analyst" | "Administrator";
+        /**
+         * ShoppingSegment
+         * @enum {string}
+         */
+        ShoppingSegment: "higher_spend" | "frequent" | "infrequent" | "other";
         /** Signal */
         Signal: {
             comparison: components["schemas"]["Period"];
@@ -1937,6 +1941,7 @@ export interface operations {
                 loyalty_flag?: string | null;
                 age_range?: string | null;
                 household_size?: string | null;
+                segment?: components["schemas"]["ShoppingSegment"] | null;
                 page?: number;
                 page_size?: number;
             };
@@ -1991,6 +1996,7 @@ export interface operations {
                 loyalty_flag?: string | null;
                 age_range?: string | null;
                 household_size?: string | null;
+                segment?: components["schemas"]["ShoppingSegment"] | null;
             };
             header?: never;
             path?: never;

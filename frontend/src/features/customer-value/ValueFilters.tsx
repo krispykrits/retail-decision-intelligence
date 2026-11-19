@@ -2,7 +2,7 @@ import type { FormEvent } from 'react'
 import type { Cohort } from '../../api/customerValue'
 import { LoadingProgress } from '../../components/LoadingProgress'
 
-import { regions } from './cohortQuery'
+import { regions, segmentLabels } from './cohortQuery'
 
 const ageRanges = ['19-24', '25-34', '35-44', '45-54', '55-64', '65-74', '75+']
 const householdSizes = ['1', '2', '3', '4', '5+']
@@ -48,10 +48,13 @@ export function ValueFilters({
       </label>
       <label className={labelClass}>
         Customer segment
-        <select name="loyalty_flag" className={fieldClass} defaultValue={cohort.loyalty_flag ?? ''}>
+        <select name="segment" className={fieldClass} defaultValue={cohort.segment ?? ''}>
           <option value="">All segments</option>
-          <option value="Y">Loyalty member</option>
-          <option value="N">Non-member</option>
+          {Object.entries(segmentLabels).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
         </select>
       </label>
       <details
