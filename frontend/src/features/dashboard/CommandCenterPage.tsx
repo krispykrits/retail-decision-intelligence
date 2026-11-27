@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { DashboardQuery } from '../../api/dashboard'
 import { commandCenterPath, dataOperationsPath } from '../../app/workspaces'
 import { LoadingProgress } from '../../components/LoadingProgress'
 import { Panel } from '../../components/Panel'
+import { useDetailsDisclosure } from '../../components/useDetailsDisclosure'
 import { Icon } from '../../components/WorkspaceIcon'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { DashboardBreakdown } from './DashboardBreakdown'
@@ -20,7 +21,7 @@ import { useDashboard } from './useDashboard'
 export function CommandCenterPage() {
   const { search, hash, key } = useLocation()
   const navigate = useNavigate()
-  const periodPicker = useRef<HTMLDetailsElement>(null)
+  const { ref: periodPicker, close: closePeriodPicker } = useDetailsDisclosure()
   const {
     query,
     metric,
@@ -36,18 +37,6 @@ export function CommandCenterPage() {
   } = useDashboard(search)
 
   useEffect(() => {
-    function dismissPeriodPicker(event: PointerEvent) {
-      const picker = periodPicker.current
-      if (picker?.open && event.target instanceof Node && !picker.contains(event.target)) {
-        picker.open = false
-      }
-    }
-
-    document.addEventListener('pointerdown', dismissPeriodPicker, true)
-    return () => document.removeEventListener('pointerdown', dismissPeriodPicker, true)
-  }, [])
-
-  useEffect(() => {
     if (!pending && hash === '#performance-trend') {
       const trend = document.getElementById('performance-trend')
       trend?.focus({ preventScroll: true })
@@ -60,7 +49,7 @@ export function CommandCenterPage() {
   }
 
   function applyPeriod(filters: DashboardQuery) {
-    if (periodPicker.current) periodPicker.current.open = false
+    closePeriodPicker()
     apply({ ...filters, metric: query.metric })
   }
 

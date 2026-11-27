@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import type { Cohort } from '../../api/customerValue'
 import { LoadingProgress } from '../../components/LoadingProgress'
+import { useDetailsDisclosure } from '../../components/useDetailsDisclosure'
 
 import { regions } from './cohortQuery'
 
@@ -20,12 +21,15 @@ export function ValueFilters({
   updating: boolean
   apply: (params: URLSearchParams) => void
 }) {
+  const { ref: moreFilters, close: closeMoreFilters } = useDetailsDisclosure()
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const params = new URLSearchParams()
     for (const [key, value] of new FormData(event.currentTarget)) {
       if (typeof value === 'string' && value.trim()) params.set(key, value.trim())
     }
+    closeMoreFilters()
     apply(params)
   }
 
@@ -54,10 +58,7 @@ export function ValueFilters({
           <option value="N">Non-member</option>
         </select>
       </label>
-      <details
-        open={cohort.age_range || cohort.household_size ? true : undefined}
-        className="relative"
-      >
+      <details ref={moreFilters} className="relative">
         <summary className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-link">
           More filters
         </summary>
@@ -105,7 +106,10 @@ export function ValueFilters({
       </button>
       <button
         type="reset"
-        onClick={() => apply(new URLSearchParams())}
+        onClick={() => {
+          closeMoreFilters()
+          apply(new URLSearchParams())
+        }}
         className="rounded-lg px-2 py-2 text-sm font-semibold text-link hover:bg-nav-hover"
       >
         Reset

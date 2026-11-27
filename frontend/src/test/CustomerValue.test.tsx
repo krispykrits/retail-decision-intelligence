@@ -279,6 +279,32 @@ describe('Customer Value', () => {
     expect(history.closest('[aria-busy="true"]')).toBeNull()
   })
 
+  it('dismisses More filters on an outside click while keeping the filter draft', async () => {
+    const user = userEvent.setup()
+    openCustomerValue()
+    const trigger = screen.getByText('More filters')
+    const disclosure = trigger.closest('details')
+
+    await user.click(trigger)
+    const age = screen.getByLabelText('Age range')
+    await user.type(age, '25-34')
+    expect(disclosure).toHaveAttribute('open')
+
+    await user.click(screen.getByRole('heading', { name: 'Customer Intelligence' }))
+    expect(disclosure).not.toHaveAttribute('open')
+
+    await user.click(trigger)
+    expect(age).toHaveValue('25-34')
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+    expect(screen.getByText('More filters').closest('details')).not.toHaveAttribute('open')
+    await waitFor(() =>
+      expect(getCustomerValue).toHaveBeenLastCalledWith(
+        expect.objectContaining({ age_range: '25-34' }),
+        expect.anything(),
+      ),
+    )
+  })
+
   it('filters cohorts, resets pagination, and retains the selection through household detail', async () => {
     const user = userEvent.setup()
     openCustomerValue('/customers?page=2')
