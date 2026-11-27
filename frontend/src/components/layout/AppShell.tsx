@@ -1,12 +1,18 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router-dom'
-import { commandCenterPath, dataOperationsPath, workspaces } from '../../app/workspaces'
+import {
+  commandCenterPath,
+  customerIntelligencePath,
+  dataOperationsPath,
+  workspaces,
+} from '../../app/workspaces'
 import { AccountMenu } from '../AccountMenu'
 import { WorkspaceIcon } from '../WorkspaceIcon'
 
 export function AppShell() {
   const isCommandCenter = useMatch(commandCenterPath)
   const isDataOperations = useMatch(dataOperationsPath)
-  const hasWorkspaceHeader = Boolean(isCommandCenter || isDataOperations)
+  const isCustomerIntelligence = useMatch(`${customerIntelligencePath}/*`)
+  const hasWorkspaceHeader = Boolean(isCommandCenter || isDataOperations || isCustomerIntelligence)
   return (
     <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">
       <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">

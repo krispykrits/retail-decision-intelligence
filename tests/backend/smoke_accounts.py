@@ -125,45 +125,45 @@ def main() -> None:
         endpoint = "/customers"
         assert request("GET", f"{endpoint}/churn/summary", 200)["evidence"]["status"] == "not_run"
         cutoff = date(2018, 8, 17)
-        version = uuid4()
-        model = ModelType.CHURN
-        with engine.begin() as db:
-            transaction_version, household_version = source_versions(db)
-            evidence = ModelEvidence(
-                model=model,
-                status="available",
-                reason="CI API fixture",
-                version=version,
-                as_of=cutoff,
-                trained_at=datetime.now(UTC),
-                source_first_date=date(2018, 2, 16),
-                source_last_date=cutoff,
-                transaction_version=transaction_version,
-                household_version=household_version,
-                horizon_days=HORIZONS[model],
-                target=TARGETS[model],
-                population=POPULATION,
-            )
-            publish(
-                db,
-                evidence,
-                [
-                    {
-                        "run_id": version,
-                        "household_id": "0010",
-                        "region": "CENTRAL",
-                        "loyalty_flag": "Y",
-                        "age_range": None,
-                        "household_size": None,
-                        "last_purchase": cutoff,
-                        "purchase_days_180d": 8,
-                        "eligible": True,
-                        "observed_spend_180d": Decimal("20.05"),
-                        "forecast": 0.8,
-                    }
-                ],
-                "file:///ci-fixture.joblib",
-            )
+        for model in ModelType:
+            version = uuid4()
+            with engine.begin() as db:
+                transaction_version, household_version = source_versions(db)
+                evidence = ModelEvidence(
+                    model=model,
+                    status="available",
+                    reason="CI API fixture",
+                    version=version,
+                    as_of=cutoff,
+                    trained_at=datetime.now(UTC),
+                    source_first_date=date(2018, 2, 16),
+                    source_last_date=cutoff,
+                    transaction_version=transaction_version,
+                    household_version=household_version,
+                    horizon_days=HORIZONS[model],
+                    target=TARGETS[model],
+                    population=POPULATION,
+                )
+                publish(
+                    db,
+                    evidence,
+                    [
+                        {
+                            "run_id": version,
+                            "household_id": "0010",
+                            "region": "CENTRAL",
+                            "loyalty_flag": "Y",
+                            "age_range": None,
+                            "household_size": None,
+                            "last_purchase": cutoff,
+                            "purchase_days_180d": 8,
+                            "eligible": True,
+                            "observed_spend_180d": Decimal("20.05"),
+                            "forecast": 0.8,
+                        }
+                    ],
+                    "file:///ci-fixture.joblib",
+                )
         summary = request("GET", f"{endpoint}/churn/summary?region=CENTRAL", 200)
         assert summary["high_risk_households"] == 1
         assert sum(bucket["count"] for bucket in summary["distribution"]) == 1
@@ -173,6 +173,15 @@ def main() -> None:
             ]
             == "0010"
         )
+        clv = request("GET", f"{endpoint}/clv/summary?region=CENTRAL", 200)
+        assert [Decimal(period["net_spend"]) for period in clv["historical_spend"]] == [
+            Decimal(0),
+            Decimal("-1.18"),
+        ]
+        segment = clv["observed_spend_segments"][0]
+        assert segment["households"] == 1 and Decimal(segment["net_spend"]) == Decimal("-1.18")
+        clv_row = request("GET", f"{endpoint}/clv/households?page_size=5", 200)["items"][0]
+        assert Decimal(clv_row["observed_spend_90d"]) == Decimal("-1.18")
         print("SQL Server smoke passed for sessions, CSV imports, dashboard, and customer models.")
 
     finally:

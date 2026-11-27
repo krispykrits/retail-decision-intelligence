@@ -8,12 +8,12 @@ from retail_api.customers import service
 from retail_api.customers.schemas import (
     ChurnFilters,
     ChurnPageFilters,
-    CohortFilters,
+    ClvFilters,
+    ClvPageFilters,
     HouseholdPredictions,
     ModelEvidence,
     ModelSummary,
     ModelType,
-    PageFilters,
     PredictionPage,
 )
 
@@ -40,12 +40,12 @@ Models = Annotated[service.CustomerModels, Depends(read_connection, scope="funct
 
 
 @router.get("/clv/summary", summary="Summarize modeled 90-day net spend for a cohort")
-def clv_summary(models: Models, filters: Annotated[CohortFilters, Query()]) -> ModelSummary:
+def clv_summary(models: Models, filters: Annotated[ClvFilters, Query()]) -> ModelSummary:
     return models.summary(ModelType.CLV, filters)
 
 
 @router.get("/clv/households", summary="Rank households by validated 90-day net spend")
-def clv_households(models: Models, filters: Annotated[PageFilters, Query()]) -> PredictionPage:
+def clv_households(models: Models, filters: Annotated[ClvPageFilters, Query()]) -> PredictionPage:
     return models.page(ModelType.CLV, filters)
 
 
