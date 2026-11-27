@@ -281,22 +281,15 @@ describe('Customer Value', () => {
 
   it('filters cohorts, resets pagination, and retains the selection through household detail', async () => {
     const user = userEvent.setup()
-    vi.mocked(getHouseholdValue).mockResolvedValue({
-      household_id: household.household_id,
-      clv: evidence,
-      churn: { ...evidence, model: 'churn', status: 'not_run' },
-      future_spend: household,
-      churn_risk: null,
-    })
     openCustomerValue('/customers?page=2')
 
-    await screen.findByRole('link', { name: household.household_id })
+    await screen.findByRole('button', { name: household.household_id })
     expect(getRankedHouseholds).toHaveBeenLastCalledWith(expect.anything(), 2, expect.anything())
     await user.selectOptions(screen.getByLabelText('Store region'), 'CENTRAL')
     await user.selectOptions(screen.getByLabelText('Loyalty membership'), 'Y')
     await user.click(screen.getByRole('button', { name: 'Apply filters' }))
 
-    const link = await screen.findByRole('link', { name: household.household_id })
+    const householdButton = await screen.findByRole('button', { name: household.household_id })
     expect(getCustomerValue).toHaveBeenLastCalledWith(
       expect.objectContaining({ region: 'CENTRAL', loyalty_flag: 'Y' }),
       expect.anything(),
@@ -306,21 +299,30 @@ describe('Customer Value', () => {
       1,
       expect.anything(),
     )
-    expect(link).toHaveAttribute(
-      'href',
-      '/customers/households/001994?region=CENTRAL&loyalty_flag=Y',
-    )
-    await user.click(link)
-    expect(await screen.findByRole('heading', { name: 'Household 001994' })).toBeVisible()
-    expect(screen.getByText('$875.42')).toBeVisible()
+    const card = within(screen.getByRole('region', { name: 'Household value detail' }))
+    const overviewRequests = vi.mocked(getCustomerValue).mock.calls.length
+    const rankingRequests = vi.mocked(getRankedHouseholds).mock.calls.length
+    expect(screen.queryByText('About Customer Value')).not.toBeInTheDocument()
+
+    await user.click(householdButton)
+    const details = within(card.getByRole('region', { name: 'Household 001994' }))
+    expect(details.getByRole('heading', { name: 'Household 001994' })).toBeVisible()
+    expect(details.getByText('$875.42')).toBeVisible()
     expect(
-      screen.getByRole('button', { name: 'How Last purchase is determined' }),
+      card.getByRole('button', { name: 'How Last purchase is determined' }),
     ).toHaveAccessibleDescription('The latest purchase date in the records used for this view.')
-    expect(getHouseholdValue).toHaveBeenCalledWith('001994', expect.anything())
-    expect(screen.getByRole('link', { name: /Back to Customer Value/ })).toHaveAttribute(
-      'href',
-      '/customers?region=CENTRAL&loyalty_flag=Y',
-    )
+    expect(card.queryByRole('region', { name: 'Household value results' })).not.toBeInTheDocument()
+
+    const back = card.getByRole('button', { name: /Back to households/ })
+    expect(back).toHaveFocus()
+    await user.click(back)
+    expect(card.getByRole('region', { name: 'Household value results' })).toBeVisible()
+    expect(householdButton).toHaveFocus()
+    expect(screen.getByLabelText('Store region')).toHaveValue('CENTRAL')
+    expect(screen.getByLabelText('Loyalty membership')).toHaveValue('Y')
+    expect(getCustomerValue).toHaveBeenCalledTimes(overviewRequests)
+    expect(getRankedHouseholds).toHaveBeenCalledTimes(rankingRequests)
+    expect(getHouseholdValue).not.toHaveBeenCalled()
   })
 
   it.each(['stale', 'unavailable'] as const)(

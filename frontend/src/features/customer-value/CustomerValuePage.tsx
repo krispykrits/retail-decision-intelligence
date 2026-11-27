@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getCustomerValue, getRankedHouseholds } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
-import { InfoTooltip } from '../../components/InfoTooltip'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { HistoricalSpendTrend } from './HistoricalSpendTrend'
 import { readCohort } from './cohortQuery'
@@ -78,21 +77,12 @@ export function CustomerValuePage() {
           </span>
         ))}
       </nav>
-      <div className="flex flex-wrap items-end gap-3">
-        <ValueFilters
-          key={cohortKey}
-          cohort={cohort}
-          updating={updating}
-          apply={(next) => setParams(next)}
-        />
-        <div className="relative flex items-center gap-2 rounded-lg bg-nav-selected px-3 py-2 text-sm font-medium text-link sm:ml-auto">
-          About Customer Value
-          <InfoTooltip label="Customer Value">
-            Recorded spending includes returns. The forecast estimates what households may spend in
-            the next 90 days as a proxy for customer lifetime value.
-          </InfoTooltip>
-        </div>
-      </div>
+      <ValueFilters
+        key={cohortKey}
+        cohort={cohort}
+        updating={updating}
+        apply={(next) => setParams(next)}
+      />
       {!result && !summary && <ValuePageSkeleton />}
       {result?.error && <ValueError message="Could not load Customer Value." retry={retry} />}
       {differentRun && (
@@ -109,6 +99,7 @@ export function CustomerValuePage() {
           <div className="grid items-start gap-3 md:gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             {summary.evidence.version && (
               <ValueRanking
+                key={`${cohortKey}:${page}`}
                 result={ranking}
                 observedPeriod={summary.historical_spend?.at(-1)}
                 page={page}
