@@ -3,6 +3,7 @@ import {
   commandCenterPath,
   customerIntelligencePath,
   dataOperationsPath,
+  household360Path,
   workspaces,
 } from '../../app/workspaces'
 import { AccountMenu } from '../AccountMenu'
@@ -12,7 +13,10 @@ export function AppShell() {
   const isCommandCenter = useMatch(commandCenterPath)
   const isDataOperations = useMatch(dataOperationsPath)
   const isCustomerIntelligence = useMatch(`${customerIntelligencePath}/*`)
-  const hasWorkspaceHeader = Boolean(isCommandCenter || isDataOperations || isCustomerIntelligence)
+  const isHouseholdDetail = useMatch(`${household360Path}/:householdId`)
+  const hasWorkspaceHeader = Boolean(
+    isCommandCenter || isDataOperations || isCustomerIntelligence || isHouseholdDetail,
+  )
   return (
     <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">
       <a className="fixed -top-20 left-4 z-10 bg-surface p-3 focus:top-4" href="#main-content">

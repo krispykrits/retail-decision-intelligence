@@ -1,7 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react'
 
 type ChartPoint = { index: number; value: number; label: string }
-type ChartSeries = { id: string; label: string; points: ChartPoint[]; dashed?: boolean }
+type ChartSeries = {
+  id: string
+  label: string
+  points: ChartPoint[]
+  dashed?: boolean
+  color?: string
+}
 
 type PointTarget = { index: number; seriesId: string }
 
@@ -164,7 +170,7 @@ export function TrendChart({
                 return `${connected ? 'L' : 'M'}${x(point.index)},${y(point.value)}`
               })
               .join(' ')
-            const color = line.dashed ? 'text-muted' : 'text-brand'
+            const color = line.color ?? (line.dashed ? 'text-muted' : 'text-brand')
             return (
               <g key={line.id} className={color}>
                 <path
@@ -234,7 +240,7 @@ export function TrendChart({
                   </dd>
                 </div>
               ))}
-              {series.length > 1 && (
+              {series.some(({ id }) => id === 'prior') && (
                 <div className="flex justify-between gap-2 border-t border-line pt-1.5 font-semibold text-ink">
                   <dt>Difference</dt>
                   <dd>
@@ -255,7 +261,7 @@ export function TrendChart({
         {series.map((line) => (
           <li key={line.id} className="flex items-center gap-2">
             <span
-              className={`w-5 border-t-2 ${line.dashed ? 'border-dashed border-muted' : 'border-brand'}`}
+              className={`w-5 border-t-2 ${line.color ? `border-current ${line.color}` : line.dashed ? 'border-dashed border-muted' : 'border-brand'}`}
               aria-hidden="true"
             />
             {line.label}

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 
 from retail_api.accounts.schemas import ErrorResponse
-from retail_api.customers import service
+from retail_api.customers import retention, service
 from retail_api.customers.schemas import (
     ChurnFilters,
     ChurnPageFilters,
@@ -15,6 +15,8 @@ from retail_api.customers.schemas import (
     ModelSummary,
     ModelType,
     PredictionPage,
+    RetentionFilters,
+    RetentionOverview,
 )
 
 router = APIRouter(
@@ -47,6 +49,13 @@ def clv_summary(models: Models, filters: Annotated[ClvFilters, Query()]) -> Mode
 @router.get("/clv/households", summary="Rank households by validated 90-day net spend")
 def clv_households(models: Models, filters: Annotated[ClvPageFilters, Query()]) -> PredictionPage:
     return models.page(ModelType.CLV, filters)
+
+
+@router.get("/churn/engagement", summary="Review historical household activity and evaluated risk")
+def churn_engagement(
+    models: Models, filters: Annotated[RetentionFilters, Query()]
+) -> RetentionOverview:
+    return retention.overview(models.db, models.evidence(ModelType.CHURN), filters)
 
 
 @router.get("/churn/summary", summary="Summarize observed inactivity and modeled 60-day risk")

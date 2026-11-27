@@ -123,6 +123,10 @@ class ChurnFilters(CohortFilters):
     )
 
 
+class RetentionFilters(ChurnFilters):
+    segment: ShoppingSegment | None = None
+
+
 class ChurnPageFilters(PageFilters, ChurnFilters):
     pass
 
@@ -206,3 +210,38 @@ class HouseholdPredictions(BaseModel):
     churn: ModelEvidence
     future_spend: HouseholdPrediction | None
     churn_risk: HouseholdPrediction | None
+
+
+class EngagementCounts(BaseModel):
+    active: int = 0
+    at_risk: int = 0
+    inactive: int = 0
+    no_purchase: int = 0
+
+
+class EngagementPoint(EngagementCounts):
+    date: date
+
+
+class EngagementSegment(EngagementCounts):
+    segment: ShoppingSegment
+
+
+class RetentionHousehold(BaseModel):
+    household_id: str
+    segment: ShoppingSegment
+    last_purchase: date | None
+    recency_days: int | None
+    purchase_days_180d: int
+    net_spend_90d: Decimal
+    churn_risk: float | None = None
+
+
+class RetentionOverview(BaseModel):
+    evidence: ModelEvidence
+    as_of: date | None = None
+    history_complete: bool = False
+    households: list[RetentionHousehold]
+    trend: list[EngagementPoint]
+    segments: list[EngagementSegment]
+    risk_threshold: float

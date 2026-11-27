@@ -3,7 +3,7 @@ import type { Cohort } from '../../api/customerValue'
 import { LoadingProgress } from '../../components/LoadingProgress'
 import { useDetailsDisclosure } from '../../components/useDetailsDisclosure'
 
-import { regions } from './cohortQuery'
+import { regions, segmentLabels } from './cohortQuery'
 
 const ageRanges = ['19-24', '25-34', '35-44', '45-54', '55-64', '65-74', '75+']
 const householdSizes = ['1', '2', '3', '4', '5+']
@@ -16,9 +16,11 @@ export function ValueFilters({
   cohort,
   updating,
   apply,
+  showSegment = false,
 }: {
   cohort: Cohort
   updating: boolean
+  showSegment?: boolean
   apply: (params: URLSearchParams) => void
 }) {
   const { ref: moreFilters, close: closeMoreFilters } = useDetailsDisclosure()
@@ -58,6 +60,19 @@ export function ValueFilters({
           <option value="N">Non-member</option>
         </select>
       </label>
+      {showSegment && (
+        <label className={labelClass}>
+          Shopping segment
+          <select name="segment" className={fieldClass} defaultValue={cohort.segment ?? ''}>
+            <option value="">All segments</option>
+            {Object.entries(segmentLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <details ref={moreFilters} className="relative">
         <summary className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-link">
           More filters

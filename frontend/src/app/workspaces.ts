@@ -1,5 +1,7 @@
 export const commandCenterPath = '/command-center'
 export const customerIntelligencePath = '/customers'
+export const retentionPath = `${customerIntelligencePath}/retention`
+export const household360Path = '/households'
 export const dataOperationsPath = '/data'
 
 export const workspaces = [
@@ -30,7 +32,7 @@ export const workspaces = [
     description: 'Demand forecasts and evaluation evidence.',
   },
   {
-    path: '/households',
+    path: household360Path,
     title: 'Household 360',
     description: 'Household search and purchase history.',
   },
