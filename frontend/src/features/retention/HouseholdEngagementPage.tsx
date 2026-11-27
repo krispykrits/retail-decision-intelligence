@@ -46,38 +46,54 @@ export function HouseholdEngagementPage() {
       )}
       {row && (
         <Panel aria-labelledby="household-engagement">
-          <PanelHeading
-            id="household-engagement"
-            title={`Household ${row.household_id}`}
-            icon="/households"
-            className="relative"
-          >
-            Review this household’s purchase activity and validated churn forecast, if available.
-          </PanelHeading>
-          {asOf && <p className="mt-2 text-sm text-muted">Observed as of {dateLabel(asOf)}</p>}
-          <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-            {[
-              ['Segment', segmentLabels[row.segment]],
-              [
-                'Last purchase',
-                row.last_purchase ? dateLabel(row.last_purchase) : 'No purchase recorded',
-              ],
-              ['Days since purchase', row.recency_days ?? '—'],
-              ['Purchase days · 180d', numberLabel(row.purchase_days_180d)],
-              ['Net spend · 90d', moneyLabel(row.net_spend_90d)],
-              [
-                `Churn outlook${horizon ? ` · ${horizon} days` : ''}`,
-                row.churn_risk == null ? 'Unavailable' : percent(row.churn_risk),
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-canvas p-3">
-                <dt className="text-xs text-muted">{label}</dt>
-                <dd className="font-semibold">{value}</dd>
-              </div>
-            ))}
-          </dl>
+          <HouseholdEngagementDetails row={row} asOf={asOf} horizon={horizon} />
         </Panel>
       )}
     </div>
+  )
+}
+
+export function HouseholdEngagementDetails({
+  row,
+  asOf,
+  horizon,
+}: {
+  row: RetentionHousehold
+  asOf?: string | null
+  horizon?: number
+}) {
+  return (
+    <>
+      <PanelHeading
+        id="household-engagement"
+        title={`Household ${row.household_id}`}
+        icon="/households"
+        className="relative"
+      >
+        Review this household’s purchase activity and validated churn forecast, if available.
+      </PanelHeading>
+      {asOf && <p className="mt-2 text-sm text-muted">Observed as of {dateLabel(asOf)}</p>}
+      <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+        {[
+          ['Segment', segmentLabels[row.segment]],
+          [
+            'Last purchase',
+            row.last_purchase ? dateLabel(row.last_purchase) : 'No purchase recorded',
+          ],
+          ['Days since purchase', row.recency_days ?? '—'],
+          ['Purchase days · 180d', numberLabel(row.purchase_days_180d)],
+          ['Net spend · 90d', moneyLabel(row.net_spend_90d)],
+          [
+            `Churn outlook${horizon ? ` · ${horizon} days` : ''}`,
+            row.churn_risk == null ? 'Unavailable' : percent(row.churn_risk),
+          ],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg bg-canvas p-3">
+            <dt className="text-xs text-muted">{label}</dt>
+            <dd className="font-semibold">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </>
   )
 }
