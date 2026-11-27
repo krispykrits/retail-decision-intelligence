@@ -6,6 +6,8 @@ import {
   commandCenterPath,
   customerIntelligencePath,
   dataOperationsPath,
+  household360Path,
+  retentionPath,
   workspaces,
   type Workspace,
 } from './workspaces'
@@ -15,6 +17,8 @@ import { DataOperationsPage } from '../features/data-operations/DataOperationsPa
 import { CommandCenterPage } from '../features/dashboard/CommandCenterPage'
 
 import { CustomerValuePage } from '../features/customer-value/CustomerValuePage'
+import { RetentionPage } from '../features/retention/RetentionPage'
+import { HouseholdEngagementPage } from '../features/retention/HouseholdEngagementPage'
 import { HouseholdValuePage } from '../features/customer-value/HouseholdValuePage'
 
 const workspacePages: Partial<Record<Workspace['path'], typeof CommandCenterPage>> = {
@@ -44,6 +48,8 @@ export function App() {
             path={`${customerIntelligencePath}/households/:householdId`}
             element={<HouseholdValuePage />}
           />
+          <Route path={retentionPath} element={<RetentionPage />} />
+          <Route path={`${household360Path}/:householdId`} element={<HouseholdEngagementPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

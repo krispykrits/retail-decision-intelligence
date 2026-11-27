@@ -432,6 +432,72 @@
         "title": "EmailRequest",
         "type": "object"
       },
+      "EngagementPoint": {
+        "properties": {
+          "active": {
+            "default": 0,
+            "title": "Active",
+            "type": "integer"
+          },
+          "at_risk": {
+            "default": 0,
+            "title": "At Risk",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "inactive": {
+            "default": 0,
+            "title": "Inactive",
+            "type": "integer"
+          },
+          "no_purchase": {
+            "default": 0,
+            "title": "No Purchase",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "EngagementPoint",
+        "type": "object"
+      },
+      "EngagementSegment": {
+        "properties": {
+          "active": {
+            "default": 0,
+            "title": "Active",
+            "type": "integer"
+          },
+          "at_risk": {
+            "default": 0,
+            "title": "At Risk",
+            "type": "integer"
+          },
+          "inactive": {
+            "default": 0,
+            "title": "Inactive",
+            "type": "integer"
+          },
+          "no_purchase": {
+            "default": 0,
+            "title": "No Purchase",
+            "type": "integer"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/ShoppingSegment"
+          }
+        },
+        "required": [
+          "segment"
+        ],
+        "title": "EngagementSegment",
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "detail": {
@@ -1850,6 +1916,127 @@
         "title": "ResetPassword",
         "type": "object"
       },
+      "RetentionHousehold": {
+        "properties": {
+          "churn_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Churn Risk"
+          },
+          "household_id": {
+            "title": "Household Id",
+            "type": "string"
+          },
+          "last_purchase": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Purchase"
+          },
+          "net_spend_90d": {
+            "title": "Net Spend 90D",
+            "type": "string"
+          },
+          "purchase_days_180d": {
+            "title": "Purchase Days 180D",
+            "type": "integer"
+          },
+          "recency_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recency Days"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/ShoppingSegment"
+          }
+        },
+        "required": [
+          "household_id",
+          "segment",
+          "last_purchase",
+          "recency_days",
+          "purchase_days_180d",
+          "net_spend_90d"
+        ],
+        "title": "RetentionHousehold",
+        "type": "object"
+      },
+      "RetentionOverview": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/ModelEvidence"
+          },
+          "history_complete": {
+            "default": false,
+            "title": "History Complete",
+            "type": "boolean"
+          },
+          "households": {
+            "items": {
+              "$ref": "#/components/schemas/RetentionHousehold"
+            },
+            "title": "Households",
+            "type": "array"
+          },
+          "risk_threshold": {
+            "title": "Risk Threshold",
+            "type": "number"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EngagementSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/EngagementPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "evidence",
+          "households",
+          "trend",
+          "segments",
+          "risk_threshold"
+        ],
+        "title": "RetentionOverview",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "Analyst",
@@ -2839,6 +3026,162 @@
         "summary": "Verify account email ownership",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/api/v1/customers/churn/engagement": {
+      "get": {
+        "operationId": "churn_engagement_api_v1_customers_churn_engagement_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EAST",
+                    "CENTRAL",
+                    "WEST",
+                    "SOUTH"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loyalty_flag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loyalty Flag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age_range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "household_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size"
+            }
+          },
+          {
+            "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+            "in": "query",
+            "name": "risk_threshold",
+            "required": false,
+            "schema": {
+              "default": 0.5,
+              "description": "Probability used to flag high risk. Lower scoring rows remain visible.",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Risk Threshold",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "segment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShoppingSegment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Customer models temporarily unavailable"
+          }
+        },
+        "summary": "Review historical household activity and evaluated risk",
+        "tags": [
+          "Customer Models"
         ]
       }
     },

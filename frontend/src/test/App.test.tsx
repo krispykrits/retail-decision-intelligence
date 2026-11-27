@@ -7,6 +7,7 @@ import { App } from '../app/App'
 import { TrendChart } from '../components/TrendChart'
 import { SessionContext } from '../auth/session'
 import { getDashboard, getDashboardTrend, type Dashboard } from '../api/dashboard'
+import { getRetention } from '../api/retention'
 import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
 
 const emptyDashboard: Dashboard = {
@@ -36,6 +37,8 @@ const emptyDashboard: Dashboard = {
 
 vi.mock('../api/dashboard', () => ({ getDashboard: vi.fn(), getDashboardTrend: vi.fn() }))
 vi.mocked(getDashboard).mockResolvedValue(emptyDashboard)
+
+vi.mock('../api/retention', () => ({ getRetention: vi.fn() }))
 
 vi.mock('../api/imports', () => ({
   getDatasets: vi.fn().mockResolvedValue([]),
@@ -76,6 +79,70 @@ const expectedRoutes = [
 ] as const
 
 describe('workspace shell', () => {
+  it('shows observed retention and opens a household when a churn model is unavailable', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getRetention).mockResolvedValueOnce({
+      evidence: {
+        model: 'churn',
+        status: 'not_run',
+        reason: 'No evaluated forecast',
+        target: 'No purchase in 60 days',
+        population: 'Recent shoppers',
+        history_days: 180,
+        horizon_days: 60,
+      },
+      as_of: '2020-08-15',
+      history_complete: true,
+      households: Array.from({ length: 6 }, (_, index) => ({
+        household_id: String(1989 + index).padStart(6, '0'),
+        segment: 'frequent' as const,
+        last_purchase: '2020-04-01',
+        recency_days: 136,
+        purchase_days_180d: 12,
+        net_spend_90d: '0.00',
+        churn_risk: null,
+      })),
+      trend: [{ date: '2020-08-15', active: 0, at_risk: 6, inactive: 0, no_purchase: 0 }],
+      segments: [{ segment: 'frequent', active: 0, at_risk: 6, inactive: 0, no_purchase: 0 }],
+      risk_threshold: 0.5,
+    })
+    render(
+      <MemoryRouter initialEntries={['/customers/retention']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Not evaluated')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Observed household activity by date' })).toBeVisible()
+    expect(screen.queryByText('Show households with predicted risk')).not.toBeInTheDocument()
+    const card = within(screen.getByRole('region', { name: 'At-risk household details' }))
+    await user.click(card.getByRole('button', { name: 'Purchase days · 180d' }))
+    await user.click(card.getByRole('button', { name: 'Next' }))
+    const household = card.getByRole('button', { name: '001994' })
+    const requests = vi.mocked(getRetention).mock.calls.length
+    await user.click(household)
+
+    expect(card.getByRole('heading', { name: 'Household 001994' })).toBeVisible()
+    expect(card.queryByRole('region', { name: 'Retention household results' })).toBeNull()
+    const back = card.getByRole('button', { name: '← Back to households' })
+    expect(back).toHaveFocus()
+    await user.click(back)
+
+    expect(household).toHaveFocus()
+    expect(card.getByText('6–6 of 6')).toBeVisible()
+    expect(card.getByRole('columnheader', { name: 'Purchase days · 180d' })).toHaveAttribute(
+      'aria-sort',
+      'descending',
+    )
+    expect(getRetention).toHaveBeenCalledTimes(requests)
+
+    await user.click(household)
+    await user.click(card.getByRole('link', { name: 'Open Household 360' }))
+    expect(screen.getByRole('heading', { name: 'Household 360' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Household 001994' })).toBeVisible()
+    expect(getRetention).toHaveBeenCalledTimes(requests)
+  })
+
   it('opens Command Center by default', async () => {
     render(
       <MemoryRouter>

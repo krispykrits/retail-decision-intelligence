@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getCustomerValue, getRankedHouseholds } from '../../api/customerValue'
 import { customerIntelligencePath } from '../../app/workspaces'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
+import { CustomerTabs } from './CustomerTabs'
 import { HistoricalSpendTrend } from './HistoricalSpendTrend'
 import { readCohort } from './cohortQuery'
 import { ValueFilters } from './ValueFilters'
@@ -14,14 +15,6 @@ import { ValueOutlook, ValueOverview } from './ValueSummary'
 import { ValueInsights } from './ValueInsights'
 import { ValueSegments } from './ValueSegments'
 import { useValueRequest } from './useValueRequest'
-
-const customerSections = [
-  'Segmentation & Behavior',
-  'Customer Value (CLV)',
-  'Retention & Churn',
-  'External Factors',
-  'Customer Explorer',
-]
 
 export function CustomerValuePage() {
   const [params, setParams] = useSearchParams()
@@ -62,21 +55,7 @@ export function CustomerValuePage() {
         path={customerIntelligencePath}
         status={updating ? 'Updating household spending…' : undefined}
       />
-      <nav
-        aria-label="Customer Intelligence sections"
-        className="flex gap-1 overflow-x-auto border-b border-line"
-      >
-        {customerSections.map((section) => (
-          <span
-            key={section}
-            aria-current={section === 'Customer Value (CLV)' ? 'page' : undefined}
-            aria-disabled={section !== 'Customer Value (CLV)' || undefined}
-            className={`shrink-0 border-b-2 px-3 py-2 text-sm ${section === 'Customer Value (CLV)' ? 'border-brand font-semibold text-link' : 'border-transparent text-muted'}`}
-          >
-            {section}
-          </span>
-        ))}
-      </nav>
+      <CustomerTabs />
       <ValueFilters
         key={cohortKey}
         cohort={cohort}

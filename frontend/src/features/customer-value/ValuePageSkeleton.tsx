@@ -3,10 +3,12 @@ import { Panel } from '../../components/Panel'
 import { Skeleton } from '../../components/Skeleton'
 import { valueAnalysisGrid } from './valueLayout'
 
-export function ValuePageSkeleton() {
+export function ValuePageSkeleton({
+  label = 'Loading household spending…',
+}: { label?: string } = {}) {
   return (
     <div role="status" className="space-y-3 md:space-y-4">
-      <span className="sr-only">Loading household spending…</span>
+      <span className="sr-only">{label}</span>
       <Panel>
         <Skeleton className="h-4 w-40" />
         <Skeleton className="mt-2 h-3 w-72 max-w-full" />

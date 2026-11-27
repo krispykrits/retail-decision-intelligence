@@ -171,6 +171,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/customers/churn/engagement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review historical household activity and evaluated risk */
+        get: operations["churn_engagement_api_v1_customers_churn_engagement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/customers/churn/households": {
         parameters: {
             query?: never;
@@ -745,6 +762,58 @@ export interface components {
              */
             email: string;
         };
+        /** EngagementPoint */
+        EngagementPoint: {
+            /**
+             * Active
+             * @default 0
+             */
+            active: number;
+            /**
+             * At Risk
+             * @default 0
+             */
+            at_risk: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Inactive
+             * @default 0
+             */
+            inactive: number;
+            /**
+             * No Purchase
+             * @default 0
+             */
+            no_purchase: number;
+        };
+        /** EngagementSegment */
+        EngagementSegment: {
+            /**
+             * Active
+             * @default 0
+             */
+            active: number;
+            /**
+             * At Risk
+             * @default 0
+             */
+            at_risk: number;
+            /**
+             * Inactive
+             * @default 0
+             */
+            inactive: number;
+            /**
+             * No Purchase
+             * @default 0
+             */
+            no_purchase: number;
+            segment: components["schemas"]["ShoppingSegment"];
+        };
         /** ErrorResponse */
         ErrorResponse: {
             /** Detail */
@@ -1237,6 +1306,41 @@ export interface components {
             password: string;
             /** Token */
             token: string;
+        };
+        /** RetentionHousehold */
+        RetentionHousehold: {
+            /** Churn Risk */
+            churn_risk?: number | null;
+            /** Household Id */
+            household_id: string;
+            /** Last Purchase */
+            last_purchase: string | null;
+            /** Net Spend 90D */
+            net_spend_90d: string;
+            /** Purchase Days 180D */
+            purchase_days_180d: number;
+            /** Recency Days */
+            recency_days: number | null;
+            segment: components["schemas"]["ShoppingSegment"];
+        };
+        /** RetentionOverview */
+        RetentionOverview: {
+            /** As Of */
+            as_of?: string | null;
+            evidence: components["schemas"]["ModelEvidence"];
+            /**
+             * History Complete
+             * @default false
+             */
+            history_complete: boolean;
+            /** Households */
+            households: components["schemas"]["RetentionHousehold"][];
+            /** Risk Threshold */
+            risk_threshold: number;
+            /** Segments */
+            segments: components["schemas"]["EngagementSegment"][];
+            /** Trend */
+            trend: components["schemas"]["EngagementPoint"][];
         };
         /**
          * Role
@@ -1827,6 +1931,61 @@ export interface operations {
                 };
             };
             /** @description Account configuration, SQL or email delivery unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    churn_engagement_api_v1_customers_churn_engagement_get: {
+        parameters: {
+            query?: {
+                region?: ("EAST" | "CENTRAL" | "WEST" | "SOUTH") | null;
+                loyalty_flag?: string | null;
+                age_range?: string | null;
+                household_size?: string | null;
+                /** @description Probability used to flag high risk. Lower scoring rows remain visible. */
+                risk_threshold?: number;
+                segment?: components["schemas"]["ShoppingSegment"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionOverview"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Customer models temporarily unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;

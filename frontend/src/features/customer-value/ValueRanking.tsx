@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
 import type { ModelEvidence, PredictionPage } from '../../api/customerValue'
 import { DataTable } from '../../components/DataTable'
 import { LoadingProgress } from '../../components/LoadingProgress'
 import { Skeleton } from '../../components/Skeleton'
 import { Panel, PanelHeading } from '../../components/Panel'
+import { useHouseholdDrilldown } from '../../components/useHouseholdDrilldown'
 import { dateLabel, numberLabel } from '../../lib/format'
 import { HouseholdValueDetails } from './HouseholdValueDetails'
 import type { ValueResult } from './useValueRequest'
@@ -25,20 +25,8 @@ export function ValueRanking({
   selectPage: (page: number) => void
   retry: () => void
 }) {
-  const [selectedId, setSelectedId] = useState<string>()
-  const backButton = useRef<HTMLButtonElement>(null)
-  const opener = useRef<HTMLButtonElement>(null)
   const data = result?.data
-  const selected = data?.items.find((row) => row.household_id === selectedId)
-
-  useEffect(() => {
-    if (selected) {
-      backButton.current?.focus({ preventScroll: true })
-    } else if (opener.current) {
-      opener.current.focus({ preventScroll: true })
-      opener.current = null
-    }
-  }, [selected])
+  const { selected, backButton, open, close } = useHouseholdDrilldown(data?.items)
 
   const available = isAvailable(evidence)
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1
@@ -66,7 +54,7 @@ export function ValueRanking({
             ref={backButton}
             type="button"
             className="mb-3 text-sm font-semibold text-link hover:underline"
-            onClick={() => setSelectedId(undefined)}
+            onClick={close}
           >
             ← Back to households
           </button>
@@ -121,10 +109,7 @@ export function ValueRanking({
                       <button
                         type="button"
                         className="font-semibold text-link underline-offset-2 hover:underline"
-                        onClick={(event) => {
-                          opener.current = event.currentTarget
-                          setSelectedId(row.household_id)
-                        }}
+                        onClick={(event) => open(row.household_id, event.currentTarget)}
                       >
                         {row.household_id}
                       </button>

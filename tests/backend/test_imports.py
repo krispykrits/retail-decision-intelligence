@@ -544,6 +544,17 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
         b"00000007,0011,2020-08-15,00000001,60,1,CENTRAL,33,2020\n"
     )
     assert upload(client, "transactions", TRANSACTIONS + rows).json()["inserted"] == 7
+    engagement = "/api/v1/customers/churn/engagement"
+    assert TestClient(client.app).get(engagement).status_code == 401
+    observed = client.get(engagement).json()
+    assert observed["evidence"]["status"] == "not_run"
+    assert observed["as_of"] == "2020-08-16"
+    assert observed["trend"][-1]["active"] == len(observed["households"]) == 2
+    assert all(row["churn_risk"] is None for row in observed["households"])
+    filtered = client.get(engagement, params={"loyalty_flag": "N", "region": "CENTRAL"}).json()
+    assert [row["household_id"] for row in filtered["households"]] == ["0011"]
+    assert filtered["trend"][-1]["active"] == 1
+
     endpoint = "/api/v1/customers/clv/summary"
     assert client.get(endpoint).json()["historical_spend"] == []
 
