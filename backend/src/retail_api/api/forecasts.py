@@ -21,7 +21,8 @@ router = APIRouter(
     "/accuracy",
     summary="Read purchase history and saved accuracy checks",
     description=(
-        "Filters by commodity and store region. A selected check includes paired actual, "
+        "Filters by commodity and store region. Defaults to the latest completed check. "
+        "A selected check includes paired actual, "
         "candidate and seasonal baseline values for all evaluated horizons. Only checks "
         "from the current transaction and product revisions are available."
     ),

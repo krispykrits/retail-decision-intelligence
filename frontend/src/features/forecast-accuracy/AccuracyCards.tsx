@@ -79,17 +79,30 @@ const chartLines = [
 export function ForecastComparison({
   commodity,
   result,
+  observed,
   empty,
 }: {
   commodity?: string | null
   result?: HorizonAccuracy
+  observed: AccuracyOverview['observed']
   empty: string
 }) {
   const points = result?.points ?? []
-  const ticks = points.map((point, index) => ({ index, label: dateLabel(point.week_start) }))
-  const series = chartLines.map((line) => ({
+  const hasForecasts = points.length > 0
+  const chartWeeks = hasForecasts ? points : observed
+  const firstWeek = chartWeeks[0]?.week_start
+  const startTime = firstWeek ? Date.parse(firstWeek) : 0
+  const ticks = chartWeeks.map((point) => ({
+    index: (Date.parse(point.week_start) - startTime) / (7 * 24 * 60 * 60 * 1000),
+    label: dateLabel(point.week_start),
+  }))
+  const lines = hasForecasts ? chartLines : chartLines.slice(0, 1)
+  const series = lines.map((line) => ({
     ...line,
-    points: ticks.map((tick) => ({ ...tick, value: points[tick.index][line.id] })),
+    points: ticks.map((tick, index) => ({
+      ...tick,
+      value: hasForecasts ? points[index][line.id] : observed[index].units,
+    })),
   }))
   const first = points[0]
   const last = points.at(-1)
@@ -99,17 +112,16 @@ export function ForecastComparison({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PanelHeading
           id="forecast-comparison"
-          title={
-            commodity ? `Forecast vs. actual demand · ${commodity}` : 'Forecast vs. actual demand'
-          }
+          title={`${hasForecasts ? 'Forecast vs. actual demand' : 'Recorded weekly demand'}${commodity ? ` · ${commodity}` : ''}`}
           icon="/forecast"
           className="relative"
         >
-          Compare recorded weekly net units with both forecasts for the same weeks. Select or hover
-          over a point to see the values.
+          {hasForecasts
+            ? 'Compare recorded weekly net units with both forecasts for the same weeks.'
+            : 'Recorded weekly units after returns and adjustments. Weeks without commodity records are left blank.'}
         </PanelHeading>
         <ul className="flex flex-wrap gap-3 text-xs text-muted" aria-label="Chart legend">
-          {chartLines.map((line) => (
+          {lines.map((line) => (
             <li key={line.id} className="flex items-center gap-1.5">
               <span
                 className={`w-4 border-t-2 ${line.dashed ? 'border-dashed' : ''} ${line.color}`}
@@ -119,9 +131,9 @@ export function ForecastComparison({
           ))}
         </ul>
       </div>
-      {points.length ? (
+      {chartWeeks.length ? (
         <TrendChart
-          label="Actual demand and forecasts by week"
+          label={hasForecasts ? 'Actual demand and forecasts by week' : 'Recorded demand by week'}
           series={series}
           ticks={ticks}
           format={(value) => `${units(value)} units`}
@@ -135,24 +147,28 @@ export function ForecastComparison({
           </p>
         </div>
       )}
-      <dl className="mt-3 grid gap-3 rounded-lg bg-canvas p-3 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-xs text-muted">Weeks compared</dt>
-          <dd className="mt-1 font-semibold">
-            {first && last
-              ? `${dateLabel(first.week_start)} – ${dateAfter(last.week_start, 6)}`
-              : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted">Weeks tested</dt>
-          <dd className="mt-1 font-semibold">{result ? numberLabel(result.weeks_tested) : '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted">Last forecast cutoff</dt>
-          <dd className="mt-1 font-semibold">{displayDate(last?.forecast_cutoff)}</dd>
-        </div>
-      </dl>
+      {hasForecasts && (
+        <dl className="mt-3 grid gap-3 rounded-lg bg-canvas p-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-xs text-muted">Weeks compared</dt>
+            <dd className="mt-1 font-semibold">
+              {first && last
+                ? `${dateLabel(first.week_start)} – ${dateAfter(last.week_start, 6)}`
+                : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted">Weeks tested</dt>
+            <dd className="mt-1 font-semibold">
+              {result ? numberLabel(result.weeks_tested) : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted">Last forecast cutoff</dt>
+            <dd className="mt-1 font-semibold">{displayDate(last?.forecast_cutoff)}</dd>
+          </div>
+        </dl>
+      )}
     </Panel>
   )
 }

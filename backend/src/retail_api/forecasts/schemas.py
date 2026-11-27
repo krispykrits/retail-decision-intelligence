@@ -16,6 +16,11 @@ class PurchaseCoverage(BaseModel):
     weeks_with_purchases: int
 
 
+class ObservedWeek(BaseModel):
+    week_start: date
+    units: int
+
+
 class AccuracyPoint(BaseModel):
     week_start: date
     forecast_cutoff: date
@@ -65,5 +70,6 @@ class ForecastAccuracy(BaseModel):
     commodity: str | None
     region: str | None
     coverage: PurchaseCoverage
+    observed: list[ObservedWeek]
     checks: list[AccuracyCheck]
     selected: AccuracyResult | None

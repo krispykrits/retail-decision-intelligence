@@ -10,6 +10,7 @@ from retail_api.forecasts.schemas import (
     AccuracyEvidence,
     AccuracyResult,
     ForecastAccuracy,
+    ObservedWeek,
     PurchaseCoverage,
 )
 from retail_api.imports.queries import transaction_product_versions
@@ -109,7 +110,7 @@ def accuracy_overview(
         raise ValueError("Choose a recorded commodity.")
     if region is not None and region not in regions:
         raise ValueError("Choose a recorded region.")
-    coverage, _ = DemandQueries(db, commodity, region).weekly_history()
+    coverage, totals = DemandQueries(db, commodity, region).weekly_history()
     checks: list[AccuracyCheck] = []
     selected = None
     if commodity:
@@ -131,9 +132,12 @@ def accuracy_overview(
                 .limit(50)
             )
         ]
-        if check_id:
+        selected_id = check_id or next(
+            (check.id for check in checks if check.status == "completed"), None
+        )
+        if selected_id:
             row = db.execute(
-                sa.select(accuracy_checks).where(*scope, columns.id == check_id)
+                sa.select(accuracy_checks).where(*scope, columns.id == selected_id)
             ).one_or_none()
             if row is not None:
                 selected = AccuracyResult(
@@ -153,6 +157,7 @@ def accuracy_overview(
         commodity=commodity,
         region=region,
         coverage=coverage,
+        observed=[ObservedWeek(week_start=day, units=totals[day]) for day in sorted(totals)],
         checks=checks,
         selected=selected,
     )

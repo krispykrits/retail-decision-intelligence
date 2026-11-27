@@ -676,6 +676,7 @@ def test_forecast_accuracy_reads_coverage_and_only_current_scoped_checks(
     assert upload(client, "transactions", TRANSACTIONS + lines).json()["inserted"] == 5
     response = client.get(endpoint, params={"region": "CENTRAL"})
     assert response.status_code == 200
+    assert response.json()["observed"] == [{"week_start": "2018-08-20", "units": 0}]
     assert response.json()["coverage"] == {
         "first_purchase": "2018-08-17",
         "last_purchase": "2018-09-01",

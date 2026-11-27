@@ -56,6 +56,7 @@ const accuracy: AccuracyOverview = {
     complete_weeks: 103,
     weeks_with_purchases: 103,
   },
+  observed: [{ week_start: '2018-08-20', units: 120 }],
   checks: [],
   selected: null,
 }
@@ -155,6 +156,8 @@ describe('workspace shell', () => {
       </MemoryRouter>,
     )
     expect(await screen.findByText('103 / 103')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Recorded demand by week' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Customer Value (CLV)' })).toBeVisible()
     expect(screen.getAllByText('Not checked')).toHaveLength(4)
     await user.selectOptions(screen.getByLabelText('How far ahead'), '2')
     await user.selectOptions(screen.getByLabelText('Accuracy check'), check.id)

@@ -6,7 +6,12 @@ import {
   type AccuracyScope,
 } from '../../api/forecastAccuracy'
 import { useRequest } from '../../api/useRequest'
-import { forecastEvidencePath, forecastStudioPath } from '../../app/workspaces'
+import {
+  customerIntelligencePath,
+  forecastEvidencePath,
+  forecastStudioPath,
+  retentionPath,
+} from '../../app/workspaces'
 import { Panel } from '../../components/Panel'
 import { Skeleton } from '../../components/Skeleton'
 import { Icon } from '../../components/WorkspaceIcon'
@@ -179,7 +184,11 @@ function AccuracyFilters({
             onChange={(event) => setCheckId(event.target.value)}
           >
             <option value="">
-              {scopeMatches ? 'Choose a completed check' : 'Apply filters to find checks'}
+              {!scopeMatches
+                ? 'Apply filters to find checks'
+                : completed.length
+                  ? 'Latest completed check'
+                  : 'No completed checks'}
             </option>
             {checkId && !completed.some((check) => check.id === checkId) && (
               <option value={checkId} disabled>
@@ -215,9 +224,8 @@ function noticeFor(data: AccuracyOverview, checkId?: string) {
       data.selected?.evidence.reason ?? 'The most recent check found too little purchase history.'
     )
   if (data.selected) return `Accuracy check completed ${dateLabel(data.selected.checked_at)}.`
-  if (data.checks.length) return 'Choose a completed accuracy check to compare the forecasts.'
   if (!data.coverage.first_purchase) return 'Import purchase data to make accuracy checks possible.'
-  return 'No accuracy checks have been run for this selection.'
+  return 'No saved accuracy checks for this selection. The chart shows recorded demand.'
 }
 
 export function ForecastAccuracyPage() {
@@ -253,6 +261,11 @@ export function ForecastAccuracyPage() {
   return (
     <div className="space-y-4">
       <StudioHeader />
+      <p className="text-sm text-muted">
+        Check how closely commodity forecasts matched weekly unit demand. For household predictions,
+        see <Link to={customerIntelligencePath}>Customer Value (CLV)</Link> or{' '}
+        <Link to={retentionPath}>Retention &amp; Churn</Link>.
+      </p>
       {filters && (
         <AccuracyFilters
           key={JSON.stringify([search.toString(), filters.commodity, filters.region])}
@@ -297,6 +310,7 @@ export function ForecastAccuracyPage() {
             <ForecastComparison
               commodity={data.commodity}
               result={active}
+              observed={data.observed}
               empty={
                 missingCheck
                   ? 'Accuracy check unavailable'

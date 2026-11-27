@@ -999,6 +999,13 @@
           "coverage": {
             "$ref": "#/components/schemas/PurchaseCoverage"
           },
+          "observed": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedWeek"
+            },
+            "title": "Observed",
+            "type": "array"
+          },
           "region": {
             "anyOf": [
               {
@@ -1034,6 +1041,7 @@
           "commodity",
           "region",
           "coverage",
+          "observed",
           "checks",
           "selected"
         ],
@@ -2087,6 +2095,25 @@
           "segment"
         ],
         "title": "ObservedSpendSegment",
+        "type": "object"
+      },
+      "ObservedWeek": {
+        "properties": {
+          "units": {
+            "title": "Units",
+            "type": "integer"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_start",
+          "units"
+        ],
+        "title": "ObservedWeek",
         "type": "object"
       },
       "Period": {
@@ -5119,7 +5146,7 @@
     },
     "/api/v1/forecasts/accuracy": {
       "get": {
-        "description": "Filters by commodity and store region. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.",
+        "description": "Filters by commodity and store region. Defaults to the latest completed check. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.",
         "operationId": "accuracy_api_v1_forecasts_accuracy_get",
         "parameters": [
           {

@@ -433,7 +433,7 @@ export interface paths {
         };
         /**
          * Read purchase history and saved accuracy checks
-         * @description Filters by commodity and store region. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.
+         * @description Filters by commodity and store region. Defaults to the latest completed check. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.
          */
         get: operations["accuracy_api_v1_forecasts_accuracy_get"];
         put?: never;
@@ -1009,6 +1009,8 @@ export interface components {
             /** Commodity */
             commodity: string | null;
             coverage: components["schemas"]["PurchaseCoverage"];
+            /** Observed */
+            observed: components["schemas"]["ObservedWeek"][];
             /** Region */
             region: string | null;
             /** Regions */
@@ -1390,6 +1392,16 @@ export interface components {
             /** Net Spend */
             net_spend: string;
             segment: components["schemas"]["ShoppingSegment"];
+        };
+        /** ObservedWeek */
+        ObservedWeek: {
+            /** Units */
+            units: number;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
         };
         /** Period */
         Period: {
