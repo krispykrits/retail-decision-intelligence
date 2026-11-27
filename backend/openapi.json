@@ -34,6 +34,150 @@
         "title": "AccountRead",
         "type": "object"
       },
+      "AccuracyCheck": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "insufficient_history",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "checked_at",
+          "status"
+        ],
+        "title": "AccuracyCheck",
+        "type": "object"
+      },
+      "AccuracyEvidence": {
+        "properties": {
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/HorizonAccuracy"
+            },
+            "title": "Horizons",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "insufficient_history",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "AccuracyEvidence",
+        "type": "object"
+      },
+      "AccuracyPoint": {
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "integer"
+          },
+          "baseline": {
+            "title": "Baseline",
+            "type": "integer"
+          },
+          "forecast": {
+            "title": "Forecast",
+            "type": "number"
+          },
+          "forecast_cutoff": {
+            "format": "date",
+            "title": "Forecast Cutoff",
+            "type": "string"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_start",
+          "forecast_cutoff",
+          "actual",
+          "forecast",
+          "baseline"
+        ],
+        "title": "AccuracyPoint",
+        "type": "object"
+      },
+      "AccuracyResult": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/AccuracyEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "product_version": {
+            "title": "Product Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "insufficient_history",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "transaction_version": {
+            "title": "Transaction Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "checked_at",
+          "status",
+          "model_version",
+          "transaction_version",
+          "product_version",
+          "evidence"
+        ],
+        "title": "AccuracyResult",
+        "type": "object"
+      },
       "Breakdown": {
         "properties": {
           "current_period": {
@@ -825,6 +969,77 @@
         "title": "FoldEvidence",
         "type": "object"
       },
+      "ForecastAccuracy": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/AccuracyCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "commodities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Commodities",
+            "type": "array"
+          },
+          "commodity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commodity"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/PurchaseCoverage"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "selected": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccuracyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "commodities",
+          "regions",
+          "commodity",
+          "region",
+          "coverage",
+          "checks",
+          "selected"
+        ],
+        "title": "ForecastAccuracy",
+        "type": "object"
+      },
       "ForecastBin": {
         "properties": {
           "count": {
@@ -907,6 +1122,98 @@
           "net_spend"
         ],
         "title": "HistoricalSpendPeriod",
+        "type": "object"
+      },
+      "HorizonAccuracy": {
+        "properties": {
+          "average_miss": {
+            "title": "Average Miss",
+            "type": "number"
+          },
+          "baseline_average_miss": {
+            "title": "Baseline Average Miss",
+            "type": "number"
+          },
+          "baseline_overall_error_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Overall Error Percent"
+          },
+          "baseline_symmetric_error_percent": {
+            "title": "Baseline Symmetric Error Percent",
+            "type": "number"
+          },
+          "first_training_week": {
+            "format": "date",
+            "title": "First Training Week",
+            "type": "string"
+          },
+          "horizon": {
+            "title": "Horizon",
+            "type": "integer"
+          },
+          "last_training_week_end": {
+            "format": "date",
+            "title": "Last Training Week End",
+            "type": "string"
+          },
+          "overall_error_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Error Percent"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/AccuracyPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "symmetric_error_percent": {
+            "title": "Symmetric Error Percent",
+            "type": "number"
+          },
+          "training_samples_max": {
+            "title": "Training Samples Max",
+            "type": "integer"
+          },
+          "training_samples_min": {
+            "title": "Training Samples Min",
+            "type": "integer"
+          },
+          "weeks_tested": {
+            "title": "Weeks Tested",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "horizon",
+          "average_miss",
+          "baseline_average_miss",
+          "overall_error_percent",
+          "baseline_overall_error_percent",
+          "symmetric_error_percent",
+          "baseline_symmetric_error_percent",
+          "weeks_tested",
+          "first_training_week",
+          "last_training_week_end",
+          "training_samples_min",
+          "training_samples_max",
+          "points"
+        ],
+        "title": "HorizonAccuracy",
         "type": "object"
       },
       "HouseholdPrediction": {
@@ -1840,6 +2147,76 @@
           "items"
         ],
         "title": "PredictionPage",
+        "type": "object"
+      },
+      "PurchaseCoverage": {
+        "properties": {
+          "complete_weeks": {
+            "title": "Complete Weeks",
+            "type": "integer"
+          },
+          "first_complete_week": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Complete Week"
+          },
+          "first_purchase": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Purchase"
+          },
+          "last_complete_week_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Complete Week End"
+          },
+          "last_purchase": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Purchase"
+          },
+          "weeks_with_purchases": {
+            "title": "Weeks With Purchases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "first_purchase",
+          "last_purchase",
+          "first_complete_week",
+          "last_complete_week_end",
+          "complete_weeks",
+          "weeks_with_purchases"
+        ],
+        "title": "PurchaseCoverage",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -4737,6 +5114,113 @@
         "summary": "List stored retail datasets",
         "tags": [
           "Data Operations"
+        ]
+      }
+    },
+    "/api/v1/forecasts/accuracy": {
+      "get": {
+        "description": "Filters by commodity and store region. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.",
+        "operationId": "accuracy_api_v1_forecasts_accuracy_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "commodity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Commodity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 7,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "check_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Check Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastAccuracy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forecast accuracy temporarily unavailable"
+          }
+        },
+        "summary": "Read purchase history and saved accuracy checks",
+        "tags": [
+          "Forecast Studio"
         ]
       }
     },

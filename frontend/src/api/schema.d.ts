@@ -424,6 +424,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/forecasts/accuracy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read purchase history and saved accuracy checks
+         * @description Filters by commodity and store region. A selected check includes paired actual, candidate and seasonal baseline values for all evaluated horizons. Only checks from the current transaction and product revisions are available.
+         */
+        get: operations["accuracy_api_v1_forecasts_accuracy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -622,6 +642,80 @@ export interface components {
             id: string;
             /** Roles */
             roles: components["schemas"]["Role"][];
+        };
+        /** AccuracyCheck */
+        AccuracyCheck: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "insufficient_history" | "failed";
+        };
+        /** AccuracyEvidence */
+        AccuracyEvidence: {
+            /** Horizons */
+            horizons?: components["schemas"]["HorizonAccuracy"][];
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "insufficient_history" | "failed";
+        };
+        /** AccuracyPoint */
+        AccuracyPoint: {
+            /** Actual */
+            actual: number;
+            /** Baseline */
+            baseline: number;
+            /** Forecast */
+            forecast: number;
+            /**
+             * Forecast Cutoff
+             * Format: date
+             */
+            forecast_cutoff: string;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+        };
+        /** AccuracyResult */
+        AccuracyResult: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            evidence: components["schemas"]["AccuracyEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Model Version */
+            model_version: string;
+            /** Product Version */
+            product_version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "insufficient_history" | "failed";
+            /** Transaction Version */
+            transaction_version: number;
         };
         /** Breakdown */
         Breakdown: {
@@ -906,6 +1000,21 @@ export interface components {
             /** Validation Rows */
             validation_rows: number;
         };
+        /** ForecastAccuracy */
+        ForecastAccuracy: {
+            /** Checks */
+            checks: components["schemas"]["AccuracyCheck"][];
+            /** Commodities */
+            commodities: string[];
+            /** Commodity */
+            commodity: string | null;
+            coverage: components["schemas"]["PurchaseCoverage"];
+            /** Region */
+            region: string | null;
+            /** Regions */
+            regions: string[];
+            selected: components["schemas"]["AccuracyResult"] | null;
+        };
         /** ForecastBin */
         ForecastBin: {
             /** Count */
@@ -954,6 +1063,41 @@ export interface components {
              * Format: date
              */
             start: string;
+        };
+        /** HorizonAccuracy */
+        HorizonAccuracy: {
+            /** Average Miss */
+            average_miss: number;
+            /** Baseline Average Miss */
+            baseline_average_miss: number;
+            /** Baseline Overall Error Percent */
+            baseline_overall_error_percent: number | null;
+            /** Baseline Symmetric Error Percent */
+            baseline_symmetric_error_percent: number;
+            /**
+             * First Training Week
+             * Format: date
+             */
+            first_training_week: string;
+            /** Horizon */
+            horizon: number;
+            /**
+             * Last Training Week End
+             * Format: date
+             */
+            last_training_week_end: string;
+            /** Overall Error Percent */
+            overall_error_percent: number | null;
+            /** Points */
+            points: components["schemas"]["AccuracyPoint"][];
+            /** Symmetric Error Percent */
+            symmetric_error_percent: number;
+            /** Training Samples Max */
+            training_samples_max: number;
+            /** Training Samples Min */
+            training_samples_min: number;
+            /** Weeks Tested */
+            weeks_tested: number;
         };
         /** HouseholdPrediction */
         HouseholdPrediction: {
@@ -1273,6 +1417,21 @@ export interface components {
             page_size: number;
             /** Total */
             total: number;
+        };
+        /** PurchaseCoverage */
+        PurchaseCoverage: {
+            /** Complete Weeks */
+            complete_weeks: number;
+            /** First Complete Week */
+            first_complete_week: string | null;
+            /** First Purchase */
+            first_purchase: string | null;
+            /** Last Complete Week End */
+            last_complete_week_end: string | null;
+            /** Last Purchase */
+            last_purchase: string | null;
+            /** Weeks With Purchases */
+            weeks_with_purchases: number;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -2644,6 +2803,57 @@ export interface operations {
             };
             /** @description Sign in required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accuracy_api_v1_forecasts_accuracy_get: {
+        parameters: {
+            query?: {
+                commodity?: string | null;
+                region?: string | null;
+                check_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAccuracy"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Forecast accuracy temporarily unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

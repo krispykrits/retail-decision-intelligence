@@ -649,3 +649,65 @@ def test_clv_trend_uses_complete_periods_and_the_published_cohort(signed_in: Tes
     stale = client.get(endpoint).json()
     assert stale["evidence"]["status"] == "stale"
     assert stale["historical_spend"] == stale["observed_spend_segments"] == []
+
+
+def test_forecast_accuracy_reads_coverage_and_only_current_scoped_checks(
+    signed_in: TestClient,
+) -> None:
+    from retail_api.forecasts.schema_v1 import accuracy_checks
+    from retail_api.forecasts.schemas import AccuracyEvidence
+
+    client = signed_in
+    endpoint = "/api/v1/forecasts/accuracy"
+    assert TestClient(client.app).get(endpoint).status_code == 401
+    assert client.get(endpoint).json()["coverage"]["complete_weeks"] == 0
+
+    with Session(client.app.state.database) as db, db.begin():
+        db.scalars(select(Account)).one().is_superuser = True
+    assert upload(client, "households", HOUSEHOLDS + HOUSEHOLD).status_code == 200
+    assert upload(client, "products", PRODUCTS + PRODUCT).status_code == 200
+    lines = (
+        b"00000001,0010,17-AUG-18,00000001,1,1,CENTRAL,32,2018\n"
+        b"00000002,0010,20-AUG-18,00000001,2,2,CENTRAL,34,2018\n"
+        b"00000003,0010,26-AUG-18,00000001,-2,-2,CENTRAL,34,2018\n"
+        b"00000004,0010,01-SEP-18,00000001,1,1,CENTRAL,35,2018\n"
+        b"00000005,0010,09-SEP-18,00000001,1,1,EAST,36,2018\n"
+    )
+    assert upload(client, "transactions", TRANSACTIONS + lines).json()["inserted"] == 5
+    response = client.get(endpoint, params={"region": "CENTRAL"})
+    assert response.status_code == 200
+    assert response.json()["coverage"] == {
+        "first_purchase": "2018-08-17",
+        "last_purchase": "2018-09-01",
+        "first_complete_week": "2018-08-20",
+        "last_complete_week_end": "2018-08-26",
+        "complete_weeks": 1,
+        "weeks_with_purchases": 1,
+    }
+
+    result = AccuracyEvidence(status="insufficient_history", reason="Too few weeks.")
+    check_id = uuid4()
+    with client.app.state.database.begin() as db:
+        db.execute(
+            accuracy_checks.insert().values(
+                id=check_id,
+                commodity="PRODUCE",
+                region="CENTRAL",
+                transaction_version=1,
+                product_version=1,
+                model_version="ridge-lag-v1",
+                checked_at=datetime(2018, 9, 10),
+                status=result.status,
+                evidence=result.model_dump_json(),
+            )
+        )
+    response = client.get(endpoint, params={"region": "CENTRAL", "check_id": str(check_id)})
+    assert response.json()["selected"]["evidence"]["status"] == "insufficient_history"
+    assert response.json()["selected"]["evidence"]["horizons"] == []
+    assert client.get(endpoint, params={"check_id": str(check_id)}).json()["selected"] is None
+
+    update = b"00000006,0010,10-SEP-18,00000001,1,1,CENTRAL,37,2018\n"
+    assert upload(client, "transactions", TRANSACTIONS + update).json()["inserted"] == 1
+    response = client.get(endpoint, params={"region": "CENTRAL", "check_id": str(check_id)})
+    assert response.json()["checks"] == []
+    assert response.json()["selected"] is None

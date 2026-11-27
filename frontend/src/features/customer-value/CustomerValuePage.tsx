@@ -14,7 +14,7 @@ import { valueAnalysisGrid } from './valueLayout'
 import { ValueOutlook, ValueOverview } from './ValueSummary'
 import { ValueInsights } from './ValueInsights'
 import { ValueSegments } from './ValueSegments'
-import { useValueRequest } from './useValueRequest'
+import { useRequest } from '../../api/useRequest'
 
 export function CustomerValuePage() {
   const [params, setParams] = useSearchParams()
@@ -25,7 +25,7 @@ export function CustomerValuePage() {
   const cohortKey = filterParams.toString()
   const cohort = useMemo(() => readCohort(new URLSearchParams(cohortKey)), [cohortKey])
   const load = useCallback((signal: AbortSignal) => getCustomerValue(cohort, signal), [cohort])
-  const { result, previousData, retry } = useValueRequest(load)
+  const { result, previousData, retry } = useRequest(load)
   const updating = !result && Boolean(previousData)
   const summary = result ? result.data : previousData
   const currentSummary = result?.data
@@ -36,7 +36,7 @@ export function CustomerValuePage() {
         : undefined,
     [cohort, currentSummary, page],
   )
-  const { result: ranking, retry: retryRanking } = useValueRequest(loadRanking)
+  const { result: ranking, retry: retryRanking } = useRequest(loadRanking)
   const differentRun =
     ranking?.data &&
     (ranking.data.evidence.version !== summary?.evidence.version ||

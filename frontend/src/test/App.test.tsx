@@ -7,6 +7,7 @@ import { App } from '../app/App'
 import { TrendChart } from '../components/TrendChart'
 import { SessionContext } from '../auth/session'
 import { getDashboard, getDashboardTrend, type Dashboard } from '../api/dashboard'
+import { getForecastAccuracy, type AccuracyOverview } from '../api/forecastAccuracy'
 import { getRetention } from '../api/retention'
 import { getDatasets, getImportHistory, uploadCsv, type ImportResult } from '../api/imports'
 
@@ -39,6 +40,26 @@ vi.mock('../api/dashboard', () => ({ getDashboard: vi.fn(), getDashboardTrend: v
 vi.mocked(getDashboard).mockResolvedValue(emptyDashboard)
 
 vi.mock('../api/retention', () => ({ getRetention: vi.fn() }))
+
+vi.mock('../api/forecastAccuracy', () => ({ getForecastAccuracy: vi.fn() }))
+
+const accuracy: AccuracyOverview = {
+  commodities: ['PRODUCE'],
+  regions: ['CENTRAL'],
+  commodity: 'PRODUCE',
+  region: null,
+  coverage: {
+    first_purchase: '2018-08-17',
+    last_purchase: '2020-08-15',
+    first_complete_week: '2018-08-20',
+    last_complete_week_end: '2020-08-09',
+    complete_weeks: 103,
+    weeks_with_purchases: 103,
+  },
+  checks: [],
+  selected: null,
+}
+vi.mocked(getForecastAccuracy).mockResolvedValue(accuracy)
 
 vi.mock('../api/imports', () => ({
   getDatasets: vi.fn().mockResolvedValue([]),
@@ -79,6 +100,81 @@ const expectedRoutes = [
 ] as const
 
 describe('workspace shell', () => {
+  it('shows purchase coverage and displays scores only after a completed check is selected', async () => {
+    const user = userEvent.setup()
+    const check = {
+      id: '495e2edd-b20d-4ede-b9a5-d097938ee6f1',
+      checked_at: '2020-08-16T00:00:00Z',
+      status: 'completed' as const,
+    }
+    vi.mocked(getForecastAccuracy)
+      .mockResolvedValueOnce({ ...accuracy, checks: [check] })
+      .mockResolvedValueOnce({
+        ...accuracy,
+        checks: [check],
+        selected: {
+          ...check,
+          model_version: 'ridge-lag-v1',
+          transaction_version: 1,
+          product_version: 1,
+          evidence: {
+            status: 'completed',
+            reason: 'Compared the same weeks.',
+            horizons: [
+              {
+                horizon: 2,
+                average_miss: 5.5,
+                baseline_average_miss: 12,
+                overall_error_percent: 5.5,
+                baseline_overall_error_percent: 12,
+                symmetric_error_percent: 5.6,
+                baseline_symmetric_error_percent: 12.8,
+                weeks_tested: 1,
+                first_training_week: '2018-08-20',
+                last_training_week_end: '2020-07-26',
+                training_samples_min: 90,
+                training_samples_max: 90,
+                points: [
+                  {
+                    week_start: '2020-08-03',
+                    forecast_cutoff: '2020-07-26',
+                    actual: 100,
+                    forecast: 94.5,
+                    baseline: 88,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+
+    render(
+      <MemoryRouter initialEntries={['/forecast']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('103 / 103')).toBeVisible()
+    expect(screen.getAllByText('Not checked')).toHaveLength(4)
+    await user.selectOptions(screen.getByLabelText('How far ahead'), '2')
+    await user.selectOptions(screen.getByLabelText('Accuracy check'), check.id)
+    await user.click(screen.getByRole('button', { name: 'View results' }))
+
+    expect(
+      await screen.findByRole('group', { name: 'Actual demand and forecasts by week' }),
+    ).toBeVisible()
+    expect(screen.getByText('5.5%')).toBeVisible()
+    expect(screen.getByText(/Model ridge-lag-v1/)).not.toBeVisible()
+    await user.click(screen.getByText('Technical details'))
+    expect(screen.getByText(/Model ridge-lag-v1/)).toBeVisible()
+    await user.click(screen.getByRole('link', { name: 'View Forecast Evidence' }))
+    expect(await screen.findByRole('heading', { name: 'Forecast Evidence' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Back to Forecast Accuracy' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('check_id=' + check.id),
+    )
+  })
+
   it('shows observed retention and opens a household when a churn model is unavailable', async () => {
     const user = userEvent.setup()
     vi.mocked(getRetention).mockResolvedValueOnce({

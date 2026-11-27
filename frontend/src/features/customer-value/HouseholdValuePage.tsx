@@ -6,7 +6,7 @@ import { Panel } from '../../components/Panel'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { HouseholdValueDetails } from './HouseholdValueDetails'
 import { ValueError, ValueLoading } from './ValueRequestState'
-import { useValueRequest } from './useValueRequest'
+import { useRequest } from '../../api/useRequest'
 
 export function HouseholdValuePage() {
   const { householdId = '' } = useParams()
@@ -15,7 +15,7 @@ export function HouseholdValuePage() {
     (signal: AbortSignal) => getHouseholdValue(householdId, signal),
     [householdId],
   )
-  const { result, retry } = useValueRequest(load)
+  const { result, retry } = useRequest(load)
   const detail = result?.data
 
   return (

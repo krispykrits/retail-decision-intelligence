@@ -6,6 +6,8 @@ import {
   commandCenterPath,
   customerIntelligencePath,
   dataOperationsPath,
+  forecastEvidencePath,
+  forecastStudioPath,
   household360Path,
   retentionPath,
   workspaces,
@@ -19,11 +21,16 @@ import { CommandCenterPage } from '../features/dashboard/CommandCenterPage'
 import { CustomerValuePage } from '../features/customer-value/CustomerValuePage'
 import { RetentionPage } from '../features/retention/RetentionPage'
 import { HouseholdEngagementPage } from '../features/retention/HouseholdEngagementPage'
+import {
+  ForecastAccuracyPage,
+  ForecastEvidencePage,
+} from '../features/forecast-accuracy/ForecastAccuracyPage'
 import { HouseholdValuePage } from '../features/customer-value/HouseholdValuePage'
 
 const workspacePages: Partial<Record<Workspace['path'], typeof CommandCenterPage>> = {
   [commandCenterPath]: CommandCenterPage,
   [dataOperationsPath]: DataOperationsPage,
+  [forecastStudioPath]: ForecastAccuracyPage,
   [customerIntelligencePath]: CustomerValuePage,
 }
 
@@ -48,6 +55,7 @@ export function App() {
             path={`${customerIntelligencePath}/households/:householdId`}
             element={<HouseholdValuePage />}
           />
+          <Route path={forecastEvidencePath} element={<ForecastEvidencePage />} />
           <Route path={retentionPath} element={<RetentionPage />} />
           <Route path={`${household360Path}/:householdId`} element={<HouseholdEngagementPage />} />
           <Route path="*" element={<NotFoundPage />} />
