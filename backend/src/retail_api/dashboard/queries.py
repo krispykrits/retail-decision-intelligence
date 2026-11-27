@@ -9,8 +9,8 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import FromClause
 
 from retail_api.dashboard.schemas import Dimension, Filters, Grain, Metric, Period
-from retail_api.imports.schema_v1 import dataset_state, households, products, transactions
-from retail_api.imports.schemas import Dataset
+from retail_api.imports.queries import transaction_product_versions
+from retail_api.imports.schema_v1 import households, products, transactions
 
 METRICS: tuple[Metric, ...] = ("spend", "households", "baskets", "units", "avg_basket")
 PURCHASE_DATE = transactions.c.purchase_date
@@ -51,15 +51,6 @@ def month_index(value: date) -> int:
     return value.year * 12 + value.month - 1
 
 
-def revision(dataset: Dataset) -> ColumnElement[int]:
-    return sa.func.coalesce(
-        sa.select(dataset_state.c.version)
-        .where(dataset_state.c.dataset == dataset)
-        .scalar_subquery(),
-        0,
-    )
-
-
 class DashboardQueries:
     def __init__(self, db: Connection, filters: Filters) -> None:
         self.db = db
@@ -75,10 +66,7 @@ class DashboardQueries:
         return start, end, *versions
 
     def source_versions(self) -> tuple[int, int]:
-        fact, product = self.db.execute(
-            sa.select(revision(Dataset.TRANSACTIONS), revision(Dataset.PRODUCTS))
-        ).one()
-        return fact, product
+        return transaction_product_versions(self.db)
 
     def options(self) -> tuple[list[str], list[str]]:
         region = transactions.c.store_region

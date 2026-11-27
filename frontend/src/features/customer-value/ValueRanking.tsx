@@ -6,7 +6,7 @@ import { Panel, PanelHeading } from '../../components/Panel'
 import { useHouseholdDrilldown } from '../../components/useHouseholdDrilldown'
 import { dateLabel, numberLabel } from '../../lib/format'
 import { HouseholdValueDetails } from './HouseholdValueDetails'
-import type { ValueResult } from './useValueRequest'
+import type { RequestResult } from '../../api/useRequest'
 import { forecastLabel, isAvailable, optionalMoney } from './valueDisplay'
 import { ValueError } from './ValueRequestState'
 
@@ -18,7 +18,7 @@ export function ValueRanking({
   selectPage,
   retry,
 }: {
-  result?: ValueResult<PredictionPage>
+  result?: RequestResult<PredictionPage>
   observedPeriod?: { start: string; end: string }
   page: number
   evidence: ModelEvidence

@@ -37,6 +37,7 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
         "/merchandise",
         "/baskets",
         "/forecast",
+        "/forecast/evidence",
         "/households",
         "/households/001994",
         "/data",
@@ -49,7 +50,8 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
     assert scripts, "Built frontend JavaScript is missing"
     with urlopen(f"{base_url}{scripts[0]}", timeout=REQUEST_TIMEOUT_SECONDS) as response:
         assert "javascript" in response.headers["Content-Type"]
-    customer_endpoints = (
+    analyst_endpoints = (
+        f"{API_PREFIX}/forecasts/accuracy",
         f"{API_PREFIX}/customers/churn/engagement",
         f"{API_PREFIX}/customers/clv/summary",
         f"{API_PREFIX}/customers/clv/households",
@@ -62,7 +64,7 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
         f"{API_PREFIX}/admin": 401,
         f"{API_PREFIX}/me": 401,
         f"{API_PREFIX}/dashboard": 401,
-        **{path.format(model="clv", hshd_num="001994"): 401 for path in customer_endpoints},
+        **{path.format(model="clv", hshd_num="001994"): 401 for path in analyst_endpoints},
     }
     with urlopen(
         f"{base_url}{API_PREFIX}/openapi.json", timeout=REQUEST_TIMEOUT_SECONDS
@@ -71,7 +73,7 @@ def check_deployment(base_url: str, *, security: bool = False) -> None:
         assert {
             f"{API_PREFIX}/health",
             f"{API_PREFIX}/dashboard",
-            *customer_endpoints,
+            *analyst_endpoints,
         } <= paths.keys()
     with urlopen(f"{base_url}{API_PREFIX}/docs", timeout=REQUEST_TIMEOUT_SECONDS) as response:
         assert "SwaggerUIBundle" in response.read().decode()

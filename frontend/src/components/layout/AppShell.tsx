@@ -3,6 +3,7 @@ import {
   commandCenterPath,
   customerIntelligencePath,
   dataOperationsPath,
+  forecastStudioPath,
   household360Path,
   workspaces,
 } from '../../app/workspaces'
@@ -13,9 +14,14 @@ export function AppShell() {
   const isCommandCenter = useMatch(commandCenterPath)
   const isDataOperations = useMatch(dataOperationsPath)
   const isCustomerIntelligence = useMatch(`${customerIntelligencePath}/*`)
+  const isForecastStudio = useMatch(`${forecastStudioPath}/*`)
   const isHouseholdDetail = useMatch(`${household360Path}/:householdId`)
   const hasWorkspaceHeader = Boolean(
-    isCommandCenter || isDataOperations || isCustomerIntelligence || isHouseholdDetail,
+    isCommandCenter ||
+    isDataOperations ||
+    isCustomerIntelligence ||
+    isForecastStudio ||
+    isHouseholdDetail,
   )
   return (
     <div className="flex min-h-screen flex-col bg-canvas pt-13 font-sans text-ink md:flex-row md:pt-0">

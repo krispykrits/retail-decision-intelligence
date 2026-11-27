@@ -6,7 +6,7 @@ import { Panel, PanelHeading } from '../../components/Panel'
 import { WorkspaceHeader } from '../../components/layout/WorkspaceHeader'
 import { dateLabel, moneyLabel, numberLabel } from '../../lib/format'
 import { segmentLabels } from '../customer-value/cohortQuery'
-import { useValueRequest } from '../customer-value/useValueRequest'
+import { useRequest } from '../../api/useRequest'
 import { ValueError, ValueLoading } from '../customer-value/ValueRequestState'
 import { percent } from './engagement'
 
@@ -24,7 +24,7 @@ export function HouseholdEngagementPage() {
   const selected =
     navigation?.household?.household_id === householdId ? navigation?.household : undefined
   const load = useCallback((signal: AbortSignal) => getRetention({}, signal), [])
-  const { result, retry } = useValueRequest(selected ? undefined : load)
+  const { result, retry } = useRequest(selected ? undefined : load)
   const row =
     selected ?? result?.data?.households.find((household) => household.household_id === householdId)
   const asOf = selected ? navigation?.asOf : result?.data?.as_of

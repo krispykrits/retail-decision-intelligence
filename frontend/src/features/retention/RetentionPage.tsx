@@ -13,7 +13,7 @@ import { isAvailable, statusLabels } from '../customer-value/valueDisplay'
 import { ValueFilters } from '../customer-value/ValueFilters'
 import { ValueError } from '../customer-value/ValueRequestState'
 import { ValuePageSkeleton } from '../customer-value/ValuePageSkeleton'
-import { useValueRequest } from '../customer-value/useValueRequest'
+import { useRequest } from '../../api/useRequest'
 import { valueAnalysisGrid } from '../customer-value/valueLayout'
 import { atRisk, engagementGroups, percent } from './engagement'
 import { EngagementSegments, EngagementTrend } from './RetentionCharts'
@@ -238,7 +238,7 @@ export function RetentionPage() {
     return { ...readCohort(search), segment }
   }, [filterKey])
   const load = useCallback((signal: AbortSignal) => getRetention(cohort, signal), [cohort])
-  const { result, previousData, retry } = useValueRequest(load)
+  const { result, previousData, retry } = useRequest(load)
   const data = result ? result.data : previousData
   const updating = !result && Boolean(data)
 

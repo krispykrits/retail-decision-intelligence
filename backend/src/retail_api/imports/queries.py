@@ -26,6 +26,22 @@ HISTORY_LIMIT = 20
 ERROR_PREVIEW = 20
 
 
+def revision(dataset: Dataset) -> sa.ColumnElement[int]:
+    return sa.func.coalesce(
+        sa.select(dataset_state.c.version)
+        .where(dataset_state.c.dataset == dataset)
+        .scalar_subquery(),
+        0,
+    )
+
+
+def transaction_product_versions(db: sa.Connection) -> tuple[int, int]:
+    transactions_version, products_version = db.execute(
+        sa.select(revision(Dataset.TRANSACTIONS), revision(Dataset.PRODUCTS))
+    ).one()
+    return transactions_version, products_version
+
+
 def preview_query(import_id: UUID) -> sa.Select[tuple[UUID, int, str]]:
     return (
         sa.select(import_errors.c.import_id, import_errors.c.row_number, import_errors.c.reason)

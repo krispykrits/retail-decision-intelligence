@@ -1,6 +1,8 @@
 export const commandCenterPath = '/command-center'
 export const customerIntelligencePath = '/customers'
 export const retentionPath = `${customerIntelligencePath}/retention`
+export const forecastStudioPath = '/forecast'
+export const forecastEvidencePath = `${forecastStudioPath}/evidence`
 export const household360Path = '/households'
 export const dataOperationsPath = '/data'
 
@@ -27,9 +29,9 @@ export const workspaces = [
     description: 'Basket composition and purchase relationships.',
   },
   {
-    path: '/forecast',
+    path: forecastStudioPath,
     title: 'Forecast Studio',
-    description: 'Demand forecasts and evaluation evidence.',
+    description: 'See how closely forecasts matched actual demand.',
   },
   {
     path: household360Path,

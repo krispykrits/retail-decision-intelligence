@@ -18,6 +18,7 @@ from retail_api.api import API_PREFIX
 from retail_api.api.account import router as account_router
 from retail_api.api.customers import router as customers_router
 from retail_api.api.dashboard import router as dashboard_router
+from retail_api.api.forecasts import router as forecasts_router
 from retail_api.api.health import router as health_router
 from retail_api.api.imports import router as imports_router
 from retail_api.config import Settings
@@ -95,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(imports_router, prefix=API_PREFIX)
     application.include_router(dashboard_router, prefix=API_PREFIX)
     application.include_router(customers_router, prefix=API_PREFIX)
+    application.include_router(forecasts_router, prefix=API_PREFIX)
     if configuration.static_directory is not None:
         # Unknown API requests must never fall through to the React HTML page.
         application.add_api_route(

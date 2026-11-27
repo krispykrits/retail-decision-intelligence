@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { abortableRequest } from '../../api/abortableRequest'
+import { abortableRequest } from './abortableRequest'
 
-export type ValueResult<T> = { data: T; error?: never } | { data?: never; error: true }
+export type RequestResult<T> = { data: T; error?: never } | { data?: never; error: true }
 
-export function useValueRequest<T>(load?: (signal: AbortSignal) => Promise<T>) {
+export function useRequest<T>(load?: (signal: AbortSignal) => Promise<T>) {
   const [attempt, setAttempt] = useState(0)
   const [settled, setSettled] = useState<{
     load: typeof load
     attempt: number
-    result: ValueResult<T>
+    result: RequestResult<T>
   }>()
 
   useEffect(
